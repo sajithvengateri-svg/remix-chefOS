@@ -354,12 +354,22 @@ const Recipes = () => {
                         ${Number(recipe.cost_per_serving).toFixed(2)}
                       </p>
                     </div>
-                    <Link
-                      to={`/recipes/${recipe.id}`}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      View Details →
-                    </Link>
+                    <div className="flex gap-2">
+                      <Link
+                        to={`/recipes/${recipe.id}`}
+                        className="text-sm font-medium text-primary hover:underline"
+                      >
+                        View
+                      </Link>
+                      {hasEditPermission && (
+                        <Link
+                          to={`/recipes/${recipe.id}/edit`}
+                          className="text-sm font-medium text-muted-foreground hover:text-primary"
+                        >
+                          Edit
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
               </motion.div>
