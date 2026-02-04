@@ -280,19 +280,21 @@ const OperationsCalendar = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="flex items-center justify-between">
-            <TabsList>
-              <TabsTrigger value="calendar" className="gap-2">
-                <Calendar className="w-4 h-4" />
-                Calendar
-              </TabsTrigger>
-              <TabsTrigger value="sections" className="gap-2">
-                <LayoutGrid className="w-4 h-4" />
-                Kitchen Sections
-              </TabsTrigger>
-            </TabsList>
-
-            {activeTab === "calendar" && (
+          <TabsList>
+            <TabsTrigger value="calendar" className="gap-2">
+              <Calendar className="w-4 h-4" />
+              Calendar
+            </TabsTrigger>
+            <TabsTrigger value="sections" className="gap-2">
+              <LayoutGrid className="w-4 h-4" />
+              Kitchen Sections
+            </TabsTrigger>
+          </TabsList>
+          {/* Calendar Tab Content */}
+          <TabsContent value="calendar" className="space-y-6 mt-4">
+            {/* Calendar Controls */}
+            <div className="flex items-center justify-between">
+              <AlertBanner overdueCount={overdueCount} dueCount={dueCount} />
               <div className="flex items-center gap-2">
                 <div className="flex items-center bg-muted rounded-lg p-1">
                   <button
@@ -325,16 +327,9 @@ const OperationsCalendar = () => {
                   </Button>
                 )}
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Calendar Tab Content */}
-          <TabsContent value="calendar" className="space-y-6 mt-0">
-
-        {/* Alert Banner */}
-        <AlertBanner overdueCount={overdueCount} dueCount={dueCount} />
-
-        {/* Year Navigation */}
+            {/* Year Navigation */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
