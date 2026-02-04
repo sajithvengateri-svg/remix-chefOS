@@ -11,7 +11,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Calendar,
-  Package
+  Package,
+  Scan
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -26,6 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { AssetLabelScanner } from "@/components/equipment/AssetLabelScanner";
 
 interface TechContact {
   name: string;
@@ -66,6 +68,7 @@ const Equipment = () => {
   const [editingEquipment, setEditingEquipment] = useState<EquipmentItem | null>(null);
   const [deletingEquipment, setDeletingEquipment] = useState<EquipmentItem | null>(null);
   const [selectedEquipment, setSelectedEquipment] = useState<EquipmentItem | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -236,6 +239,27 @@ const Equipment = () => {
     setNewContact({ name: "", phone: "", email: "" });
   };
 
+  const handleScanData = (data: {
+    name?: string;
+    manufacturer?: string;
+    model?: string;
+    serial_number?: string;
+    manufacture_date?: string;
+    warranty_info?: string;
+    notes?: string;
+  }) => {
+    setFormData(prev => ({
+      ...prev,
+      name: data.name || prev.name,
+      manufacturer: data.manufacturer || prev.manufacturer,
+      model: data.model || prev.model,
+      serial_number: data.serial_number || prev.serial_number,
+      notes: [prev.notes, data.notes, data.warranty_info].filter(Boolean).join("\n"),
+    }));
+    setDialogOpen(true);
+    toast.success("Scanned data applied to form");
+  };
+
   const needsAttentionCount = equipment.filter(
     e => e.status === "needs_maintenance" || e.status === "out_of_service"
   ).length;
@@ -254,10 +278,16 @@ const Equipment = () => {
             <p className="page-subtitle">Manage kitchen equipment and maintenance</p>
           </div>
           {hasEditPermission && (
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Equipment
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setScannerOpen(true)}>
+                <Scan className="w-4 h-4 mr-2" />
+                Scan Label
+              </Button>
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Equipment
+              </Button>
+            </div>
           )}
         </motion.div>
 
@@ -676,6 +706,12 @@ const Equipment = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* Asset Label Scanner */}
+        <AssetLabelScanner
+          open={scannerOpen}
+          onOpenChange={setScannerOpen}
+          onDataExtracted={handleScanData}
+        />
       </div>
     </AppLayout>
   );
