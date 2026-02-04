@@ -84,6 +84,11 @@ interface RosterStore {
   connectRoster: (provider: RosterProvider, credentials: any) => void;
   disconnectRoster: (connectionId: string) => void;
 
+  // Shift Overrides
+  addShift: (shift: Omit<Shift, 'id'>) => Shift;
+  updateShift: (shiftId: string, updates: Partial<Shift>) => void;
+  deleteShift: (shiftId: string) => void;
+
   // Line Prep Lists
   createLinePrepList: (list: Omit<LinePrepList, 'id' | 'status' | 'submittedAt'>) => LinePrepList;
   submitLinePrepList: (listId: string) => void;
@@ -157,6 +162,32 @@ export const useRosterStore = create<RosterStore>((set, get) => ({
           : c
       ),
       selectedRosterProvider: state.selectedRosterProvider?.id === connectionId ? null : state.selectedRosterProvider,
+    }));
+  },
+
+  addShift: (shiftData) => {
+    const newShift: Shift = {
+      ...shiftData,
+      id: `shift-override-${Date.now()}`,
+      isOverride: true,
+    };
+    set(state => ({ shifts: [...state.shifts, newShift] }));
+    return newShift;
+  },
+
+  updateShift: (shiftId: string, updates: Partial<Shift>) => {
+    set(state => ({
+      shifts: state.shifts.map(s => 
+        s.id === shiftId 
+          ? { ...s, ...updates, isOverride: true }
+          : s
+      ),
+    }));
+  },
+
+  deleteShift: (shiftId: string) => {
+    set(state => ({
+      shifts: state.shifts.filter(s => s.id !== shiftId),
     }));
   },
 
