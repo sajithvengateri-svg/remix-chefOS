@@ -16,7 +16,8 @@ import {
   BookOpen,
   Calendar,
   Wrench,
-  LogOut
+  LogOut,
+  Store
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,6 +37,7 @@ const mainNavItems = [
   { path: "/inventory", icon: Package, label: "Inventory", module: "inventory" },
   { path: "/prep", icon: ClipboardList, label: "Prep Lists", module: "prep" },
   { path: "/production", icon: Factory, label: "Production", module: "production" },
+  { path: "/marketplace", icon: Store, label: "Marketplace", module: "marketplace" },
   { path: "/allergens", icon: AlertTriangle, label: "Allergens", module: "allergens" },
 ];
 
@@ -84,8 +86,8 @@ const Sidebar = ({ className }: SidebarProps) => {
             <ChefHat className="w-6 h-6 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="font-display text-lg font-semibold text-sidebar-foreground">ChefFlow</h1>
-            <p className="text-xs text-muted-foreground">Kitchen Management</p>
+            <h1 className="font-display text-lg font-semibold text-sidebar-foreground">ChefOS</h1>
+            <p className="text-xs text-muted-foreground">Kitchen Operating System</p>
           </div>
         </div>
       </div>
