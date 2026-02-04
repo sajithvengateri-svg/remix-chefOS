@@ -610,6 +610,8 @@ export type Database = {
       recipes: {
         Row: {
           allergens: string[] | null
+          batch_yield_quantity: number | null
+          batch_yield_unit: string | null
           category: string
           cook_time: number | null
           cost_per_serving: number | null
@@ -623,17 +625,21 @@ export type Database = {
           image_url: string | null
           ingredients: Json | null
           instructions: Json | null
+          is_batch_recipe: boolean | null
           name: string
           prep_time: number | null
           sell_price: number | null
           servings: number | null
           target_food_cost_percent: number | null
+          tasting_notes: string | null
           total_yield: number | null
           updated_at: string
           yield_unit: string | null
         }
         Insert: {
           allergens?: string[] | null
+          batch_yield_quantity?: number | null
+          batch_yield_unit?: string | null
           category?: string
           cook_time?: number | null
           cost_per_serving?: number | null
@@ -647,17 +653,21 @@ export type Database = {
           image_url?: string | null
           ingredients?: Json | null
           instructions?: Json | null
+          is_batch_recipe?: boolean | null
           name: string
           prep_time?: number | null
           sell_price?: number | null
           servings?: number | null
           target_food_cost_percent?: number | null
+          tasting_notes?: string | null
           total_yield?: number | null
           updated_at?: string
           yield_unit?: string | null
         }
         Update: {
           allergens?: string[] | null
+          batch_yield_quantity?: number | null
+          batch_yield_unit?: string | null
           category?: string
           cook_time?: number | null
           cost_per_serving?: number | null
@@ -671,11 +681,13 @@ export type Database = {
           image_url?: string | null
           ingredients?: Json | null
           instructions?: Json | null
+          is_batch_recipe?: boolean | null
           name?: string
           prep_time?: number | null
           sell_price?: number | null
           servings?: number | null
           target_food_cost_percent?: number | null
+          tasting_notes?: string | null
           total_yield?: number | null
           updated_at?: string
           yield_unit?: string | null

@@ -1,31 +1,27 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { 
   Search, 
   Plus, 
   Filter, 
   ChefHat,
-  Clock,
   Calculator,
-  AlertTriangle,
-  CheckCircle2,
-  MoreVertical,
-  Edit,
-  Trash2,
   Loader2,
-  Upload
+  Upload,
+  Beaker
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import FoodCostCalculator from "@/components/costing/FoodCostCalculator";
 import RecipeImportDialog from "@/components/recipes/RecipeImportDialog";
+import RecipeCard from "@/components/recipes/RecipeCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -43,11 +39,15 @@ interface Recipe {
   instructions: unknown;
   allergens: string[] | null;
   cost_per_serving: number;
+  sell_price: number | null;
   image_url: string | null;
+  tasting_notes: string | null;
+  is_batch_recipe: boolean;
+  target_food_cost_percent: number | null;
   created_at: string;
 }
 
-const categories = ["All", "Mains", "Appetizers", "Soups", "Salads", "Desserts", "Sauces"];
+const categories = ["All", "Mains", "Appetizers", "Soups", "Salads", "Desserts", "Sauces", "Batch Recipes"];
 
 const Recipes = () => {
   const navigate = useNavigate();
@@ -72,6 +72,8 @@ const Recipes = () => {
     cook_time: 0,
     servings: 1,
     cost_per_serving: 0,
+    tasting_notes: "",
+    is_batch_recipe: false,
   });
 
   const hasEditPermission = canEdit("recipes");
@@ -108,11 +110,13 @@ const Recipes = () => {
         .update({
           name: formData.name,
           description: formData.description || null,
-          category: formData.category,
+          category: formData.is_batch_recipe ? "Sauces" : formData.category,
           prep_time: formData.prep_time,
           cook_time: formData.cook_time,
           servings: formData.servings,
           cost_per_serving: formData.cost_per_serving,
+          tasting_notes: formData.tasting_notes || null,
+          is_batch_recipe: formData.is_batch_recipe,
         })
         .eq("id", editingRecipe.id);
 
@@ -126,11 +130,13 @@ const Recipes = () => {
       const { error } = await supabase.from("recipes").insert({
         name: formData.name,
         description: formData.description || null,
-        category: formData.category,
+        category: formData.is_batch_recipe ? "Sauces" : formData.category,
         prep_time: formData.prep_time,
         cook_time: formData.cook_time,
         servings: formData.servings,
         cost_per_serving: formData.cost_per_serving,
+        tasting_notes: formData.tasting_notes || null,
+        is_batch_recipe: formData.is_batch_recipe,
         created_by: user?.id,
       });
 
@@ -176,6 +182,8 @@ const Recipes = () => {
       cook_time: recipe.cook_time,
       servings: recipe.servings,
       cost_per_serving: Number(recipe.cost_per_serving),
+      tasting_notes: recipe.tasting_notes || "",
+      is_batch_recipe: recipe.is_batch_recipe || false,
     });
     setDialogOpen(true);
   };
@@ -191,12 +199,22 @@ const Recipes = () => {
       cook_time: 0,
       servings: 1,
       cost_per_serving: 0,
+      tasting_notes: "",
+      is_batch_recipe: false,
     });
+  };
+
+  const handleImageUpdate = (recipeId: string, imageUrl: string) => {
+    setRecipes(prev => prev.map(r => 
+      r.id === recipeId ? { ...r, image_url: imageUrl } : r
+    ));
   };
 
   const filteredRecipes = recipes.filter(recipe => {
     const matchesSearch = recipe.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || recipe.category === selectedCategory;
+    const matchesCategory = selectedCategory === "All" || 
+      recipe.category === selectedCategory ||
+      (selectedCategory === "Batch Recipes" && recipe.is_batch_recipe);
     return matchesSearch && matchesCategory;
   });
 
@@ -299,89 +317,18 @@ const Recipes = () => {
                 key={recipe.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 * index }}
-                className="card-interactive p-4"
+                transition={{ delay: Math.min(0.1 * index, 0.5) }}
               >
-                {/* Recipe Image Placeholder */}
-                <div className="aspect-video rounded-lg bg-muted mb-4 flex items-center justify-center relative overflow-hidden">
-                  <ChefHat className="w-12 h-12 text-muted-foreground/50" />
-                </div>
-
-                {/* Recipe Info */}
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold text-foreground">{recipe.name}</h3>
-                      <span className="text-xs text-muted-foreground">{recipe.category}</span>
-                    </div>
-                    {hasEditPermission && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <button className="p-1 rounded-lg hover:bg-muted transition-colors">
-                            <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                          </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEditDialog(recipe)}>
-                            <Edit className="w-4 h-4 mr-2" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              setDeletingRecipe(recipe);
-                              setDeleteDialogOpen(true);
-                            }}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-
-                  {recipe.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">{recipe.description}</p>
-                  )}
-
-                  {/* Stats */}
-                  <div className="flex items-center gap-4 text-sm">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      <span>{recipe.prep_time + recipe.cook_time} min</span>
-                    </div>
-                    <div className="text-muted-foreground">
-                      {recipe.servings} servings
-                    </div>
-                  </div>
-
-                  {/* Pricing */}
-                  <div className="flex items-center justify-between pt-3 border-t border-border">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Cost/Serving</p>
-                      <p className="font-semibold text-foreground">
-                        ${Number(recipe.cost_per_serving).toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Link
-                        to={`/recipes/${recipe.id}`}
-                        className="text-sm font-medium text-primary hover:underline"
-                      >
-                        View
-                      </Link>
-                      {hasEditPermission && (
-                        <Link
-                          to={`/recipes/${recipe.id}/edit`}
-                          className="text-sm font-medium text-muted-foreground hover:text-primary"
-                        >
-                          Edit
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <RecipeCard
+                  recipe={recipe}
+                  hasEditPermission={hasEditPermission}
+                  onEdit={() => openEditDialog(recipe)}
+                  onDelete={() => {
+                    setDeletingRecipe(recipe);
+                    setDeleteDialogOpen(true);
+                  }}
+                  onImageUpdate={handleImageUpdate}
+                />
               </motion.div>
             ))}
 
@@ -501,6 +448,27 @@ const Recipes = () => {
                     onChange={(e) => setFormData({ ...formData, cost_per_serving: parseFloat(e.target.value) || 0 })}
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tasting_notes">Tasting Notes</Label>
+                <Textarea
+                  id="tasting_notes"
+                  value={formData.tasting_notes}
+                  onChange={(e) => setFormData({ ...formData, tasting_notes: e.target.value })}
+                  placeholder="Flavor profile, texture, recommended pairings..."
+                  rows={2}
+                />
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <div>
+                  <Label htmlFor="is_batch">Batch Recipe</Label>
+                  <p className="text-xs text-muted-foreground">Mark this as a batch/prep recipe that can be used as an ingredient</p>
+                </div>
+                <Switch
+                  id="is_batch"
+                  checked={formData.is_batch_recipe}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_batch_recipe: checked })}
+                />
               </div>
             </div>
             <DialogFooter>
