@@ -23,45 +23,45 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-// Empty placeholder data - wireframe only
+// Latin placeholder data - wireframe only
 const placeholderSuppliers = [
   { 
     id: "1", 
-    name: "Lorem Ipsum Produce", 
+    name: "Lorem Ipsum", 
     category: "Produce", 
     rating: 0, 
-    location: "—",
-    deliveryDays: ["—"],
+    location: "Consectetur",
+    deliveryDays: ["Dies", "Lunae"],
     specialsCount: 0,
     verified: false
   },
   { 
     id: "2", 
-    name: "Dolor Sit Seafood", 
+    name: "Dolor Sit Amet", 
     category: "Seafood", 
     rating: 0, 
-    location: "—",
-    deliveryDays: ["—"],
+    location: "Adipiscing",
+    deliveryDays: ["Martis"],
     specialsCount: 0,
     verified: false
   },
   { 
     id: "3", 
-    name: "Amet Consectetur Meats", 
+    name: "Consectetur Elit", 
     category: "Meat", 
     rating: 0, 
-    location: "—",
-    deliveryDays: ["—"],
+    location: "Tempor",
+    deliveryDays: ["Mercurii"],
     specialsCount: 0,
     verified: false
   },
   { 
     id: "4", 
-    name: "Adipiscing Dairy Co", 
+    name: "Sed Do Eiusmod", 
     category: "Dairy", 
     rating: 0, 
-    location: "—",
-    deliveryDays: ["—"],
+    location: "Incididunt",
+    deliveryDays: ["Iovis"],
     specialsCount: 0,
     verified: false
   },
