@@ -8,123 +8,8 @@ import {
   Allergen
 } from '@/types/menu';
 
-// Mock menu data
-const initialMenus: Menu[] = [
-  {
-    id: 'menu-1',
-    name: 'Spring Menu 2026',
-    version: 2,
-    status: 'active',
-    effectiveFrom: new Date('2026-01-15'),
-    avgFoodCostPercent: 28.5,
-    totalItems: 24,
-    createdAt: new Date('2026-01-10'),
-    updatedAt: new Date('2026-02-01'),
-    items: [
-      {
-        id: 'item-1',
-        name: 'Pan-Seared Duck Breast',
-        category: 'Mains',
-        recipeId: 'rec-1',
-        sellPrice: 32,
-        foodCost: 9.25,
-        foodCostPercent: 28.9,
-        contributionMargin: 22.75,
-        popularity: 145,
-        profitability: 'star',
-        isActive: true,
-        menuId: 'menu-1',
-        allergens: ['gluten'],
-      },
-      {
-        id: 'item-2',
-        name: 'Mushroom Risotto',
-        category: 'Mains',
-        recipeId: 'rec-3',
-        sellPrice: 24,
-        foodCost: 6.20,
-        foodCostPercent: 25.8,
-        contributionMargin: 17.80,
-        popularity: 210,
-        profitability: 'star',
-        isActive: true,
-        menuId: 'menu-1',
-        allergens: ['dairy', 'gluten'],
-      },
-      {
-        id: 'item-3',
-        name: 'Pan-Seared Salmon',
-        category: 'Mains',
-        recipeId: 'rec-4',
-        sellPrice: 28,
-        foodCost: 8.45,
-        foodCostPercent: 30.2,
-        contributionMargin: 19.55,
-        popularity: 178,
-        profitability: 'plow-horse',
-        isActive: true,
-        menuId: 'menu-1',
-        allergens: ['fish', 'dairy'],
-      },
-      {
-        id: 'item-4',
-        name: 'Crème Brûlée',
-        category: 'Desserts',
-        recipeId: 'rec-2',
-        sellPrice: 12,
-        foodCost: 2.15,
-        foodCostPercent: 17.9,
-        contributionMargin: 9.85,
-        popularity: 95,
-        profitability: 'puzzle',
-        isActive: true,
-        menuId: 'menu-1',
-        allergens: ['eggs', 'dairy'],
-      },
-      {
-        id: 'item-5',
-        name: 'Caesar Salad',
-        category: 'Starters',
-        sellPrice: 14,
-        foodCost: 4.50,
-        foodCostPercent: 32.1,
-        contributionMargin: 9.50,
-        popularity: 62,
-        profitability: 'dog',
-        isActive: true,
-        menuId: 'menu-1',
-        allergens: ['eggs', 'fish', 'gluten', 'dairy'],
-      },
-      {
-        id: 'item-6',
-        name: 'Grilled Vegetable Stack',
-        category: 'Mains',
-        sellPrice: 22,
-        foodCost: 5.80,
-        foodCostPercent: 26.4,
-        contributionMargin: 16.20,
-        popularity: 88,
-        profitability: 'puzzle',
-        isActive: true,
-        menuId: 'menu-1',
-        allergens: [],
-      },
-    ],
-  },
-  {
-    id: 'menu-2',
-    name: 'Winter Menu 2025',
-    version: 1,
-    status: 'archived',
-    effectiveFrom: new Date('2025-10-01'),
-    effectiveTo: new Date('2026-01-14'),
-    avgFoodCostPercent: 29.2,
-    totalItems: 22,
-    createdAt: new Date('2025-09-20'),
-    updatedAt: new Date('2025-12-15'),
-    items: [],
-  },
-];
+// Empty initial state - no mock data
+const initialMenus: Menu[] = [];
 
 // POS connections
 const initialPOSConnections: POSConnection[] = [
@@ -148,6 +33,8 @@ interface MenuStore {
   archiveMenu: (menuId: string) => void;
   activateMenu: (menuId: string) => void;
   updateMenuItem: (menuId: string, item: MenuItem) => void;
+  addMenuItem: (menuId: string, item: MenuItem) => void;
+  deleteMenuItem: (menuId: string, itemId: string) => void;
 
   // Analytics
   getMenuAnalytics: (menuId: string) => MenuAnalytics;
@@ -225,6 +112,36 @@ export const useMenuStore = create<MenuStore>((set, get) => ({
           ? { 
               ...m, 
               items: m.items.map(i => i.id === item.id ? item : i),
+              updatedAt: new Date(),
+            }
+          : m
+      ),
+    }));
+  },
+
+  addMenuItem: (menuId: string, item: MenuItem) => {
+    set(state => ({
+      menus: state.menus.map(m => 
+        m.id === menuId 
+          ? { 
+              ...m, 
+              items: [...m.items, item],
+              totalItems: m.items.length + 1,
+              updatedAt: new Date(),
+            }
+          : m
+      ),
+    }));
+  },
+
+  deleteMenuItem: (menuId: string, itemId: string) => {
+    set(state => ({
+      menus: state.menus.map(m => 
+        m.id === menuId 
+          ? { 
+              ...m, 
+              items: m.items.filter(i => i.id !== itemId),
+              totalItems: m.items.length - 1,
               updatedAt: new Date(),
             }
           : m
