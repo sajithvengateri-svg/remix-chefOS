@@ -10,7 +10,8 @@ import {
   FileText,
   Shield,
   List,
-  Grid3X3
+  Grid3X3,
+  LayoutGrid
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -19,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -27,6 +29,7 @@ import { format, isBefore, addDays, getMonth, getYear, isSameMonth } from "date-
 import YearView from "@/components/calendar/YearView";
 import EventList from "@/components/calendar/EventList";
 import AlertBanner from "@/components/calendar/AlertBanner";
+import KitchenSectionsManager from "@/components/operations/KitchenSectionsManager";
 
 interface CalendarEvent {
   id: string;
@@ -56,6 +59,7 @@ const OperationsCalendar = () => {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<CalendarEvent | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<string>("calendar");
   
   // View state
   const [viewMode, setViewMode] = useState<"year" | "list">("year");
@@ -269,42 +273,63 @@ const OperationsCalendar = () => {
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
         >
           <div>
-            <h1 className="page-title font-display">Operations Calendar</h1>
-            <p className="page-subtitle">Track maintenance, licenses, and inspections</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center bg-muted rounded-lg p-1">
-              <button
-                onClick={() => setViewMode("year")}
-                className={cn(
-                  "px-3 py-1.5 rounded-md text-sm font-medium transition-all",
-                  viewMode === "year" 
-                    ? "bg-background text-foreground shadow-sm" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <Grid3X3 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode("list")}
-                className={cn(
-                  "px-3 py-1.5 rounded-md text-sm font-medium transition-all",
-                  viewMode === "list" 
-                    ? "bg-background text-foreground shadow-sm" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
-            {hasEditPermission && (
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Event
-              </Button>
-            )}
+            <h1 className="page-title font-display">Operations</h1>
+            <p className="page-subtitle">Manage calendar, sections, and kitchen operations</p>
           </div>
         </motion.div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <div className="flex items-center justify-between">
+            <TabsList>
+              <TabsTrigger value="calendar" className="gap-2">
+                <Calendar className="w-4 h-4" />
+                Calendar
+              </TabsTrigger>
+              <TabsTrigger value="sections" className="gap-2">
+                <LayoutGrid className="w-4 h-4" />
+                Kitchen Sections
+              </TabsTrigger>
+            </TabsList>
+
+            {activeTab === "calendar" && (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center bg-muted rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode("year")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-sm font-medium transition-all",
+                      viewMode === "year" 
+                        ? "bg-background text-foreground shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode("list")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md text-sm font-medium transition-all",
+                      viewMode === "list" 
+                        ? "bg-background text-foreground shadow-sm" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+                {hasEditPermission && (
+                  <Button onClick={() => setDialogOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Event
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Calendar Tab Content */}
+          <TabsContent value="calendar" className="space-y-6 mt-0">
 
         {/* Alert Banner */}
         <AlertBanner overdueCount={overdueCount} dueCount={dueCount} />
@@ -424,6 +449,13 @@ const OperationsCalendar = () => {
             </div>
           </motion.div>
         )}
+          </TabsContent>
+
+          {/* Kitchen Sections Tab Content */}
+          <TabsContent value="sections" className="mt-0">
+            <KitchenSectionsManager hasEditPermission={hasEditPermission} />
+          </TabsContent>
+        </Tabs>
 
         {/* Add/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={resetForm}>
