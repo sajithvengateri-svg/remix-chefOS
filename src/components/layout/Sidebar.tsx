@@ -15,41 +15,51 @@ import {
   AlertTriangle,
   BookOpen,
   Calendar,
-  Wrench
+  Wrench,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 interface SidebarProps {
   className?: string;
 }
 
 const mainNavItems = [
-  { path: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { path: "/recipes", icon: ChefHat, label: "Recipe Bank" },
-  { path: "/ingredients", icon: Utensils, label: "Ingredients" },
-  { path: "/invoices", icon: Receipt, label: "Invoices" },
-  { path: "/inventory", icon: Package, label: "Inventory" },
-  { path: "/prep", icon: ClipboardList, label: "Prep Lists" },
-  { path: "/production", icon: Factory, label: "Production" },
-  { path: "/allergens", icon: AlertTriangle, label: "Allergens" },
+  { path: "/", icon: LayoutDashboard, label: "Dashboard", module: "dashboard" },
+  { path: "/recipes", icon: ChefHat, label: "Recipe Bank", module: "recipes" },
+  { path: "/ingredients", icon: Utensils, label: "Ingredients", module: "ingredients" },
+  { path: "/invoices", icon: Receipt, label: "Invoices", module: "invoices" },
+  { path: "/inventory", icon: Package, label: "Inventory", module: "inventory" },
+  { path: "/prep", icon: ClipboardList, label: "Prep Lists", module: "prep" },
+  { path: "/production", icon: Factory, label: "Production", module: "production" },
+  { path: "/allergens", icon: AlertTriangle, label: "Allergens", module: "allergens" },
 ];
 
 const secondaryNavItems = [
-  { path: "/menu-engineering", icon: Menu, label: "Menu Engineering" },
-  { path: "/roster", icon: Users, label: "Roster" },
-  { path: "/calendar", icon: Calendar, label: "Calendar" },
-  { path: "/equipment", icon: Wrench, label: "Equipment" },
-  { path: "/cheatsheets", icon: BookOpen, label: "Cheatsheets" },
-  { path: "/food-safety", icon: Shield, label: "Food Safety" },
-  { path: "/training", icon: GraduationCap, label: "Training" },
+  { path: "/menu-engineering", icon: Menu, label: "Menu Engineering", module: "menu-engineering" },
+  { path: "/roster", icon: Users, label: "Roster", module: "roster" },
+  { path: "/calendar", icon: Calendar, label: "Calendar", module: "calendar" },
+  { path: "/equipment", icon: Wrench, label: "Equipment", module: "equipment" },
+  { path: "/cheatsheets", icon: BookOpen, label: "Cheatsheets", module: "cheatsheets" },
+  { path: "/food-safety", icon: Shield, label: "Food Safety", module: "food-safety" },
+  { path: "/training", icon: GraduationCap, label: "Training", module: "training" },
+  { path: "/team", icon: Users, label: "Team", module: "team" },
 ];
 
 const Sidebar = ({ className }: SidebarProps) => {
   const location = useLocation();
+  const { profile, role, canView, signOut, isHeadChef } = useAuth();
 
-  const NavLink = ({ path, icon: Icon, label }: { path: string; icon: typeof LayoutDashboard; label: string }) => {
+  const NavLink = ({ path, icon: Icon, label, module }: { path: string; icon: typeof LayoutDashboard; label: string; module: string }) => {
     const isActive = location.pathname === path || 
       (path !== "/" && location.pathname.startsWith(path));
+    
+    // Check if user can view this module
+    if (!canView(module)) return null;
     
     return (
       <Link
@@ -80,6 +90,27 @@ const Sidebar = ({ className }: SidebarProps) => {
         </div>
       </div>
 
+      {/* User Profile */}
+      {profile && (
+        <div className="p-4 border-b border-sidebar-border">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-10 w-10">
+              <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                {profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">
+                {profile.full_name}
+              </p>
+              <Badge variant={isHeadChef ? "default" : "secondary"} className="text-xs">
+                {isHeadChef ? "Head Chef" : "Line Chef"}
+              </Badge>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         <div className="mb-6">
@@ -101,8 +132,8 @@ const Sidebar = ({ className }: SidebarProps) => {
         </div>
       </nav>
 
-      {/* Settings */}
-      <div className="p-4 border-t border-sidebar-border">
+      {/* Settings & Logout */}
+      <div className="p-4 border-t border-sidebar-border space-y-1">
         <Link
           to="/settings"
           className="nav-item"
@@ -110,6 +141,14 @@ const Sidebar = ({ className }: SidebarProps) => {
           <Settings className="w-5 h-5" />
           <span>Settings</span>
         </Link>
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 px-4 py-2 h-auto text-muted-foreground hover:text-foreground"
+          onClick={signOut}
+        >
+          <LogOut className="w-5 h-5" />
+          <span>Sign Out</span>
+        </Button>
       </div>
     </aside>
   );
