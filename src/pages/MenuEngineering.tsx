@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { 
   Menu as MenuIcon,
   TrendingUp,
-  TrendingDown,
   Star,
   AlertTriangle,
   Puzzle,
@@ -13,14 +12,27 @@ import {
   Archive,
   Plus,
   MoreVertical,
-  CheckCircle2,
   Camera,
   Upload,
-  FileText
+  FileText,
+  Edit2
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useMenuStore } from "@/stores/menuStore";
+import { MenuItem } from "@/types/menu";
 import { cn } from "@/lib/utils";
+import MenuMatrixChart from "@/components/menu/MenuMatrixChart";
+import MenuItemEditDialog from "@/components/menu/MenuItemEditDialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 const profitabilityConfig = {
   'star': { icon: Star, label: 'Star', color: 'text-warning', bg: 'bg-warning/10', desc: 'High popularity, high margin' },
@@ -31,20 +43,77 @@ const profitabilityConfig = {
 
 const MenuEngineering = () => {
   const [showArchived, setShowArchived] = useState(false);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isNewMenuDialogOpen, setIsNewMenuDialogOpen] = useState(false);
+  const [newMenuName, setNewMenuName] = useState("");
   
   const { 
     menus, 
     getActiveMenu, 
     getArchivedMenus, 
     getMenuAnalytics,
-    posConnections 
+    posConnections,
+    updateMenuItem,
+    createMenu,
+    activateMenu,
+    deleteMenuItem,
+    addMenuItem,
   } = useMenuStore();
   
   const activeMenu = getActiveMenu();
   const archivedMenus = getArchivedMenus();
   const analytics = activeMenu ? getMenuAnalytics(activeMenu.id) : null;
-
   const connectedPOS = posConnections.find(p => p.isConnected);
+
+  const handleItemClick = (item: MenuItem) => {
+    setEditingItem(item);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleItemSave = (item: MenuItem) => {
+    if (activeMenu) {
+      updateMenuItem(activeMenu.id, item);
+    }
+  };
+
+  const handleItemDelete = (itemId: string) => {
+    if (activeMenu && deleteMenuItem) {
+      deleteMenuItem(activeMenu.id, itemId);
+    }
+  };
+
+  const handleCreateMenu = () => {
+    if (newMenuName.trim()) {
+      const newMenu = createMenu(newMenuName.trim());
+      activateMenu(newMenu.id);
+      setNewMenuName("");
+      setIsNewMenuDialogOpen(false);
+    }
+  };
+
+  const handleAddItem = () => {
+    if (!activeMenu || !addMenuItem) return;
+    
+    const newItem: MenuItem = {
+      id: `item-${Date.now()}`,
+      name: "New Item",
+      category: "Mains",
+      sellPrice: 0,
+      foodCost: 0,
+      foodCostPercent: 0,
+      contributionMargin: 0,
+      popularity: 0,
+      profitability: "puzzle",
+      isActive: true,
+      menuId: activeMenu.id,
+      allergens: [],
+    };
+    
+    addMenuItem(activeMenu.id, newItem);
+    setEditingItem(newItem);
+    setIsEditDialogOpen(true);
+  };
 
   return (
     <AppLayout>
@@ -67,7 +136,10 @@ const MenuEngineering = () => {
               <Archive className="w-4 h-4" />
               <span className="hidden sm:inline">Archived ({archivedMenus.length})</span>
             </button>
-            <button className="btn-primary">
+            <button 
+              className="btn-primary"
+              onClick={() => setIsNewMenuDialogOpen(true)}
+            >
               <Plus className="w-4 h-4 mr-2" />
               New Menu
             </button>
@@ -138,8 +210,30 @@ const MenuEngineering = () => {
           </div>
         </motion.div>
 
-        {/* Active Menu Overview */}
-        {activeMenu && analytics && (
+        {/* No Active Menu State */}
+        {!activeMenu && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="card-elevated p-12 text-center"
+          >
+            <div className="w-16 h-16 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
+              <MenuIcon className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">No Active Menu</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              Create a new menu to start tracking costs and analyzing profitability of your dishes.
+            </p>
+            <Button onClick={() => setIsNewMenuDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create Your First Menu
+            </Button>
+          </motion.div>
+        )}
+
+        {/* Active Menu Content */}
+        {activeMenu && (
           <>
             {/* Menu Header */}
             <motion.div
@@ -161,7 +255,7 @@ const MenuEngineering = () => {
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      v{activeMenu.version} • {activeMenu.totalItems} items • Since {activeMenu.effectiveFrom.toLocaleDateString()}
+                      v{activeMenu.version} • {activeMenu.items.length} items • Since {activeMenu.effectiveFrom.toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -177,21 +271,25 @@ const MenuEngineering = () => {
                     <Percent className="w-4 h-4" />
                     <span className="text-xs">Avg Food Cost</span>
                   </div>
-                  <p className="text-2xl font-bold">{activeMenu.avgFoodCostPercent.toFixed(1)}%</p>
+                  <p className="text-2xl font-bold">
+                    {activeMenu.items.length > 0 
+                      ? (activeMenu.items.reduce((sum, i) => sum + i.foodCostPercent, 0) / activeMenu.items.length).toFixed(1)
+                      : "0.0"}%
+                  </p>
                 </div>
                 <div className="p-4 rounded-xl bg-muted/50">
                   <div className="flex items-center gap-2 text-muted-foreground mb-1">
                     <DollarSign className="w-4 h-4" />
                     <span className="text-xs">Total Revenue</span>
                   </div>
-                  <p className="text-2xl font-bold">${analytics.totalRevenue.toLocaleString()}</p>
+                  <p className="text-2xl font-bold">${analytics?.totalRevenue.toLocaleString() || 0}</p>
                 </div>
                 <div className="p-4 rounded-xl bg-muted/50">
                   <div className="flex items-center gap-2 text-muted-foreground mb-1">
                     <TrendingUp className="w-4 h-4" />
                     <span className="text-xs">Gross Profit</span>
                   </div>
-                  <p className="text-2xl font-bold text-success">${analytics.grossProfit.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-success">${analytics?.grossProfit.toLocaleString() || 0}</p>
                 </div>
                 <div className="p-4 rounded-xl bg-muted/50">
                   <div className="flex items-center gap-2 text-muted-foreground mb-1">
@@ -203,7 +301,7 @@ const MenuEngineering = () => {
               </div>
             </motion.div>
 
-            {/* Profitability Matrix */}
+            {/* Menu Matrix Chart */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -213,49 +311,14 @@ const MenuEngineering = () => {
               <div className="p-5 border-b border-border">
                 <h2 className="section-header mb-0">Menu Matrix</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Items classified by popularity and contribution margin
+                  Click on any item to edit. Bubble size = % of total sales.
                 </p>
               </div>
-
-              {/* Matrix Grid */}
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border">
-                {(['star', 'plow-horse', 'puzzle', 'dog'] as const).map(type => {
-                  const config = profitabilityConfig[type];
-                  const items = activeMenu.items.filter(i => i.profitability === type);
-                  const Icon = config.icon;
-
-                  return (
-                    <div key={type} className="bg-card p-4">
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className={cn("p-1.5 rounded-lg", config.bg)}>
-                          <Icon className={cn("w-4 h-4", config.color)} />
-                        </div>
-                        <div>
-                          <p className="font-semibold">{config.label}</p>
-                          <p className="text-xs text-muted-foreground">{config.desc}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        {items.slice(0, 3).map(item => (
-                          <div key={item.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-muted/50">
-                            <span className="truncate">{item.name}</span>
-                            <span className="text-muted-foreground">{item.foodCostPercent.toFixed(1)}%</span>
-                          </div>
-                        ))}
-                        {items.length > 3 && (
-                          <p className="text-xs text-muted-foreground text-center">
-                            +{items.length - 3} more
-                          </p>
-                        )}
-                        {items.length === 0 && (
-                          <p className="text-xs text-muted-foreground text-center py-2">
-                            No items
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="p-4">
+                <MenuMatrixChart 
+                  items={activeMenu.items} 
+                  onItemClick={handleItemClick}
+                />
               </div>
             </motion.div>
 
@@ -270,67 +333,85 @@ const MenuEngineering = () => {
                 <div>
                   <h2 className="section-header mb-0">All Menu Items</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Click to edit pricing and allergens
+                    Click any row to edit pricing and details
                   </p>
                 </div>
+                <Button size="sm" onClick={handleAddItem}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Item
+                </Button>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-muted/50">
-                    <tr className="text-left text-xs text-muted-foreground uppercase tracking-wider">
-                      <th className="px-4 py-3 font-medium">Item</th>
-                      <th className="px-4 py-3 font-medium">Category</th>
-                      <th className="px-4 py-3 font-medium text-right">Sell Price</th>
-                      <th className="px-4 py-3 font-medium text-right">Food Cost</th>
-                      <th className="px-4 py-3 font-medium text-right">Cost %</th>
-                      <th className="px-4 py-3 font-medium text-right">Margin</th>
-                      <th className="px-4 py-3 font-medium text-right">Sales</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {activeMenu.items.map((item, idx) => {
-                      const config = profitabilityConfig[item.profitability];
-                      const Icon = config.icon;
+              {activeMenu.items.length === 0 ? (
+                <div className="p-12 text-center text-muted-foreground">
+                  <p>No menu items yet. Add your first item to get started.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-muted/50">
+                      <tr className="text-left text-xs text-muted-foreground uppercase tracking-wider">
+                        <th className="px-4 py-3 font-medium">Item</th>
+                        <th className="px-4 py-3 font-medium">Category</th>
+                        <th className="px-4 py-3 font-medium text-right">Sell Price</th>
+                        <th className="px-4 py-3 font-medium text-right">Food Cost</th>
+                        <th className="px-4 py-3 font-medium text-right">Cost %</th>
+                        <th className="px-4 py-3 font-medium text-right">Margin</th>
+                        <th className="px-4 py-3 font-medium text-right">Sales</th>
+                        <th className="px-4 py-3 font-medium">Status</th>
+                        <th className="px-4 py-3 font-medium"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {activeMenu.items.map((item) => {
+                        const config = profitabilityConfig[item.profitability];
+                        const Icon = config.icon;
 
-                      return (
-                        <tr key={item.id} className="hover:bg-muted/30 transition-colors cursor-pointer">
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <div className={cn("p-1.5 rounded-lg", config.bg)}>
-                                <Icon className={cn("w-4 h-4", config.color)} />
+                        return (
+                          <tr 
+                            key={item.id} 
+                            className="hover:bg-muted/30 transition-colors cursor-pointer"
+                            onClick={() => handleItemClick(item)}
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className={cn("p-1.5 rounded-lg", config.bg)}>
+                                  <Icon className={cn("w-4 h-4", config.color)} />
+                                </div>
+                                <span className="font-medium">{item.name}</span>
                               </div>
-                              <span className="font-medium">{item.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">{item.category}</td>
-                          <td className="px-4 py-3 text-right font-semibold">${item.sellPrice.toFixed(2)}</td>
-                          <td className="px-4 py-3 text-right">${item.foodCost.toFixed(2)}</td>
-                          <td className={cn(
-                            "px-4 py-3 text-right font-medium",
-                            item.foodCostPercent > 30 ? "text-destructive" : "text-success"
-                          )}>
-                            {item.foodCostPercent.toFixed(1)}%
-                          </td>
-                          <td className="px-4 py-3 text-right text-success font-medium">
-                            ${item.contributionMargin.toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-right">{item.popularity}</td>
-                          <td className="px-4 py-3">
-                            <span className={cn(
-                              "px-2 py-0.5 rounded-full text-xs font-medium",
-                              config.bg, config.color
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">{item.category}</td>
+                            <td className="px-4 py-3 text-right font-semibold">${item.sellPrice.toFixed(2)}</td>
+                            <td className="px-4 py-3 text-right">${item.foodCost.toFixed(2)}</td>
+                            <td className={cn(
+                              "px-4 py-3 text-right font-medium",
+                              item.foodCostPercent > 30 ? "text-destructive" : "text-success"
                             )}>
-                              {config.label}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                              {item.foodCostPercent.toFixed(1)}%
+                            </td>
+                            <td className="px-4 py-3 text-right text-success font-medium">
+                              ${item.contributionMargin.toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-right">{item.popularity}</td>
+                            <td className="px-4 py-3">
+                              <span className={cn(
+                                "px-2 py-0.5 rounded-full text-xs font-medium",
+                                config.bg, config.color
+                              )}>
+                                {config.label}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Edit2 className="w-4 h-4 text-muted-foreground" />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </motion.div>
           </>
         )}
@@ -359,7 +440,7 @@ const MenuEngineering = () => {
                       <p className="font-medium">{menu.name}</p>
                       <p className="text-sm text-muted-foreground">
                         {menu.effectiveFrom.toLocaleDateString()} - {menu.effectiveTo?.toLocaleDateString()}
-                        {' • '}{menu.totalItems} items • {menu.avgFoodCostPercent.toFixed(1)}% avg cost
+                        {' • '}{menu.items.length} items
                       </p>
                     </div>
                   </div>
@@ -372,6 +453,42 @@ const MenuEngineering = () => {
           </motion.div>
         )}
       </div>
+
+      {/* Edit Item Dialog */}
+      <MenuItemEditDialog
+        item={editingItem}
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSave={handleItemSave}
+        onDelete={handleItemDelete}
+      />
+
+      {/* New Menu Dialog */}
+      <Dialog open={isNewMenuDialogOpen} onOpenChange={setIsNewMenuDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Menu</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="menuName">Menu Name</Label>
+            <Input
+              id="menuName"
+              value={newMenuName}
+              onChange={(e) => setNewMenuName(e.target.value)}
+              placeholder="e.g., Spring Menu 2026"
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsNewMenuDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateMenu} disabled={!newMenuName.trim()}>
+              Create Menu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };
