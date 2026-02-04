@@ -27,12 +27,12 @@ const mainNavItems = [
   { path: "/inventory", icon: Package, label: "Inventory" },
   { path: "/prep", icon: ClipboardList, label: "Prep Lists" },
   { path: "/production", icon: Factory, label: "Production" },
-  { path: "/menu-engineering", icon: Menu, label: "Menu Engineering" },
+  { path: "/allergens", icon: AlertTriangle, label: "Allergens" },
 ];
 
 const secondaryNavItems = [
+  { path: "/menu-engineering", icon: Menu, label: "Menu Engineering" },
   { path: "/roster", icon: Users, label: "Roster" },
-  { path: "/allergens", icon: AlertTriangle, label: "Allergens" },
   { path: "/food-safety", icon: Shield, label: "Food Safety" },
   { path: "/training", icon: GraduationCap, label: "Training" },
   { path: "/invoices", icon: Receipt, label: "Invoices" },
