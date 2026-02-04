@@ -13,7 +13,10 @@ import {
   Archive,
   Plus,
   MoreVertical,
-  CheckCircle2
+  CheckCircle2,
+  Camera,
+  Upload,
+  FileText
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useMenuStore } from "@/stores/menuStore";
@@ -68,6 +71,38 @@ const MenuEngineering = () => {
               <Plus className="w-4 h-4 mr-2" />
               New Menu
             </button>
+          </div>
+        </motion.div>
+
+        {/* Scan/Upload Menu Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="card-elevated p-6"
+        >
+          <div className="border-2 border-dashed border-border rounded-xl p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
+            <div className="flex flex-col items-center gap-4">
+              <div className="p-4 rounded-full bg-primary/10">
+                <FileText className="w-8 h-8 text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Scan or Upload Menu</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Upload a PDF or image of your menu to auto-populate items, categories, and pricing
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button className="btn-primary">
+                  <Camera className="w-4 h-4 mr-2" />
+                  Scan Menu
+                </button>
+                <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-input bg-background hover:bg-muted transition-colors">
+                  <Upload className="w-4 h-4" />
+                  Upload PDF
+                </button>
+              </div>
+            </div>
           </div>
         </motion.div>
 
