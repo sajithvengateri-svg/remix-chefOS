@@ -9,6 +9,7 @@ import RecipeDetail from "./pages/RecipeDetail";
 import Ingredients from "./pages/Ingredients";
 import Inventory from "./pages/Inventory";
 import PrepLists from "./pages/PrepLists";
+import Production from "./pages/Production";
 import FoodSafety from "./pages/FoodSafety";
 import Training from "./pages/Training";
 import Invoices from "./pages/Invoices";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/inventory/*" element={<Inventory />} />
           <Route path="/prep" element={<PrepLists />} />
           <Route path="/prep/*" element={<PrepLists />} />
+          <Route path="/production" element={<Production />} />
           <Route path="/food-safety" element={<FoodSafety />} />
           <Route path="/training" element={<Training />} />
           <Route path="/invoices" element={<Invoices />} />
