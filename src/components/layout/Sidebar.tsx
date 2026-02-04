@@ -13,7 +13,9 @@ import {
   Menu,
   Users,
   AlertTriangle,
-  BookOpen
+  BookOpen,
+  Calendar,
+  Wrench
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +37,8 @@ const mainNavItems = [
 const secondaryNavItems = [
   { path: "/menu-engineering", icon: Menu, label: "Menu Engineering" },
   { path: "/roster", icon: Users, label: "Roster" },
+  { path: "/calendar", icon: Calendar, label: "Calendar" },
+  { path: "/equipment", icon: Wrench, label: "Equipment" },
   { path: "/cheatsheets", icon: BookOpen, label: "Cheatsheets" },
   { path: "/food-safety", icon: Shield, label: "Food Safety" },
   { path: "/training", icon: GraduationCap, label: "Training" },

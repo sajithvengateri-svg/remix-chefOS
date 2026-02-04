@@ -17,6 +17,8 @@ import FoodSafety from "./pages/FoodSafety";
 import Training from "./pages/Training";
 import Invoices from "./pages/Invoices";
 import CookingCheatsheets from "./pages/CookingCheatsheets";
+import OperationsCalendar from "./pages/OperationsCalendar";
+import Equipment from "./pages/Equipment";
 import More from "./pages/More";
 import NotFound from "./pages/NotFound";
 
@@ -46,6 +48,8 @@ const App = () => (
           <Route path="/invoices" element={<Invoices />} />
           <Route path="/invoices/*" element={<Invoices />} />
           <Route path="/cheatsheets" element={<CookingCheatsheets />} />
+          <Route path="/calendar" element={<OperationsCalendar />} />
+          <Route path="/equipment" element={<Equipment />} />
           <Route path="/more" element={<More />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
