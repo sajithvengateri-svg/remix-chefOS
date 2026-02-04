@@ -9,11 +9,16 @@ import {
   Link2,
   User,
   ChefHat,
-  Utensils
+  Utensils,
+  Plus,
+  Edit3,
+  AlertTriangle
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useRosterStore } from "@/stores/rosterStore";
+import { ShiftEditDialog } from "@/components/roster/ShiftEditDialog";
 import { cn } from "@/lib/utils";
+import { Shift } from "@/types/menu";
 
 const roleConfig = {
   'head-chef': { label: 'Head Chef', color: 'bg-primary/10 text-primary' },
@@ -27,6 +32,9 @@ const roleConfig = {
 
 const Roster = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
+  const [isNewShift, setIsNewShift] = useState(false);
   
   const { 
     getDailyRoster, 
@@ -35,7 +43,11 @@ const Roster = () => {
     linePrepLists,
     getPendingLinePrepLists,
     approveLinePrepList,
-    rejectLinePrepList
+    rejectLinePrepList,
+    staff,
+    addShift,
+    updateShift,
+    deleteShift,
   } = useRosterStore();
   
   const dailyRoster = getDailyRoster(selectedDate);
@@ -44,6 +56,40 @@ const Roster = () => {
   const connectedRoster = rosterConnections.find(r => r.isConnected);
 
   const isToday = selectedDate.toDateString() === new Date().toDateString();
+
+  const handleEditShift = (shift: Shift) => {
+    setSelectedShift(shift);
+    setIsNewShift(false);
+    setEditDialogOpen(true);
+  };
+
+  const handleAddShift = () => {
+    setSelectedShift(null);
+    setIsNewShift(true);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveShift = (shiftData: Partial<Shift> & { id?: string }) => {
+    if (shiftData.id) {
+      updateShift(shiftData.id, shiftData);
+    } else {
+      addShift({
+        staffId: shiftData.staffId!,
+        staffName: shiftData.staffName!,
+        role: shiftData.role!,
+        date: selectedDate,
+        startTime: shiftData.startTime!,
+        endTime: shiftData.endTime!,
+        station: shiftData.station,
+        status: shiftData.status || 'scheduled',
+        isOverride: true,
+      });
+    }
+  };
+
+  const handleDeleteShift = (shiftId: string) => {
+    deleteShift(shiftId);
+  };
 
   return (
     <AppLayout>
@@ -151,6 +197,13 @@ const Roster = () => {
             </div>
             <div className="flex gap-2">
               <button
+                onClick={handleAddShift}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-warning/10 text-warning hover:bg-warning/20 transition-colors text-sm font-medium"
+              >
+                <Plus className="w-4 h-4" />
+                Override
+              </button>
+              <button
                 onClick={() => setSelectedDate(new Date(selectedDate.getTime() - 24 * 60 * 60 * 1000))}
                 className="px-3 py-1.5 rounded-lg bg-muted hover:bg-secondary transition-colors text-sm"
               >
@@ -195,13 +248,31 @@ const Roster = () => {
               </div>
             ) : (
               dailyRoster.shifts.map(shift => (
-                <div key={shift.id} className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors">
+                <div 
+                  key={shift.id} 
+                  onClick={() => handleEditShift(shift)}
+                  className={cn(
+                    "p-4 flex items-center justify-between hover:bg-muted/30 transition-colors cursor-pointer",
+                    shift.isOverride && "bg-warning/5 border-l-2 border-l-warning"
+                  )}
+                >
                   <div className="flex items-center gap-4">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <User className="w-5 h-5 text-muted-foreground" />
+                    <div className={cn("p-2 rounded-lg", shift.isOverride ? "bg-warning/10" : "bg-muted")}>
+                      {shift.isOverride ? (
+                        <AlertTriangle className="w-5 h-5 text-warning" />
+                      ) : (
+                        <User className="w-5 h-5 text-muted-foreground" />
+                      )}
                     </div>
                     <div>
-                      <p className="font-medium">{shift.staffName}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{shift.staffName}</p>
+                        {shift.isOverride && (
+                          <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning/10 text-warning font-semibold">
+                            Override
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <span className={cn("px-2 py-0.5 rounded-full text-xs", roleConfig[shift.role].color)}>
                           {roleConfig[shift.role].label}
@@ -227,10 +298,12 @@ const Roster = () => {
                       shift.status === 'in-progress' ? 'bg-success/10 text-success' :
                       shift.status === 'completed' ? 'bg-muted text-muted-foreground' :
                       shift.status === 'scheduled' ? 'bg-primary/10 text-primary' :
+                      shift.status === 'cancelled' ? 'bg-destructive/10 text-destructive' :
                       'bg-destructive/10 text-destructive'
                     )}>
                       {shift.status.replace('-', ' ')}
                     </span>
+                    <Edit3 className="w-4 h-4 text-muted-foreground" />
                   </div>
                 </div>
               ))
@@ -309,6 +382,16 @@ const Roster = () => {
             </div>
           </motion.div>
         )}
+        <ShiftEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          shift={selectedShift}
+          staffList={staff}
+          onSave={handleSaveShift}
+          onDelete={handleDeleteShift}
+          isNew={isNewShift}
+          selectedDate={selectedDate}
+        />
       </div>
     </AppLayout>
   );

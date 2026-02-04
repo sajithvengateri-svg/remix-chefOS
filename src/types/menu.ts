@@ -81,10 +81,12 @@ export interface RosterConnection {
   lastSync?: Date;
 }
 
+export type StaffRole = 'head-chef' | 'sous-chef' | 'line-cook' | 'prep-cook' | 'dishwasher' | 'server' | 'manager';
+
 export interface StaffMember {
   id: string;
   name: string;
-  role: 'head-chef' | 'sous-chef' | 'line-cook' | 'prep-cook' | 'dishwasher' | 'server' | 'manager';
+  role: StaffRole;
   avatar?: string;
   phone?: string;
   email?: string;
@@ -94,13 +96,14 @@ export interface Shift {
   id: string;
   staffId: string;
   staffName: string;
-  role: StaffMember['role'];
+  role: StaffRole;
   date: Date;
   startTime: string;
   endTime: string;
   station?: string;
   notes?: string;
-  status: 'scheduled' | 'confirmed' | 'in-progress' | 'completed' | 'no-show';
+  status: 'scheduled' | 'confirmed' | 'in-progress' | 'completed' | 'no-show' | 'cancelled';
+  isOverride?: boolean;
 }
 
 export interface DailyRoster {
@@ -126,7 +129,7 @@ export interface LinePrepTask {
 export interface LinePrepList {
   id: string;
   createdBy: string;
-  createdByRole: StaffMember['role'];
+  createdByRole: StaffRole;
   forDate: Date;
   shift: 'AM' | 'PM';
   station?: string;
