@@ -313,9 +313,11 @@ export type Database = {
           created_at: string
           current_stock: number | null
           id: string
+          last_price_update: string | null
           name: string
           notes: string | null
           par_level: number | null
+          previous_cost_per_unit: number | null
           supplier: string | null
           unit: string
           updated_at: string
@@ -327,9 +329,11 @@ export type Database = {
           created_at?: string
           current_stock?: number | null
           id?: string
+          last_price_update?: string | null
           name: string
           notes?: string | null
           par_level?: number | null
+          previous_cost_per_unit?: number | null
           supplier?: string | null
           unit?: string
           updated_at?: string
@@ -341,9 +345,11 @@ export type Database = {
           created_at?: string
           current_stock?: number | null
           id?: string
+          last_price_update?: string | null
           name?: string
           notes?: string | null
           par_level?: number | null
+          previous_cost_per_unit?: number | null
           supplier?: string | null
           unit?: string
           updated_at?: string
@@ -514,6 +520,54 @@ export type Database = {
         }
         Relationships: []
       }
+      recipe_ingredients: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_id: string
+          notes: string | null
+          quantity: number
+          recipe_id: string
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          notes?: string | null
+          quantity?: number
+          recipe_id: string
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          notes?: string | null
+          quantity?: number
+          recipe_id?: string
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ingredients_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredients_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipes: {
         Row: {
           allergens: string[] | null
@@ -523,14 +577,21 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          food_cost_high_alert: number | null
+          food_cost_low_alert: number | null
+          gst_percent: number | null
           id: string
           image_url: string | null
           ingredients: Json | null
           instructions: Json | null
           name: string
           prep_time: number | null
+          sell_price: number | null
           servings: number | null
+          target_food_cost_percent: number | null
+          total_yield: number | null
           updated_at: string
+          yield_unit: string | null
         }
         Insert: {
           allergens?: string[] | null
@@ -540,14 +601,21 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          food_cost_high_alert?: number | null
+          food_cost_low_alert?: number | null
+          gst_percent?: number | null
           id?: string
           image_url?: string | null
           ingredients?: Json | null
           instructions?: Json | null
           name: string
           prep_time?: number | null
+          sell_price?: number | null
           servings?: number | null
+          target_food_cost_percent?: number | null
+          total_yield?: number | null
           updated_at?: string
+          yield_unit?: string | null
         }
         Update: {
           allergens?: string[] | null
@@ -557,14 +625,21 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          food_cost_high_alert?: number | null
+          food_cost_low_alert?: number | null
+          gst_percent?: number | null
           id?: string
           image_url?: string | null
           ingredients?: Json | null
           instructions?: Json | null
           name?: string
           prep_time?: number | null
+          sell_price?: number | null
           servings?: number | null
+          target_food_cost_percent?: number | null
+          total_yield?: number | null
           updated_at?: string
+          yield_unit?: string | null
         }
         Relationships: []
       }

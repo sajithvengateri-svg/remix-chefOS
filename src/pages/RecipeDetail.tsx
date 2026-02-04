@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   ArrowLeft,
@@ -13,20 +13,150 @@ import {
   AlertTriangle,
   CheckCircle2,
   Edit,
-  Package
+  Package,
+  Loader2
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import FoodCostCalculator from "@/components/costing/FoodCostCalculator";
-import { useCostingStore } from "@/stores/costingStore";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+
+interface Ingredient {
+  id: string;
+  name: string;
+  unit: string;
+  cost_per_unit: number;
+  previous_cost_per_unit: number | null;
+}
+
+interface RecipeIngredient {
+  id: string;
+  ingredient_id: string;
+  quantity: number;
+  unit: string;
+  ingredient?: Ingredient;
+  line_cost?: number;
+}
+
+interface Recipe {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  prep_time: number;
+  cook_time: number;
+  servings: number;
+  cost_per_serving: number;
+  sell_price: number;
+  target_food_cost_percent: number;
+  total_yield: number;
+  yield_unit: string;
+  food_cost_low_alert: number;
+  food_cost_high_alert: number;
+}
 
 const RecipeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { canEdit } = useAuth();
   const [showCalculator, setShowCalculator] = useState(false);
-  
-  const { getRecipeWithCosts } = useCostingStore();
-  const recipe = getRecipeWithCosts(id || "");
+  const [loading, setLoading] = useState(true);
+  const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>([]);
+
+  const hasEditPermission = canEdit("recipes");
+
+  useEffect(() => {
+    if (id) {
+      fetchRecipe();
+    }
+  }, [id]);
+
+  const fetchRecipe = async () => {
+    setLoading(true);
+    
+    // Fetch recipe
+    const { data: recipeData, error: recipeError } = await supabase
+      .from("recipes")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (recipeError || !recipeData) {
+      setLoading(false);
+      return;
+    }
+
+    setRecipe({
+      ...recipeData,
+      sell_price: Number(recipeData.sell_price) || 0,
+      target_food_cost_percent: Number(recipeData.target_food_cost_percent) || 30,
+      total_yield: Number(recipeData.total_yield) || recipeData.servings || 1,
+      yield_unit: recipeData.yield_unit || "portions",
+      food_cost_low_alert: Number(recipeData.food_cost_low_alert) || 20,
+      food_cost_high_alert: Number(recipeData.food_cost_high_alert) || 35,
+    } as Recipe);
+
+    // Fetch recipe ingredients
+    const { data: riData } = await supabase
+      .from("recipe_ingredients")
+      .select("*")
+      .eq("recipe_id", id);
+
+    // Fetch all ingredients
+    const { data: ingData } = await supabase
+      .from("ingredients")
+      .select("id, name, unit, cost_per_unit, previous_cost_per_unit");
+
+    // Enrich with ingredient details
+    const enriched = (riData || []).map(ri => {
+      const ing = (ingData || []).find(i => i.id === ri.ingredient_id) as Ingredient | undefined;
+      return {
+        ...ri,
+        ingredient: ing,
+        line_cost: ing ? Number(ing.cost_per_unit) * Number(ri.quantity) : 0,
+      };
+    });
+
+    setRecipeIngredients(enriched);
+    setLoading(false);
+  };
+
+  // Calculate costs
+  const calculations = useMemo(() => {
+    if (!recipe) return null;
+
+    const totalCost = recipeIngredients.reduce((sum, ri) => sum + (ri.line_cost || 0), 0);
+    const portions = recipe.total_yield || recipe.servings || 1;
+    const costPerServing = totalCost / portions;
+    const actualFoodCostPercent = recipe.sell_price > 0 
+      ? (costPerServing / recipe.sell_price) * 100 
+      : 0;
+    const maxAllowedCost = recipe.sell_price * (recipe.target_food_cost_percent / 100);
+    const margin = recipe.sell_price - costPerServing;
+    const isOverBudget = actualFoodCostPercent > recipe.target_food_cost_percent;
+
+    return {
+      totalCost,
+      costPerServing,
+      actualFoodCostPercent,
+      maxAllowedCost,
+      margin,
+      isOverBudget,
+    };
+  }, [recipe, recipeIngredients]);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (!recipe) {
     return (
@@ -38,7 +168,7 @@ const RecipeDetail = () => {
     );
   }
 
-  const costPercentColor = recipe.isOverBudget ? "text-destructive" : "text-success";
+  const costPercentColor = calculations?.isOverBudget ? "text-destructive" : "text-success";
 
   return (
     <AppLayout>
@@ -69,10 +199,14 @@ const RecipeDetail = () => {
                   <Calculator className="w-4 h-4" />
                   <span className="hidden sm:inline">Cost Calculator</span>
                 </button>
-                <button className="btn-primary">
-                  <Edit className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Edit</span>
-                </button>
+                {hasEditPermission && (
+                  <Link to={`/recipes/${recipe.id}/edit`}>
+                    <Button>
+                      <Edit className="w-4 h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Edit Recipe</span>
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -88,108 +222,108 @@ const RecipeDetail = () => {
           <div className="stat-card">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <Clock className="w-4 h-4" />
-              <span className="text-xs">Prep Time</span>
+              <span className="text-xs">Total Time</span>
             </div>
-            <p className="stat-value text-xl">{recipe.prepTime}</p>
+            <p className="stat-value text-xl">{recipe.prep_time + recipe.cook_time} min</p>
           </div>
           <div className="stat-card">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <Users className="w-4 h-4" />
-              <span className="text-xs">Servings</span>
+              <span className="text-xs">Yield</span>
             </div>
-            <p className="stat-value text-xl">{recipe.servings}</p>
+            <p className="stat-value text-xl">{recipe.total_yield} {recipe.yield_unit}</p>
           </div>
           <div className="stat-card">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <DollarSign className="w-4 h-4" />
               <span className="text-xs">Sell Price</span>
             </div>
-            <p className="stat-value text-xl">${recipe.sellPrice.toFixed(2)}</p>
+            <p className="stat-value text-xl">${recipe.sell_price.toFixed(2)}</p>
           </div>
           <div className="stat-card">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <Percent className="w-4 h-4" />
               <span className="text-xs">Target Cost %</span>
             </div>
-            <p className="stat-value text-xl">{recipe.targetFoodCostPercent}%</p>
+            <p className="stat-value text-xl">{recipe.target_food_cost_percent}%</p>
           </div>
         </motion.div>
 
         {/* Cost Analysis Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className={cn(
-            "card-elevated p-5 border-l-4",
-            recipe.isOverBudget ? "border-l-destructive" : "border-l-success"
-          )}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="section-header mb-0">Cost Analysis</h2>
-            {recipe.isOverBudget ? (
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertTriangle className="w-5 h-5" />
-                <span className="font-medium">Over Budget</span>
+        {calculations && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className={cn(
+              "card-elevated p-5 border-l-4",
+              calculations.isOverBudget ? "border-l-destructive" : "border-l-success"
+            )}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="section-header mb-0">Cost Analysis</h2>
+              {calculations.isOverBudget ? (
+                <div className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="w-5 h-5" />
+                  <span className="font-medium">Over Budget</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-success">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="font-medium">On Target</span>
+                </div>
+              )}
+            </div>
+
+            <div className="grid sm:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-muted/50">
+                <p className="text-xs text-muted-foreground mb-1">Total Cost</p>
+                <p className="text-2xl font-bold">${calculations.totalCost.toFixed(2)}</p>
               </div>
-            ) : (
-              <div className="flex items-center gap-2 text-success">
-                <CheckCircle2 className="w-5 h-5" />
-                <span className="font-medium">On Target</span>
+              <div className="p-4 rounded-xl bg-muted/50">
+                <p className="text-xs text-muted-foreground mb-1">Cost/{recipe.yield_unit}</p>
+                <p className="text-2xl font-bold">${calculations.costPerServing.toFixed(2)}</p>
+              </div>
+              <div className={cn("p-4 rounded-xl", calculations.isOverBudget ? "bg-destructive/10" : "bg-success/10")}>
+                <p className="text-xs text-muted-foreground mb-1">Actual Food Cost %</p>
+                <p className={cn("text-2xl font-bold", costPercentColor)}>
+                  {calculations.actualFoodCostPercent.toFixed(1)}%
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-muted/50">
+                <p className="text-xs text-muted-foreground mb-1">Max Allowed Cost</p>
+                <p className="text-2xl font-bold text-primary">${calculations.maxAllowedCost.toFixed(2)}</p>
+              </div>
+            </div>
+
+            {calculations.isOverBudget && (
+              <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <p className="text-sm">
+                  <span className="font-medium text-destructive">
+                    ${(calculations.costPerServing - calculations.maxAllowedCost).toFixed(2)} over budget
+                  </span>
+                  <span className="text-muted-foreground"> — reduce ingredients or increase sell price to </span>
+                  <span className="font-medium text-foreground">
+                    ${(calculations.costPerServing / (recipe.target_food_cost_percent / 100)).toFixed(2)}
+                  </span>
+                </p>
               </div>
             )}
-          </div>
 
-          <div className="grid sm:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-muted/50">
-              <p className="text-xs text-muted-foreground mb-1">Total Cost</p>
-              <p className="text-2xl font-bold">${recipe.totalCost?.toFixed(2)}</p>
+            <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Gross Margin</p>
+                <p className="text-xl font-bold text-success">${calculations.margin.toFixed(2)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Margin %</p>
+                <p className="text-xl font-bold text-success">
+                  {(100 - calculations.actualFoodCostPercent).toFixed(1)}%
+                </p>
+              </div>
             </div>
-            <div className="p-4 rounded-xl bg-muted/50">
-              <p className="text-xs text-muted-foreground mb-1">Cost/Serving</p>
-              <p className="text-2xl font-bold">${recipe.costPerServing?.toFixed(2)}</p>
-            </div>
-            <div className={cn("p-4 rounded-xl", recipe.isOverBudget ? "bg-destructive/10" : "bg-success/10")}>
-              <p className="text-xs text-muted-foreground mb-1">Actual Food Cost %</p>
-              <p className={cn("text-2xl font-bold", costPercentColor)}>
-                {recipe.actualFoodCostPercent?.toFixed(1)}%
-              </p>
-            </div>
-            <div className="p-4 rounded-xl bg-muted/50">
-              <p className="text-xs text-muted-foreground mb-1">Max Allowed Cost</p>
-              <p className="text-2xl font-bold text-primary">${recipe.maxAllowedCost?.toFixed(2)}</p>
-            </div>
-          </div>
-
-          {/* Variance indicator */}
-          {recipe.isOverBudget && recipe.maxAllowedCost && recipe.costPerServing && (
-            <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-              <p className="text-sm">
-                <span className="font-medium text-destructive">
-                  ${(recipe.costPerServing - recipe.maxAllowedCost).toFixed(2)} over budget
-                </span>
-                <span className="text-muted-foreground"> — reduce ingredients or increase sell price to </span>
-                <span className="font-medium text-foreground">
-                  ${((recipe.costPerServing || 0) / (recipe.targetFoodCostPercent / 100)).toFixed(2)}
-                </span>
-              </p>
-            </div>
-          )}
-
-          {/* Margin info */}
-          <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Gross Margin</p>
-              <p className="text-xl font-bold text-success">${recipe.margin?.toFixed(2)}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Margin %</p>
-              <p className="text-xl font-bold text-success">
-                {(100 - (recipe.actualFoodCostPercent || 0)).toFixed(1)}%
-              </p>
-            </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        )}
 
         {/* Ingredient Breakdown */}
         <motion.div
@@ -198,84 +332,109 @@ const RecipeDetail = () => {
           transition={{ delay: 0.3 }}
           className="card-elevated overflow-hidden"
         >
-          <div className="p-5 border-b border-border">
-            <h2 className="section-header mb-0">Ingredient Cost Breakdown</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Costs update automatically when ingredient prices change
-            </p>
+          <div className="p-5 border-b border-border flex items-center justify-between">
+            <div>
+              <h2 className="section-header mb-0">Ingredient Cost Breakdown</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Costs update automatically when ingredient prices change
+              </p>
+            </div>
+            {hasEditPermission && (
+              <Link to={`/recipes/${recipe.id}/edit`}>
+                <Button variant="outline" size="sm">
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Ingredients
+                </Button>
+              </Link>
+            )}
           </div>
 
-          <div className="divide-y divide-border">
-            {recipe.ingredients.map((ri, index) => {
-              const percentOfTotal = recipe.totalCost 
-                ? ((ri.cost || 0) / recipe.totalCost) * 100 
-                : 0;
-              const priceChanged = ri.ingredient && ri.ingredient.currentPrice !== ri.ingredient.previousPrice;
-              const priceIncreased = ri.ingredient && ri.ingredient.currentPrice > ri.ingredient.previousPrice;
+          {recipeIngredients.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No ingredients added yet</p>
+              {hasEditPermission && (
+                <Link to={`/recipes/${recipe.id}/edit`}>
+                  <Button variant="outline" className="mt-4">
+                    Add Ingredients
+                  </Button>
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {recipeIngredients.map((ri) => {
+                const percentOfTotal = calculations && calculations.totalCost > 0
+                  ? ((ri.line_cost || 0) / calculations.totalCost) * 100 
+                  : 0;
+                const priceChanged = ri.ingredient?.previous_cost_per_unit && 
+                  Number(ri.ingredient.previous_cost_per_unit) !== Number(ri.ingredient.cost_per_unit);
+                const priceIncreased = priceChanged && 
+                  Number(ri.ingredient?.cost_per_unit) > Number(ri.ingredient?.previous_cost_per_unit);
 
-              return (
-                <div key={ri.ingredientId} className="p-4 hover:bg-muted/30 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 rounded-lg bg-muted flex-shrink-0">
-                      <Package className="w-4 h-4 text-muted-foreground" />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-foreground">
-                          {ri.ingredient?.name || "Unknown"}
-                        </p>
-                        {priceChanged && (
-                          <div className={cn(
-                            "flex items-center gap-1 text-xs px-1.5 py-0.5 rounded",
-                            priceIncreased 
-                              ? "bg-destructive/10 text-destructive" 
-                              : "bg-success/10 text-success"
-                          )}>
-                            {priceIncreased ? (
-                              <TrendingUp className="w-3 h-3" />
-                            ) : (
-                              <TrendingDown className="w-3 h-3" />
-                            )}
-                            <span>Price updated</span>
-                          </div>
-                        )}
+                return (
+                  <div key={ri.id} className="p-4 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 rounded-lg bg-muted flex-shrink-0">
+                        <Package className="w-4 h-4 text-muted-foreground" />
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {ri.quantity} {ri.unit} × ${ri.ingredient?.currentPrice.toFixed(2)}/{ri.ingredient?.unit}
-                      </p>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-foreground">
+                            {ri.ingredient?.name || "Unknown"}
+                          </p>
+                          {priceChanged && (
+                            <div className={cn(
+                              "flex items-center gap-1 text-xs px-1.5 py-0.5 rounded",
+                              priceIncreased 
+                                ? "bg-destructive/10 text-destructive" 
+                                : "bg-success/10 text-success"
+                            )}>
+                              {priceIncreased ? (
+                                <TrendingUp className="w-3 h-3" />
+                              ) : (
+                                <TrendingDown className="w-3 h-3" />
+                              )}
+                              <span>Price updated</span>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {Number(ri.quantity).toFixed(2)} {ri.unit} × ${Number(ri.ingredient?.cost_per_unit || 0).toFixed(2)}/{ri.ingredient?.unit}
+                        </p>
+                      </div>
+
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-semibold">${(ri.line_cost || 0).toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {percentOfTotal.toFixed(1)}% of total
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-semibold">${(ri.cost || 0).toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {percentOfTotal.toFixed(1)}% of total
-                      </p>
+                    <div className="mt-2 ml-12">
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary rounded-full transition-all duration-500"
+                          style={{ width: `${percentOfTotal}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
-
-                  {/* Cost bar visualization */}
-                  <div className="mt-2 ml-12">
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-primary rounded-full transition-all duration-500"
-                        style={{ width: `${percentOfTotal}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </motion.div>
 
         {/* Food Cost Calculator Modal */}
         <FoodCostCalculator
           isOpen={showCalculator}
           onClose={() => setShowCalculator(false)}
-          initialSellPrice={recipe.sellPrice}
-          initialTargetPercent={recipe.targetFoodCostPercent}
-          initialCost={recipe.costPerServing || 0}
+          initialSellPrice={recipe.sell_price}
+          initialTargetPercent={recipe.target_food_cost_percent}
+          initialCost={calculations?.costPerServing || 0}
         />
       </div>
     </AppLayout>
