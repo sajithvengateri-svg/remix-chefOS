@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { 
   ChefHat, 
@@ -15,14 +16,148 @@ import StatCard from "@/components/dashboard/StatCard";
 import PrepListWidget from "@/components/dashboard/PrepListWidget";
 import QuickActions from "@/components/dashboard/QuickActions";
 import RecentActivity from "@/components/dashboard/RecentActivity";
+import { supabase } from "@/integrations/supabase/client";
+
+interface DashboardStats {
+  prepTasksTotal: number;
+  prepTasksCompleted: number;
+  activeRecipes: number;
+  newRecipesThisWeek: number;
+  lowStockItems: number;
+  avgFoodCostPercent: number;
+  targetFoodCost: number;
+}
 
 const Dashboard = () => {
+  const [stats, setStats] = useState<DashboardStats>({
+    prepTasksTotal: 0,
+    prepTasksCompleted: 0,
+    activeRecipes: 0,
+    newRecipesThisWeek: 0,
+    lowStockItems: 0,
+    avgFoodCostPercent: 0,
+    targetFoodCost: 30,
+  });
+  const [loading, setLoading] = useState(true);
+
   const currentDate = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
     year: 'numeric', 
     month: 'long', 
     day: 'numeric' 
   });
+
+  const fetchDashboardStats = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      // Fetch all stats in parallel
+      const [prepListsRes, recipesRes, newRecipesRes, ingredientsRes] = await Promise.all([
+        // Today's prep lists
+        supabase
+          .from('prep_lists')
+          .select('items, status')
+          .eq('date', today),
+        // All recipes
+        supabase
+          .from('recipes')
+          .select('id, cost_per_serving, sell_price, target_food_cost_percent'),
+        // New recipes this week
+        supabase
+          .from('recipes')
+          .select('id')
+          .gte('created_at', weekAgo),
+        // Ingredients with low stock
+        supabase
+          .from('ingredients')
+          .select('id, current_stock, par_level'),
+      ]);
+
+      // Calculate prep tasks
+      let prepTasksTotal = 0;
+      let prepTasksCompleted = 0;
+      
+      interface PrepItem {
+        status?: string;
+      }
+      
+      (prepListsRes.data || []).forEach((list) => {
+        const items = (Array.isArray(list.items) ? list.items : []) as PrepItem[];
+        prepTasksTotal += items.length;
+        prepTasksCompleted += items.filter((item) => item.status === 'completed').length;
+      });
+
+      // Calculate low stock items
+      const lowStockItems = (ingredientsRes.data || []).filter(
+        (ing) => ing.current_stock !== null && 
+                 ing.par_level !== null && 
+                 Number(ing.current_stock) < Number(ing.par_level)
+      ).length;
+
+      // Calculate average food cost percentage
+      const recipesWithCost = (recipesRes.data || []).filter(
+        (r) => r.sell_price && r.sell_price > 0 && r.cost_per_serving
+      );
+      
+      let avgFoodCostPercent = 0;
+      if (recipesWithCost.length > 0) {
+        const totalFoodCost = recipesWithCost.reduce((sum, r) => {
+          const costPercent = ((r.cost_per_serving || 0) / (r.sell_price || 1)) * 100;
+          return sum + costPercent;
+        }, 0);
+        avgFoodCostPercent = totalFoodCost / recipesWithCost.length;
+      }
+
+      // Get average target food cost
+      const recipesWithTarget = (recipesRes.data || []).filter(r => r.target_food_cost_percent);
+      const avgTargetFoodCost = recipesWithTarget.length > 0
+        ? recipesWithTarget.reduce((sum, r) => sum + (r.target_food_cost_percent || 30), 0) / recipesWithTarget.length
+        : 30;
+
+      setStats({
+        prepTasksTotal,
+        prepTasksCompleted,
+        activeRecipes: recipesRes.data?.length || 0,
+        newRecipesThisWeek: newRecipesRes.data?.length || 0,
+        lowStockItems,
+        avgFoodCostPercent: Math.round(avgFoodCostPercent * 10) / 10,
+        targetFoodCost: Math.round(avgTargetFoodCost),
+      });
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardStats();
+
+    // Subscribe to realtime updates for relevant tables
+    const channel = supabase
+      .channel('dashboard-stats')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'prep_lists' }, fetchDashboardStats)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'recipes' }, fetchDashboardStats)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ingredients' }, fetchDashboardStats)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const getFoodCostTrend = () => {
+    if (stats.avgFoodCostPercent === 0) return "";
+    if (stats.avgFoodCostPercent <= stats.targetFoodCost) return "On track";
+    return "Above target";
+  };
+
+  const getFoodCostColor = (): "primary" | "accent" | "warning" | "success" => {
+    if (stats.avgFoodCostPercent === 0) return "primary";
+    if (stats.avgFoodCostPercent <= stats.targetFoodCost) return "success";
+    return "warning";
+  };
 
   return (
     <AppLayout>
@@ -55,33 +190,33 @@ const Dashboard = () => {
           <StatCard
             icon={ClipboardCheck}
             label="Prep Tasks"
-            value="12"
-            subValue="4 completed"
-            trend="+2 from yesterday"
+            value={loading ? "..." : String(stats.prepTasksTotal)}
+            subValue={`${stats.prepTasksCompleted} completed`}
+            trend={stats.prepTasksTotal > 0 ? `${stats.prepTasksTotal - stats.prepTasksCompleted} pending` : ""}
             color="primary"
           />
           <StatCard
             icon={ChefHat}
             label="Active Recipes"
-            value="48"
-            subValue="3 new this week"
+            value={loading ? "..." : String(stats.activeRecipes)}
+            subValue={stats.newRecipesThisWeek > 0 ? `${stats.newRecipesThisWeek} new this week` : "No new recipes"}
             color="accent"
           />
           <StatCard
             icon={Package}
             label="Low Stock Items"
-            value="7"
-            subValue="Need attention"
-            trend="urgent"
+            value={loading ? "..." : String(stats.lowStockItems)}
+            subValue={stats.lowStockItems > 0 ? "Need attention" : "Stock OK"}
+            trend={stats.lowStockItems > 0 ? "urgent" : ""}
             color="warning"
           />
           <StatCard
             icon={TrendingUp}
             label="Food Cost"
-            value="28.5%"
-            subValue="Target: 30%"
-            trend="On track"
-            color="success"
+            value={loading ? "..." : `${stats.avgFoodCostPercent}%`}
+            subValue={`Target: ${stats.targetFoodCost}%`}
+            trend={getFoodCostTrend()}
+            color={getFoodCostColor()}
           />
         </motion.div>
 
@@ -130,22 +265,35 @@ const Dashboard = () => {
             </Link>
           </div>
           <div className="space-y-3">
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-warning/10 border border-warning/20">
-              <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">Temperature Log Due</p>
-                <p className="text-xs text-muted-foreground">Walk-in cooler check overdue by 2 hours</p>
+            {stats.lowStockItems > 0 && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-warning/10 border border-warning/20">
+                <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">Low Stock Alert</p>
+                  <p className="text-xs text-muted-foreground">{stats.lowStockItems} items below par level</p>
+                </div>
+                <Link to="/ingredients" className="btn-primary text-sm py-1.5 px-3">Review</Link>
               </div>
-              <button className="btn-primary text-sm py-1.5 px-3">Log Now</button>
-            </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
-              <Clock className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-foreground">Prep List Review</p>
-                <p className="text-xs text-muted-foreground">Tomorrow's prep list ready for review</p>
+            )}
+            {stats.prepTasksTotal > 0 && stats.prepTasksCompleted < stats.prepTasksTotal && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
+                <Clock className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">Prep Tasks Pending</p>
+                  <p className="text-xs text-muted-foreground">{stats.prepTasksTotal - stats.prepTasksCompleted} tasks remaining today</p>
+                </div>
+                <Link to="/prep" className="text-sm text-primary hover:underline">View</Link>
               </div>
-              <Link to="/prep" className="text-sm text-primary hover:underline">Review</Link>
-            </div>
+            )}
+            {stats.lowStockItems === 0 && stats.prepTasksTotal === 0 && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
+                <CheckCircle2 className="w-5 h-5 text-success flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">No Alerts</p>
+                  <p className="text-xs text-muted-foreground">Everything is running smoothly</p>
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
