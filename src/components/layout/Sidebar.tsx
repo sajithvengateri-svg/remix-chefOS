@@ -8,7 +8,8 @@ import {
   GraduationCap,
   Receipt,
   Settings,
-  Utensils
+  Utensils,
+  Factory
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ const mainNavItems = [
   { path: "/ingredients", icon: Utensils, label: "Ingredients" },
   { path: "/inventory", icon: Package, label: "Inventory" },
   { path: "/prep", icon: ClipboardList, label: "Prep Lists" },
+  { path: "/production", icon: Factory, label: "Production" },
 ];
 
 const secondaryNavItems = [
