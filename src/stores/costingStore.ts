@@ -1,95 +1,9 @@
 import { create } from 'zustand';
 import { Ingredient, Recipe, PriceUpdateEvent, RecipeCostImpact } from '@/types/costing';
 
-// Mock ingredient data
-const initialIngredients: Ingredient[] = [
-  { id: "ing-1", name: "All-Purpose Flour", category: "Dry Goods", unit: "lb", currentPrice: 0.45, previousPrice: 0.42, supplier: "Sysco", lastUpdated: new Date() },
-  { id: "ing-2", name: "Butter (Unsalted)", category: "Dairy", unit: "lb", currentPrice: 4.50, previousPrice: 4.25, supplier: "US Foods", lastUpdated: new Date() },
-  { id: "ing-3", name: "Heavy Cream", category: "Dairy", unit: "qt", currentPrice: 3.25, previousPrice: 3.25, supplier: "Local Dairy", lastUpdated: new Date() },
-  { id: "ing-4", name: "Fresh Salmon", category: "Proteins", unit: "lb", currentPrice: 12.99, previousPrice: 14.50, supplier: "Fish Market", lastUpdated: new Date() },
-  { id: "ing-5", name: "Olive Oil (EVOO)", category: "Oils", unit: "L", currentPrice: 15.00, previousPrice: 14.00, supplier: "Sysco", lastUpdated: new Date() },
-  { id: "ing-6", name: "Shallots", category: "Produce", unit: "lb", currentPrice: 3.00, previousPrice: 2.75, supplier: "Local Farm", lastUpdated: new Date() },
-  { id: "ing-7", name: "Duck Breast", category: "Proteins", unit: "lb", currentPrice: 18.50, previousPrice: 17.00, supplier: "D'Artagnan", lastUpdated: new Date() },
-  { id: "ing-8", name: "White Wine", category: "Beverages", unit: "btl", currentPrice: 8.00, previousPrice: 8.00, supplier: "Wine Depot", lastUpdated: new Date() },
-  { id: "ing-9", name: "Eggs", category: "Dairy", unit: "dz", currentPrice: 4.20, previousPrice: 3.80, supplier: "Local Farm", lastUpdated: new Date() },
-  { id: "ing-10", name: "Sugar", category: "Dry Goods", unit: "lb", currentPrice: 0.65, previousPrice: 0.60, supplier: "Sysco", lastUpdated: new Date() },
-  { id: "ing-11", name: "Vanilla Extract", category: "Dry Goods", unit: "oz", currentPrice: 2.50, previousPrice: 2.50, supplier: "Sysco", lastUpdated: new Date() },
-  { id: "ing-12", name: "Arborio Rice", category: "Dry Goods", unit: "lb", currentPrice: 3.50, previousPrice: 3.25, supplier: "Sysco", lastUpdated: new Date() },
-  { id: "ing-13", name: "Parmesan Cheese", category: "Dairy", unit: "lb", currentPrice: 12.00, previousPrice: 11.50, supplier: "US Foods", lastUpdated: new Date() },
-  { id: "ing-14", name: "Mixed Mushrooms", category: "Produce", unit: "lb", currentPrice: 8.00, previousPrice: 7.50, supplier: "Local Farm", lastUpdated: new Date() },
-  { id: "ing-15", name: "Chicken Stock", category: "Prepared", unit: "qt", currentPrice: 2.00, previousPrice: 2.00, supplier: "Sysco", lastUpdated: new Date() },
-];
-
-// Mock recipe data with ingredients
-const initialRecipes: Recipe[] = [
-  {
-    id: "rec-1",
-    name: "Pan-Seared Duck Breast",
-    category: "Mains",
-    description: "Perfectly seared duck breast with crispy skin",
-    servings: 1,
-    prepTime: "45 min",
-    sellPrice: 32,
-    targetFoodCostPercent: 28,
-    ingredients: [
-      { ingredientId: "ing-7", quantity: 0.5, unit: "lb" },
-      { ingredientId: "ing-6", quantity: 0.1, unit: "lb" },
-      { ingredientId: "ing-2", quantity: 0.05, unit: "lb" },
-      { ingredientId: "ing-8", quantity: 0.1, unit: "btl" },
-    ]
-  },
-  {
-    id: "rec-2",
-    name: "Crème Brûlée",
-    category: "Desserts",
-    description: "Classic French vanilla custard with caramelized sugar",
-    servings: 1,
-    prepTime: "30 min",
-    sellPrice: 12,
-    targetFoodCostPercent: 22,
-    ingredients: [
-      { ingredientId: "ing-3", quantity: 0.25, unit: "qt" },
-      { ingredientId: "ing-9", quantity: 0.25, unit: "dz" },
-      { ingredientId: "ing-10", quantity: 0.1, unit: "lb" },
-      { ingredientId: "ing-11", quantity: 0.5, unit: "oz" },
-    ]
-  },
-  {
-    id: "rec-3",
-    name: "Mushroom Risotto",
-    category: "Mains",
-    description: "Creamy arborio rice with mixed wild mushrooms",
-    servings: 2,
-    prepTime: "45 min",
-    sellPrice: 24,
-    targetFoodCostPercent: 25,
-    ingredients: [
-      { ingredientId: "ing-12", quantity: 0.5, unit: "lb" },
-      { ingredientId: "ing-14", quantity: 0.5, unit: "lb" },
-      { ingredientId: "ing-13", quantity: 0.25, unit: "lb" },
-      { ingredientId: "ing-2", quantity: 0.15, unit: "lb" },
-      { ingredientId: "ing-8", quantity: 0.2, unit: "btl" },
-      { ingredientId: "ing-15", quantity: 1, unit: "qt" },
-      { ingredientId: "ing-6", quantity: 0.1, unit: "lb" },
-    ]
-  },
-  {
-    id: "rec-4",
-    name: "Pan-Seared Salmon",
-    category: "Mains",
-    description: "Fresh Atlantic salmon with herb butter",
-    servings: 1,
-    prepTime: "25 min",
-    sellPrice: 28,
-    targetFoodCostPercent: 30,
-    ingredients: [
-      { ingredientId: "ing-4", quantity: 0.5, unit: "lb" },
-      { ingredientId: "ing-2", quantity: 0.1, unit: "lb" },
-      { ingredientId: "ing-5", quantity: 0.05, unit: "L" },
-      { ingredientId: "ing-6", quantity: 0.05, unit: "lb" },
-    ]
-  },
-];
+// Empty initial state - no mock data
+const initialIngredients: Ingredient[] = [];
+const initialRecipes: Recipe[] = [];
 
 interface CostingStore {
   ingredients: Ingredient[];
