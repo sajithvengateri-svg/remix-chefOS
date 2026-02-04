@@ -17,6 +17,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import IngredientCombobox from "./IngredientCombobox";
+import NewIngredientDialog from "./NewIngredientDialog";
+import { IngredientMatch } from "@/lib/ingredientMatcher";
 
 interface Ingredient {
   id: string;
@@ -79,6 +82,11 @@ const RecipeBuilder = ({
     unit: "g",
     notes: "",
   });
+
+  // New ingredient dialog state
+  const [showNewIngredientDialog, setShowNewIngredientDialog] = useState(false);
+  const [pendingIngredientName, setPendingIngredientName] = useState("");
+  const [pendingSimilarMatches, setPendingSimilarMatches] = useState<IngredientMatch[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -181,6 +189,66 @@ const RecipeBuilder = ({
       setNewIngredient({ ingredient_id: "", quantity: 0, unit: "g", notes: "" });
       fetchData();
     }
+    setSaving(false);
+  };
+
+  // Handle opening new ingredient dialog
+  const handleCreateNewIngredient = (searchTerm: string, matches: IngredientMatch[]) => {
+    setPendingIngredientName(searchTerm);
+    setPendingSimilarMatches(matches);
+    setShowNewIngredientDialog(true);
+  };
+
+  // Handle selecting existing ingredient from dialog
+  const handleSelectExistingFromDialog = (ingredientId: string) => {
+    const ing = ingredients.find(i => i.id === ingredientId);
+    setNewIngredient({
+      ...newIngredient,
+      ingredient_id: ingredientId,
+      unit: ing?.unit || "g",
+    });
+    setShowNewIngredientDialog(false);
+  };
+
+  // Handle creating new ingredient from dialog
+  const handleCreateNewFromDialog = async (newIng: {
+    name: string;
+    unit: string;
+    category: string;
+    cost_per_unit: number;
+  }) => {
+    setSaving(true);
+    
+    const { data, error } = await supabase
+      .from("ingredients")
+      .insert({
+        name: newIng.name,
+        unit: newIng.unit,
+        category: newIng.category,
+        cost_per_unit: newIng.cost_per_unit,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error("Failed to create ingredient");
+      setSaving(false);
+      return;
+    }
+
+    toast.success(`Added "${newIng.name}" to ingredients database`);
+    
+    // Update local ingredients list
+    setIngredients(prev => [...prev, data as Ingredient]);
+    
+    // Select the new ingredient
+    setNewIngredient({
+      ...newIngredient,
+      ingredient_id: data.id,
+      unit: data.unit,
+    });
+    
+    setShowNewIngredientDialog(false);
     setSaving(false);
   };
 
@@ -401,30 +469,21 @@ const RecipeBuilder = ({
               {hasEditPermission && (
                 <tr className="bg-muted/20">
                   <td className="px-4 py-3">
-                    <Select
+                    <IngredientCombobox
+                      ingredients={ingredients}
                       value={newIngredient.ingredient_id}
-                      onValueChange={(v) => {
-                        const ing = ingredients.find(i => i.id === v);
+                      onChange={(id) => {
+                        const ing = ingredients.find(i => i.id === id);
                         setNewIngredient({ 
                           ...newIngredient, 
-                          ingredient_id: v,
+                          ingredient_id: id,
                           unit: ing?.unit || "g"
                         });
                       }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select ingredient..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ingredients
-                          .filter(i => !recipeIngredients.some(ri => ri.ingredient_id === i.id))
-                          .map(ing => (
-                            <SelectItem key={ing.id} value={ing.id}>
-                              {ing.name} (${Number(ing.cost_per_unit).toFixed(2)}/{ing.unit})
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                      onCreateNew={handleCreateNewIngredient}
+                      excludeIds={recipeIngredients.map(ri => ri.ingredient_id)}
+                      placeholder="Search or add ingredient..."
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <Input
@@ -482,6 +541,16 @@ const RecipeBuilder = ({
           </table>
         </div>
       </motion.div>
+
+      {/* New Ingredient Dialog */}
+      <NewIngredientDialog
+        open={showNewIngredientDialog}
+        onOpenChange={setShowNewIngredientDialog}
+        ingredientName={pendingIngredientName}
+        similarMatches={pendingSimilarMatches}
+        onSelectExisting={handleSelectExistingFromDialog}
+        onCreateNew={handleCreateNewFromDialog}
+      />
     </div>
   );
 };
