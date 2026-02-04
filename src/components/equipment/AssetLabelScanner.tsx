@@ -123,19 +123,21 @@ export function AssetLabelScanner({ open, onOpenChange, onDataExtracted }: Asset
         <div className="space-y-4">
           {/* Image Upload Area */}
           {!imagePreview ? (
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
-            >
+            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
               <Camera className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
               <p className="font-medium">Upload Asset Label Photo</p>
               <p className="text-sm text-muted-foreground mt-1">
                 Take a clear photo of the equipment label
               </p>
-              <Button variant="outline" className="mt-4">
-                <Upload className="w-4 h-4 mr-2" />
-                Choose Image
-              </Button>
+              <div className="flex gap-2 justify-center mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Choose Image
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
