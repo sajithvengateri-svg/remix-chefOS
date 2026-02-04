@@ -23,95 +23,65 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-// Mock data for wireframe
-const mockSuppliers = [
+// Empty placeholder data - wireframe only
+const placeholderSuppliers = [
   { 
     id: "1", 
-    name: "Fresh Farms Co", 
+    name: "Lorem Ipsum Produce", 
     category: "Produce", 
-    rating: 4.8, 
-    location: "Melbourne CBD",
-    deliveryDays: ["Mon", "Wed", "Fri"],
-    specialsCount: 3,
-    verified: true
+    rating: 0, 
+    location: "—",
+    deliveryDays: ["—"],
+    specialsCount: 0,
+    verified: false
   },
   { 
     id: "2", 
-    name: "Ocean Harvest", 
+    name: "Dolor Sit Seafood", 
     category: "Seafood", 
-    rating: 4.6, 
-    location: "Port Melbourne",
-    deliveryDays: ["Tue", "Thu", "Sat"],
-    specialsCount: 1,
-    verified: true
+    rating: 0, 
+    location: "—",
+    deliveryDays: ["—"],
+    specialsCount: 0,
+    verified: false
   },
   { 
     id: "3", 
-    name: "Butcher's Best", 
+    name: "Amet Consectetur Meats", 
     category: "Meat", 
-    rating: 4.9, 
-    location: "Footscray",
-    deliveryDays: ["Daily"],
+    rating: 0, 
+    location: "—",
+    deliveryDays: ["—"],
     specialsCount: 0,
-    verified: true
+    verified: false
   },
   { 
     id: "4", 
-    name: "Artisan Dairy", 
+    name: "Adipiscing Dairy Co", 
     category: "Dairy", 
-    rating: 4.5, 
-    location: "Brunswick",
-    deliveryDays: ["Mon", "Wed", "Fri"],
-    specialsCount: 2,
+    rating: 0, 
+    location: "—",
+    deliveryDays: ["—"],
+    specialsCount: 0,
     verified: false
   },
 ];
 
-const mockSpecials = [
-  {
-    id: "1",
-    supplier: "Fresh Farms Co",
-    item: "Heirloom Tomatoes",
-    originalPrice: 12.50,
-    specialPrice: 8.99,
-    unit: "kg",
-    expiresIn: "2 days",
-    category: "Produce"
-  },
-  {
-    id: "2",
-    supplier: "Ocean Harvest",
-    item: "Wild Caught Salmon",
-    originalPrice: 45.00,
-    specialPrice: 35.00,
-    unit: "kg",
-    expiresIn: "1 day",
-    category: "Seafood"
-  },
-  {
-    id: "3",
-    supplier: "Fresh Farms Co",
-    item: "Baby Spinach",
-    originalPrice: 18.00,
-    specialPrice: 14.50,
-    unit: "kg",
-    expiresIn: "3 days",
-    category: "Produce"
-  },
-];
+const placeholderSpecials: {
+  id: string;
+  supplier: string;
+  item: string;
+  originalPrice: number;
+  specialPrice: number;
+  unit: string;
+  expiresIn: string;
+  category: string;
+}[] = [];
 
-const mockPriceComparison = [
-  { ingredient: "Olive Oil (Extra Virgin)", suppliers: [
-    { name: "Fresh Farms Co", price: 28.50, unit: "L" },
-    { name: "Wholesale Foods", price: 32.00, unit: "L" },
-    { name: "Mediterranean Imports", price: 26.00, unit: "L" },
-  ]},
-  { ingredient: "Free Range Eggs", suppliers: [
-    { name: "Fresh Farms Co", price: 8.50, unit: "doz" },
-    { name: "Artisan Dairy", price: 9.20, unit: "doz" },
-    { name: "Happy Hens", price: 7.80, unit: "doz" },
-  ]},
-];
+const placeholderPriceComparison: {
+  ingredient: string;
+  suppliers: { name: string; price: number; unit: string }[];
+}[] = [];
 
 const Marketplace = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -183,61 +153,56 @@ const Marketplace = () => {
 
           {/* Suppliers Tab */}
           <TabsContent value="suppliers" className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              {mockSuppliers.map((supplier) => (
-                <motion.div
-                  key={supplier.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ scale: 1.02 }}
-                  className="card-elevated p-4 cursor-pointer"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                        <Store className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">{supplier.name}</h3>
-                          {supplier.verified && (
-                            <Badge variant="secondary" className="text-xs">Verified</Badge>
-                          )}
+            {placeholderSuppliers.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {placeholderSuppliers.map((supplier) => (
+                  <motion.div
+                    key={supplier.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ scale: 1.02 }}
+                    className="card-elevated p-4 cursor-pointer opacity-60"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
+                          <Store className="w-6 h-6 text-muted-foreground" />
                         </div>
-                        <p className="text-sm text-muted-foreground">{supplier.category}</p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-muted-foreground">{supplier.name}</h3>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{supplier.category}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Star className="w-4 h-4" />
+                        <span className="text-sm">—</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 text-amber-500">
-                      <Star className="w-4 h-4 fill-current" />
-                      <span className="text-sm font-medium">{supplier.rating}</span>
+                    
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {supplier.location}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {supplier.deliveryDays.join(", ")}
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {supplier.location}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {supplier.deliveryDays.join(", ")}
-                    </div>
-                  </div>
-
-                  {supplier.specialsCount > 0 && (
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <Badge variant="default" className="gap-1 bg-success/10 text-success hover:bg-success/20">
-                        <Zap className="w-3 h-3" />
-                        {supplier.specialsCount} active specials
-                      </Badge>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <Store className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                <p>No suppliers connected yet</p>
+              </div>
+            )}
 
             <div className="text-center py-8 text-muted-foreground">
-              <p className="text-sm">More suppliers coming soon...</p>
+              <p className="text-sm">Supplier connections coming soon...</p>
               <p className="text-xs mt-1">Vendor app launching Q2 2025</p>
             </div>
           </TabsContent>
@@ -256,46 +221,54 @@ const Marketplace = () => {
               </CardHeader>
             </Card>
 
-            <div className="grid gap-4">
-              {mockSpecials.map((special) => (
-                <motion.div
-                  key={special.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="card-elevated p-4 flex items-center gap-4"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
-                    <DollarSign className="w-6 h-6 text-success" />
-                  </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">{special.item}</h3>
-                      <Badge variant="outline" className="text-xs">{special.category}</Badge>
+            {placeholderSpecials.length > 0 ? (
+              <div className="grid gap-4">
+                {placeholderSpecials.map((special) => (
+                  <motion.div
+                    key={special.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="card-elevated p-4 flex items-center gap-4"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
+                      <DollarSign className="w-6 h-6 text-success" />
                     </div>
-                    <p className="text-sm text-muted-foreground">{special.supplier}</p>
-                  </div>
-
-                  <div className="text-right">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground line-through">
-                        ${special.originalPrice.toFixed(2)}
-                      </span>
-                      <span className="text-lg font-bold text-success">
-                        ${special.specialPrice.toFixed(2)}
-                      </span>
-                      <span className="text-sm text-muted-foreground">/{special.unit}</span>
+                    
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{special.item}</h3>
+                        <Badge variant="outline" className="text-xs">{special.category}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{special.supplier}</p>
                     </div>
-                    <p className="text-xs text-warning">Expires in {special.expiresIn}</p>
-                  </div>
 
-                  <Button variant="outline" size="sm">
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Contact
-                  </Button>
-                </motion.div>
-              ))}
-            </div>
+                    <div className="text-right">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground line-through">
+                          ${special.originalPrice.toFixed(2)}
+                        </span>
+                        <span className="text-lg font-bold text-success">
+                          ${special.specialPrice.toFixed(2)}
+                        </span>
+                        <span className="text-sm text-muted-foreground">/{special.unit}</span>
+                      </div>
+                      <p className="text-xs text-warning">Expires in {special.expiresIn}</p>
+                    </div>
+
+                    <Button variant="outline" size="sm">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Contact
+                    </Button>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <Zap className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                <p>No active specials</p>
+                <p className="text-sm mt-1">Deals will appear here when suppliers post them</p>
+              </div>
+            )}
           </TabsContent>
 
           {/* Compare Tab */}
@@ -312,48 +285,56 @@ const Marketplace = () => {
               </CardHeader>
             </Card>
 
-            <div className="space-y-4">
-              {mockPriceComparison.map((item, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.1 }}
-                  className="card-elevated p-4"
-                >
-                  <h3 className="font-semibold mb-3">{item.ingredient}</h3>
-                  <div className="grid gap-2">
-                    {item.suppliers
-                      .sort((a, b) => a.price - b.price)
-                      .map((supplier, sIdx) => (
-                        <div 
-                          key={sIdx}
-                          className={cn(
-                            "flex items-center justify-between p-2 rounded-lg",
-                            sIdx === 0 && "bg-success/10"
-                          )}
-                        >
-                          <span className={cn(
-                            "text-sm",
-                            sIdx === 0 ? "font-medium" : "text-muted-foreground"
-                          )}>
-                            {supplier.name}
-                            {sIdx === 0 && (
-                              <Badge variant="secondary" className="ml-2 text-xs">Best Price</Badge>
+            {placeholderPriceComparison.length > 0 ? (
+              <div className="space-y-4">
+                {placeholderPriceComparison.map((item, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    className="card-elevated p-4"
+                  >
+                    <h3 className="font-semibold mb-3">{item.ingredient}</h3>
+                    <div className="grid gap-2">
+                      {item.suppliers
+                        .sort((a, b) => a.price - b.price)
+                        .map((supplier, sIdx) => (
+                          <div 
+                            key={sIdx}
+                            className={cn(
+                              "flex items-center justify-between p-2 rounded-lg",
+                              sIdx === 0 && "bg-success/10"
                             )}
-                          </span>
-                          <span className={cn(
-                            "font-mono",
-                            sIdx === 0 ? "font-bold text-success" : "text-muted-foreground"
-                          )}>
-                            ${supplier.price.toFixed(2)}/{supplier.unit}
-                          </span>
-                        </div>
-                      ))}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                          >
+                            <span className={cn(
+                              "text-sm",
+                              sIdx === 0 ? "font-medium" : "text-muted-foreground"
+                            )}>
+                              {supplier.name}
+                              {sIdx === 0 && (
+                                <Badge variant="secondary" className="ml-2 text-xs">Best Price</Badge>
+                              )}
+                            </span>
+                            <span className={cn(
+                              "font-mono",
+                              sIdx === 0 ? "font-bold text-success" : "text-muted-foreground"
+                            )}>
+                              ${supplier.price.toFixed(2)}/{supplier.unit}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                <p>No price data available</p>
+                <p className="text-sm mt-1">Connect suppliers to compare prices</p>
+              </div>
+            )}
           </TabsContent>
 
           {/* Messages Tab */}
