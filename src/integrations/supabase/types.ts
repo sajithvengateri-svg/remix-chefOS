@@ -125,6 +125,39 @@ export type Database = {
         }
         Relationships: []
       }
+      cleaning_areas: {
+        Row: {
+          cleaning_frequency: string | null
+          created_at: string
+          id: string
+          instructions: string | null
+          location: string | null
+          name: string
+          reference_image_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          cleaning_frequency?: string | null
+          created_at?: string
+          id?: string
+          instructions?: string | null
+          location?: string | null
+          name: string
+          reference_image_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cleaning_frequency?: string | null
+          created_at?: string
+          id?: string
+          instructions?: string | null
+          location?: string | null
+          name?: string
+          reference_image_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       direct_messages: {
         Row: {
           created_at: string
@@ -214,6 +247,8 @@ export type Database = {
       }
       food_safety_logs: {
         Row: {
+          ai_verification_notes: string | null
+          ai_verification_status: string | null
           corrective_action: string | null
           created_at: string
           date: string
@@ -224,11 +259,15 @@ export type Database = {
           readings: Json | null
           recorded_by: string | null
           recorded_by_name: string | null
+          reference_image_url: string | null
           status: string | null
           time: string
           updated_at: string
+          verification_image_url: string | null
         }
         Insert: {
+          ai_verification_notes?: string | null
+          ai_verification_status?: string | null
           corrective_action?: string | null
           created_at?: string
           date?: string
@@ -239,11 +278,15 @@ export type Database = {
           readings?: Json | null
           recorded_by?: string | null
           recorded_by_name?: string | null
+          reference_image_url?: string | null
           status?: string | null
           time?: string
           updated_at?: string
+          verification_image_url?: string | null
         }
         Update: {
+          ai_verification_notes?: string | null
+          ai_verification_status?: string | null
           corrective_action?: string | null
           created_at?: string
           date?: string
@@ -254,9 +297,11 @@ export type Database = {
           readings?: Json | null
           recorded_by?: string | null
           recorded_by_name?: string | null
+          reference_image_url?: string | null
           status?: string | null
           time?: string
           updated_at?: string
+          verification_image_url?: string | null
         }
         Relationships: []
       }
