@@ -193,7 +193,7 @@ const PrepListWidget = () => {
             Crea primam tuam indicem praeparationis
           </p>
           <Link to="/prep/new" className="btn-primary text-sm py-2 px-4 mt-4">
-            Creare Indicem
+            Create Prep List
           </Link>
         </div>
       )}
