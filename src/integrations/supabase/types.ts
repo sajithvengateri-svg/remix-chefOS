@@ -409,6 +409,45 @@ export type Database = {
           },
         ]
       }
+      kitchen_sections: {
+        Row: {
+          color: string | null
+          created_at: string
+          current_month_cost: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          monthly_budget: number | null
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          current_month_cost?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          monthly_budget?: number | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          current_month_cost?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          monthly_budget?: number | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       module_permissions: {
         Row: {
           can_edit: boolean
