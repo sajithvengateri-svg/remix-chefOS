@@ -10,6 +10,9 @@ import Ingredients from "./pages/Ingredients";
 import Inventory from "./pages/Inventory";
 import PrepLists from "./pages/PrepLists";
 import Production from "./pages/Production";
+import MenuEngineering from "./pages/MenuEngineering";
+import Roster from "./pages/Roster";
+import AllergenDashboard from "./pages/AllergenDashboard";
 import FoodSafety from "./pages/FoodSafety";
 import Training from "./pages/Training";
 import Invoices from "./pages/Invoices";
@@ -34,6 +37,9 @@ const App = () => (
           <Route path="/prep" element={<PrepLists />} />
           <Route path="/prep/*" element={<PrepLists />} />
           <Route path="/production" element={<Production />} />
+          <Route path="/menu-engineering" element={<MenuEngineering />} />
+          <Route path="/roster" element={<Roster />} />
+          <Route path="/allergens" element={<AllergenDashboard />} />
           <Route path="/food-safety" element={<FoodSafety />} />
           <Route path="/training" element={<Training />} />
           <Route path="/invoices" element={<Invoices />} />
