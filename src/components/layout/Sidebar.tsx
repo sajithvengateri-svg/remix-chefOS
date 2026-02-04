@@ -24,6 +24,7 @@ const mainNavItems = [
   { path: "/", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/recipes", icon: ChefHat, label: "Recipe Bank" },
   { path: "/ingredients", icon: Utensils, label: "Ingredients" },
+  { path: "/invoices", icon: Receipt, label: "Invoices" },
   { path: "/inventory", icon: Package, label: "Inventory" },
   { path: "/prep", icon: ClipboardList, label: "Prep Lists" },
   { path: "/production", icon: Factory, label: "Production" },
@@ -35,7 +36,6 @@ const secondaryNavItems = [
   { path: "/roster", icon: Users, label: "Roster" },
   { path: "/food-safety", icon: Shield, label: "Food Safety" },
   { path: "/training", icon: GraduationCap, label: "Training" },
-  { path: "/invoices", icon: Receipt, label: "Invoices" },
 ];
 
 const Sidebar = ({ className }: SidebarProps) => {
