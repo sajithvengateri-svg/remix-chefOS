@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   Search, 
   Plus, 
@@ -13,10 +13,12 @@ import {
   MoreVertical,
   Edit,
   Trash2,
-  Loader2
+  Loader2,
+  Upload
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import FoodCostCalculator from "@/components/costing/FoodCostCalculator";
+import RecipeImportDialog from "@/components/recipes/RecipeImportDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,10 +50,12 @@ interface Recipe {
 const categories = ["All", "Mains", "Appetizers", "Soups", "Salads", "Desserts", "Sauces"];
 
 const Recipes = () => {
+  const navigate = useNavigate();
   const { user, canEdit } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [showCalculator, setShowCalculator] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -218,10 +222,16 @@ const Recipes = () => {
               <span className="hidden sm:inline">Cost Calculator</span>
             </button>
             {hasEditPermission && (
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                New Recipe
-              </Button>
+              <>
+                <Button variant="outline" onClick={() => setShowImport(true)}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  <span className="hidden sm:inline">Import</span>
+                </Button>
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Recipe
+                </Button>
+              </>
             )}
           </div>
         </motion.div>
@@ -394,6 +404,16 @@ const Recipes = () => {
         <FoodCostCalculator
           isOpen={showCalculator}
           onClose={() => setShowCalculator(false)}
+        />
+
+        {/* Recipe Import Dialog */}
+        <RecipeImportDialog
+          isOpen={showImport}
+          onClose={() => setShowImport(false)}
+          onImport={(recipeId) => {
+            fetchRecipes();
+            navigate(`/recipes/${recipeId}/edit`);
+          }}
         />
 
         {/* Add/Edit Dialog */}
