@@ -376,8 +376,7 @@ const RecipeImportDialog = ({ isOpen, onClose, onImport }: RecipeImportDialogPro
                         Photos, scans, PDFs, or Word documents
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 justify-center">
-                      <span className="text-sm text-muted-foreground">or</span>
+                    <div className="flex flex-col sm:flex-row items-center gap-2 justify-center">
                       <label className="cursor-pointer">
                         <input
                           type="file"
@@ -385,9 +384,27 @@ const RecipeImportDialog = ({ isOpen, onClose, onImport }: RecipeImportDialogPro
                           onChange={handleFileInput}
                           className="hidden"
                         />
-                        <span className="text-sm font-medium text-primary hover:underline">
-                          browse files
-                        </span>
+                        <Button type="button" variant="outline" asChild>
+                          <span>
+                            <FileImage className="w-4 h-4 mr-2" />
+                            Browse Files
+                          </span>
+                        </Button>
+                      </label>
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleFileInput}
+                          className="hidden"
+                        />
+                        <Button type="button" variant="outline" asChild>
+                          <span>
+                            <Camera className="w-4 h-4 mr-2" />
+                            Take Photo
+                          </span>
+                        </Button>
                       </label>
                     </div>
                   </div>
