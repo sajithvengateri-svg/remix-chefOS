@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.extract-recipe]
 verify_jwt = false
+
+[functions.extract-invoice]
+verify_jwt = false

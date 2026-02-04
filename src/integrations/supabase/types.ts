@@ -736,6 +736,193 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_movements: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_id: string | null
+          inventory_id: string | null
+          movement_type: string
+          notes: string | null
+          quantity_after: number | null
+          quantity_before: number | null
+          quantity_change: number
+          recorded_by: string | null
+          recorded_by_name: string | null
+          source: string | null
+          source_reference: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string | null
+          inventory_id?: string | null
+          movement_type: string
+          notes?: string | null
+          quantity_after?: number | null
+          quantity_before?: number | null
+          quantity_change: number
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          source?: string | null
+          source_reference?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string | null
+          inventory_id?: string | null
+          movement_type?: string
+          notes?: string | null
+          quantity_after?: number | null
+          quantity_before?: number | null
+          quantity_change?: number
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          source?: string | null
+          source_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stocktake_items: {
+        Row: {
+          counted_at: string | null
+          counted_by: string | null
+          counted_quantity: number | null
+          created_at: string
+          expected_quantity: number
+          id: string
+          ingredient_id: string | null
+          ingredient_name: string
+          inventory_id: string | null
+          location: string | null
+          notes: string | null
+          stocktake_id: string
+          unit: string
+          variance: number | null
+          variance_value: number | null
+        }
+        Insert: {
+          counted_at?: string | null
+          counted_by?: string | null
+          counted_quantity?: number | null
+          created_at?: string
+          expected_quantity?: number
+          id?: string
+          ingredient_id?: string | null
+          ingredient_name: string
+          inventory_id?: string | null
+          location?: string | null
+          notes?: string | null
+          stocktake_id: string
+          unit?: string
+          variance?: number | null
+          variance_value?: number | null
+        }
+        Update: {
+          counted_at?: string | null
+          counted_by?: string | null
+          counted_quantity?: number | null
+          created_at?: string
+          expected_quantity?: number
+          id?: string
+          ingredient_id?: string | null
+          ingredient_name?: string
+          inventory_id?: string | null
+          location?: string | null
+          notes?: string | null
+          stocktake_id?: string
+          unit?: string
+          variance?: number | null
+          variance_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stocktake_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stocktake_items_inventory_id_fkey"
+            columns: ["inventory_id"]
+            isOneToOne: false
+            referencedRelation: "inventory"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stocktake_items_stocktake_id_fkey"
+            columns: ["stocktake_id"]
+            isOneToOne: false
+            referencedRelation: "stocktakes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stocktakes: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          items_counted: number | null
+          name: string
+          notes: string | null
+          status: string
+          stocktake_date: string
+          stocktake_type: string
+          total_items: number | null
+          total_variance_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items_counted?: number | null
+          name: string
+          notes?: string | null
+          status?: string
+          stocktake_date?: string
+          stocktake_type?: string
+          total_items?: number | null
+          total_variance_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          items_counted?: number | null
+          name?: string
+          notes?: string | null
+          status?: string
+          stocktake_date?: string
+          stocktake_type?: string
+          total_items?: number | null
+          total_variance_value?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       suppliers: {
         Row: {
           account_number: string | null
@@ -941,6 +1128,7 @@ export type Database = {
         Returns: boolean
       }
       is_head_chef: { Args: { _user_id: string }; Returns: boolean }
+      sync_inventory_from_ingredients: { Args: never; Returns: number }
     }
     Enums: {
       app_role: "head_chef" | "line_chef"
