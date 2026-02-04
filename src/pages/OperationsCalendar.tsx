@@ -3,15 +3,14 @@ import { motion } from "framer-motion";
 import { 
   Plus,
   Calendar,
-  Clock,
-  AlertTriangle,
-  CheckCircle2,
-  Edit,
-  Trash2,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   Wrench,
   FileText,
-  Shield
+  Shield,
+  List,
+  Grid3X3
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -24,7 +23,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { format, isBefore, addDays } from "date-fns";
+import { format, isBefore, addDays, getMonth, getYear, isSameMonth } from "date-fns";
+import YearView from "@/components/calendar/YearView";
+import EventList from "@/components/calendar/EventList";
+import AlertBanner from "@/components/calendar/AlertBanner";
 
 interface CalendarEvent {
   id: string;
@@ -54,6 +56,11 @@ const OperationsCalendar = () => {
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [deletingEvent, setDeletingEvent] = useState<CalendarEvent | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
+  
+  // View state
+  const [viewMode, setViewMode] = useState<"year" | "list">("year");
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -82,7 +89,6 @@ const OperationsCalendar = () => {
       console.error("Error fetching events:", error);
       toast.error("Failed to load calendar events");
     } else {
-      // Update statuses based on date
       const today = new Date();
       const updatedEvents = (data || []).map(event => {
         const eventDate = new Date(event.date);
@@ -216,18 +222,41 @@ const OperationsCalendar = () => {
     });
   };
 
-  const filteredEvents = events.filter(event => 
-    filterType === "all" || event.event_type === filterType
-  );
+  // Filter events based on selected month and type
+  const getFilteredEvents = () => {
+    let filtered = events;
+    
+    if (filterType !== "all") {
+      filtered = filtered.filter(e => e.event_type === filterType);
+    }
+    
+    if (selectedMonth) {
+      filtered = filtered.filter(e => {
+        const eventDate = new Date(e.date);
+        return getMonth(eventDate) === getMonth(selectedMonth) && 
+               getYear(eventDate) === getYear(selectedMonth);
+      });
+    } else {
+      // Show current year events when no month selected
+      filtered = filtered.filter(e => {
+        const eventDate = new Date(e.date);
+        return getYear(eventDate) === currentYear;
+      });
+    }
+    
+    return filtered;
+  };
 
+  const filteredEvents = getFilteredEvents();
   const overdueCount = events.filter(e => e.status === "overdue").length;
   const dueCount = events.filter(e => e.status === "due").length;
 
-  const statusStyles: Record<string, string> = {
-    upcoming: "bg-primary/10 text-primary",
-    due: "bg-warning/10 text-warning",
-    overdue: "bg-destructive/10 text-destructive",
-    completed: "bg-success/10 text-success",
+  const handleMonthSelect = (date: Date) => {
+    if (selectedMonth && isSameMonth(date, selectedMonth)) {
+      setSelectedMonth(null); // Deselect if clicking same month
+    } else {
+      setSelectedMonth(date);
+    }
   };
 
   return (
@@ -243,52 +272,86 @@ const OperationsCalendar = () => {
             <h1 className="page-title font-display">Operations Calendar</h1>
             <p className="page-subtitle">Track maintenance, licenses, and inspections</p>
           </div>
-          {hasEditPermission && (
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Event
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-muted rounded-lg p-1">
+              <button
+                onClick={() => setViewMode("year")}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-sm font-medium transition-all",
+                  viewMode === "year" 
+                    ? "bg-background text-foreground shadow-sm" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Grid3X3 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={cn(
+                  "px-3 py-1.5 rounded-md text-sm font-medium transition-all",
+                  viewMode === "list" 
+                    ? "bg-background text-foreground shadow-sm" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+            {hasEditPermission && (
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Event
+              </Button>
+            )}
+          </div>
         </motion.div>
 
-        {/* Alerts */}
-        {(overdueCount > 0 || dueCount > 0) && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="grid sm:grid-cols-2 gap-4"
-          >
-            {overdueCount > 0 && (
-              <div className="card-elevated p-4 border-l-4 border-l-destructive">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="w-5 h-5 text-destructive" />
-                  <div>
-                    <p className="font-semibold">{overdueCount} Overdue</p>
-                    <p className="text-sm text-muted-foreground">Requires immediate attention</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            {dueCount > 0 && (
-              <div className="card-elevated p-4 border-l-4 border-l-warning">
-                <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-warning" />
-                  <div>
-                    <p className="font-semibold">{dueCount} Due Soon</p>
-                    <p className="text-sm text-muted-foreground">Within the next 7 days</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        )}
+        {/* Alert Banner */}
+        <AlertBanner overdueCount={overdueCount} dueCount={dueCount} />
 
-        {/* Filter */}
+        {/* Year Navigation */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
+          className="flex items-center justify-between"
+        >
+          <button
+            onClick={() => {
+              setCurrentYear(y => y - 1);
+              setSelectedMonth(null);
+            }}
+            className="p-2 rounded-lg hover:bg-muted transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="text-center">
+            <h2 className="text-2xl font-bold">{currentYear}</h2>
+            {selectedMonth && (
+              <button 
+                onClick={() => setSelectedMonth(null)}
+                className="text-sm text-primary hover:underline"
+              >
+                Showing {format(selectedMonth, "MMMM")} • Click to show all
+              </button>
+            )}
+          </div>
+          <button
+            onClick={() => {
+              setCurrentYear(y => y + 1);
+              setSelectedMonth(null);
+            }}
+            className="p-2 rounded-lg hover:bg-muted transition-colors"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </motion.div>
+
+        {/* Filter Pills */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
           className="flex gap-2 overflow-x-auto pb-2"
         >
           <button
@@ -319,7 +382,7 @@ const OperationsCalendar = () => {
           ))}
         </motion.div>
 
-        {/* Events List */}
+        {/* Main Content */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -328,92 +391,37 @@ const OperationsCalendar = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="space-y-3"
+            transition={{ delay: 0.25 }}
+            className="space-y-6"
           >
-            {filteredEvents.map((event, index) => {
-              const typeInfo = eventTypes.find(t => t.value === event.event_type);
-              const Icon = typeInfo?.icon || Calendar;
-
-              return (
-                <motion.div
-                  key={event.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.05 * index }}
-                  className="card-elevated p-4 flex items-center gap-4"
-                >
-                  <div className={cn("p-3 rounded-lg bg-muted", typeInfo?.color)}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold">{event.title}</h3>
-                      <span className={cn(
-                        "px-2 py-0.5 rounded-full text-xs font-medium capitalize",
-                        statusStyles[event.status || "upcoming"]
-                      )}>
-                        {(event.status || "upcoming").replace("_", " ")}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                      <span>{format(new Date(event.date), "MMM d, yyyy")}</span>
-                      {event.time && <span>{event.time}</span>}
-                      {event.location && <span>• {event.location}</span>}
-                    </div>
-                    {event.description && (
-                      <p className="text-sm text-muted-foreground mt-1">{event.description}</p>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {event.status !== "completed" && hasEditPermission && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => markComplete(event)}
-                      >
-                        <CheckCircle2 className="w-4 h-4 mr-1" />
-                        Complete
-                      </Button>
-                    )}
-                    {hasEditPermission && (
-                      <>
-                        <button
-                          onClick={() => openEditDialog(event)}
-                          className="p-2 rounded-lg hover:bg-muted transition-colors"
-                        >
-                          <Edit className="w-4 h-4 text-muted-foreground" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setDeletingEvent(event);
-                            setDeleteDialogOpen(true);
-                          }}
-                          className="p-2 rounded-lg hover:bg-destructive/10 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-
-            {filteredEvents.length === 0 && (
-              <div className="card-elevated p-12 text-center">
-                <Calendar className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-                <p className="text-muted-foreground">No events found</p>
-                {hasEditPermission && (
-                  <Button variant="outline" className="mt-4" onClick={() => setDialogOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add First Event
-                  </Button>
-                )}
-              </div>
+            {viewMode === "year" && (
+              <YearView
+                events={events.filter(e => filterType === "all" || e.event_type === filterType)}
+                selectedMonth={selectedMonth}
+                onMonthSelect={handleMonthSelect}
+                year={currentYear}
+              />
             )}
+
+            {/* Event List */}
+            <div>
+              <h3 className="text-lg font-semibold mb-3">
+                {selectedMonth 
+                  ? `Events in ${format(selectedMonth, "MMMM yyyy")}` 
+                  : `All Events in ${currentYear}`}
+              </h3>
+              <EventList
+                events={filteredEvents}
+                hasEditPermission={hasEditPermission}
+                onMarkComplete={markComplete}
+                onEdit={openEditDialog}
+                onDelete={(event) => {
+                  setDeletingEvent(event);
+                  setDeleteDialogOpen(true);
+                }}
+                onAddNew={() => setDialogOpen(true)}
+              />
+            </div>
           </motion.div>
         )}
 
