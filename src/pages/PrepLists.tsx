@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   Plus, 
@@ -7,73 +7,239 @@ import {
   Circle,
   Clock,
   User,
-  MoreVertical
+  Edit,
+  Trash2,
+  Loader2
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
-interface PrepTask {
+interface PrepItem {
   id: string;
   task: string;
   quantity: string;
-  recipe?: string;
-  assignee: string;
-  dueTime: string;
-  status: "pending" | "in-progress" | "completed";
-  priority: "high" | "medium" | "low";
+  completed: boolean;
 }
 
 interface PrepList {
   id: string;
+  name: string;
   date: string;
-  shift: "AM" | "PM";
-  tasks: PrepTask[];
+  items: PrepItem[];
+  assigned_to_name: string | null;
+  status: "pending" | "in_progress" | "completed";
+  notes: string | null;
 }
 
-const mockPrepLists: PrepList[] = [
-  {
-    id: "1",
-    date: "Today",
-    shift: "AM",
-    tasks: [
-      { id: "1", task: "Dice onions", quantity: "5 lbs", assignee: "Maria", dueTime: "9:00 AM", status: "completed", priority: "high" },
-      { id: "2", task: "Prep hollandaise base", quantity: "2 qts", recipe: "Eggs Benedict", assignee: "James", dueTime: "10:00 AM", status: "in-progress", priority: "high" },
-      { id: "3", task: "Portion salmon fillets", quantity: "24 pc", recipe: "Pan-Seared Salmon", assignee: "Alex", dueTime: "11:00 AM", status: "pending", priority: "medium" },
-      { id: "4", task: "Make croutons", quantity: "3 sheet pans", recipe: "Caesar Salad", assignee: "Maria", dueTime: "11:30 AM", status: "pending", priority: "low" },
-    ]
-  },
-  {
-    id: "2",
-    date: "Today",
-    shift: "PM",
-    tasks: [
-      { id: "5", task: "Blanch vegetables", quantity: "10 lbs", assignee: "James", dueTime: "3:00 PM", status: "pending", priority: "medium" },
-      { id: "6", task: "Prep dessert components", quantity: "48 servings", recipe: "Crème Brûlée", assignee: "Sarah", dueTime: "4:00 PM", status: "pending", priority: "high" },
-    ]
-  }
-];
-
-const statusIcons = {
-  "pending": Circle,
-  "in-progress": Clock,
-  "completed": CheckCircle2,
-};
-
-const priorityStyles = {
-  "high": "border-l-destructive",
-  "medium": "border-l-warning",
-  "low": "border-l-muted-foreground",
-};
-
 const PrepLists = () => {
+  const { user, canEdit } = useAuth();
   const [selectedDate, setSelectedDate] = useState("today");
+  const [prepLists, setPrepLists] = useState<PrepList[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editingList, setEditingList] = useState<PrepList | null>(null);
+  const [deletingList, setDeletingList] = useState<PrepList | null>(null);
 
-  const totalTasks = mockPrepLists.reduce((acc, list) => acc + list.tasks.length, 0);
-  const completedTasks = mockPrepLists.reduce(
-    (acc, list) => acc + list.tasks.filter(t => t.status === "completed").length, 
+  const [formData, setFormData] = useState({
+    name: "",
+    date: new Date().toISOString().split("T")[0],
+    assigned_to_name: "",
+    status: "pending" as "pending" | "in_progress" | "completed",
+    notes: "",
+    items: [] as PrepItem[],
+  });
+
+  const [newTask, setNewTask] = useState({ task: "", quantity: "" });
+
+  const hasEditPermission = canEdit("prep");
+
+  useEffect(() => {
+    fetchPrepLists();
+  }, []);
+
+  const fetchPrepLists = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("prep_lists")
+      .select("*")
+      .order("date", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching prep lists:", error);
+      toast.error("Failed to load prep lists");
+    } else {
+      const formattedData = (data || []).map(item => ({
+        ...item,
+        items: (Array.isArray(item.items) ? item.items : []) as unknown as PrepItem[],
+        status: item.status as "pending" | "in_progress" | "completed",
+      }));
+      setPrepLists(formattedData);
+    }
+    }
+    setLoading(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Prep list name is required");
+      return;
+    }
+
+    if (editingList) {
+      const { error } = await supabase
+        .from("prep_lists")
+        .update({
+          name: formData.name,
+          date: formData.date,
+          assigned_to_name: formData.assigned_to_name || null,
+          status: formData.status,
+          notes: formData.notes || null,
+          items: formData.items as unknown as Record<string, unknown>[],
+        })
+        .eq("id", editingList.id);
+
+      if (error) {
+        toast.error("Failed to update prep list");
+        console.error(error);
+        return;
+      }
+      toast.success("Prep list updated");
+    } else {
+      const { error } = await supabase.from("prep_lists").insert({
+        name: formData.name,
+        date: formData.date,
+        assigned_to_name: formData.assigned_to_name || null,
+        status: formData.status,
+        notes: formData.notes || null,
+        items: formData.items as unknown as Record<string, unknown>[],
+        created_by: user?.id,
+      });
+
+      if (error) {
+        toast.error("Failed to create prep list");
+        console.error(error);
+        return;
+      }
+      toast.success("Prep list created");
+    }
+
+    resetForm();
+    fetchPrepLists();
+  };
+
+  const handleDelete = async () => {
+    if (!deletingList) return;
+
+    const { error } = await supabase
+      .from("prep_lists")
+      .delete()
+      .eq("id", deletingList.id);
+
+    if (error) {
+      toast.error("Failed to delete prep list");
+      console.error(error);
+      return;
+    }
+
+    toast.success("Prep list deleted");
+    setDeleteDialogOpen(false);
+    setDeletingList(null);
+    fetchPrepLists();
+  };
+
+  const toggleTaskComplete = async (list: PrepList, taskId: string) => {
+    const updatedItems = list.items.map(item =>
+      item.id === taskId ? { ...item, completed: !item.completed } : item
+    );
+
+    const allCompleted = updatedItems.every(item => item.completed);
+    const anyInProgress = updatedItems.some(item => item.completed) && !allCompleted;
+
+    const { error } = await supabase
+      .from("prep_lists")
+      .update({
+        items: updatedItems as unknown as Record<string, unknown>[],
+        status: allCompleted ? "completed" : anyInProgress ? "in_progress" : "pending",
+      })
+      .eq("id", list.id);
+
+    if (error) {
+      toast.error("Failed to update task");
+      return;
+    }
+
+    fetchPrepLists();
+  };
+
+  const addTaskToForm = () => {
+    if (!newTask.task.trim()) return;
+    setFormData({
+      ...formData,
+      items: [
+        ...formData.items,
+        { id: crypto.randomUUID(), task: newTask.task, quantity: newTask.quantity, completed: false },
+      ],
+    });
+    setNewTask({ task: "", quantity: "" });
+  };
+
+  const removeTaskFromForm = (taskId: string) => {
+    setFormData({
+      ...formData,
+      items: formData.items.filter(item => item.id !== taskId),
+    });
+  };
+
+  const openEditDialog = (list: PrepList) => {
+    setEditingList(list);
+    setFormData({
+      name: list.name,
+      date: list.date,
+      assigned_to_name: list.assigned_to_name || "",
+      status: list.status,
+      notes: list.notes || "",
+      items: list.items,
+    });
+    setDialogOpen(true);
+  };
+
+  const resetForm = () => {
+    setDialogOpen(false);
+    setEditingList(null);
+    setFormData({
+      name: "",
+      date: new Date().toISOString().split("T")[0],
+      assigned_to_name: "",
+      status: "pending",
+      notes: "",
+      items: [],
+    });
+    setNewTask({ task: "", quantity: "" });
+  };
+
+  const totalTasks = prepLists.reduce((acc, list) => acc + list.items.length, 0);
+  const completedTasks = prepLists.reduce(
+    (acc, list) => acc + list.items.filter(t => t.completed).length,
     0
   );
-  const progress = (completedTasks / totalTasks) * 100;
+  const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+  const statusIcons = {
+    pending: Circle,
+    in_progress: Clock,
+    completed: CheckCircle2,
+  };
 
   return (
     <AppLayout>
@@ -88,10 +254,12 @@ const PrepLists = () => {
             <h1 className="page-title font-display">Prep Lists</h1>
             <p className="page-subtitle">Organize your kitchen prep work</p>
           </div>
-          <button className="btn-primary">
-            <Plus className="w-4 h-4 mr-2" />
-            New Prep List
-          </button>
+          {hasEditPermission && (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Prep List
+            </Button>
+          )}
         </motion.div>
 
         {/* Progress Overview */}
@@ -108,21 +276,8 @@ const PrepLists = () => {
                 {completedTasks} of {totalTasks} tasks completed
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-muted-foreground" />
-              <select 
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-muted rounded-lg px-3 py-2 text-sm font-medium border-0 focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                <option value="today">Today</option>
-                <option value="tomorrow">Tomorrow</option>
-                <option value="week">This Week</option>
-              </select>
-            </div>
           </div>
 
-          {/* Progress bar */}
           <div className="h-3 bg-muted rounded-full overflow-hidden">
             <motion.div 
               initial={{ width: 0 }}
@@ -132,7 +287,6 @@ const PrepLists = () => {
             />
           </div>
 
-          {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border">
             <div className="text-center">
               <p className="text-2xl font-bold text-success">{completedTasks}</p>
@@ -140,13 +294,13 @@ const PrepLists = () => {
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-warning">
-                {mockPrepLists.reduce((acc, list) => acc + list.tasks.filter(t => t.status === "in-progress").length, 0)}
+                {prepLists.filter(l => l.status === "in_progress").length}
               </p>
               <p className="text-xs text-muted-foreground">In Progress</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-muted-foreground">
-                {mockPrepLists.reduce((acc, list) => acc + list.tasks.filter(t => t.status === "pending").length, 0)}
+                {prepLists.filter(l => l.status === "pending").length}
               </p>
               <p className="text-xs text-muted-foreground">Pending</p>
             </div>
@@ -154,82 +308,251 @@ const PrepLists = () => {
         </motion.div>
 
         {/* Prep Lists */}
-        <div className="space-y-6">
-          {mockPrepLists.map((list, listIndex) => (
-            <motion.div
-              key={list.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 + listIndex * 0.1 }}
-              className="card-elevated overflow-hidden"
-            >
-              {/* List Header */}
-              <div className="p-4 bg-muted/50 border-b border-border flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
-                    {list.shift} Shift
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {prepLists.map((list, listIndex) => {
+              const StatusIcon = statusIcons[list.status];
+              
+              return (
+                <motion.div
+                  key={list.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 + listIndex * 0.1 }}
+                  className="card-elevated overflow-hidden"
+                >
+                  {/* List Header */}
+                  <div className="p-4 bg-muted/50 border-b border-border flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "px-3 py-1 rounded-full text-sm font-medium",
+                        list.status === "completed" ? "bg-success/10 text-success" :
+                        list.status === "in_progress" ? "bg-warning/10 text-warning" :
+                        "bg-muted text-muted-foreground"
+                      )}>
+                        {list.name}
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {format(new Date(list.date), "MMM d, yyyy")}
+                      </span>
+                      {list.assigned_to_name && (
+                        <span className="text-sm text-muted-foreground flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {list.assigned_to_name}
+                        </span>
+                      )}
+                    </div>
+                    {hasEditPermission && (
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => openEditDialog(list)}
+                          className="p-2 rounded-lg hover:bg-muted transition-colors"
+                        >
+                          <Edit className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setDeletingList(list);
+                            setDeleteDialogOpen(true);
+                          }}
+                          className="p-2 rounded-lg hover:bg-destructive/10 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <span className="text-sm text-muted-foreground">{list.date}</span>
+
+                  {/* Tasks */}
+                  <div className="divide-y divide-border">
+                    {list.items.length === 0 ? (
+                      <div className="p-4 text-center text-muted-foreground">
+                        No tasks in this list
+                      </div>
+                    ) : (
+                      list.items.map((task) => (
+                        <div 
+                          key={task.id}
+                          className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors"
+                        >
+                          <button 
+                            className="flex-shrink-0"
+                            onClick={() => hasEditPermission && toggleTaskComplete(list, task.id)}
+                            disabled={!hasEditPermission}
+                          >
+                            {task.completed ? (
+                              <CheckCircle2 className="w-5 h-5 text-success" />
+                            ) : (
+                              <Circle className="w-5 h-5 text-muted-foreground" />
+                            )}
+                          </button>
+                          
+                          <div className="flex-1 min-w-0">
+                            <p className={cn(
+                              "font-medium",
+                              task.completed && "line-through text-muted-foreground"
+                            )}>
+                              {task.task}
+                            </p>
+                          </div>
+
+                          {task.quantity && (
+                            <span className="text-sm text-muted-foreground">
+                              {task.quantity}
+                            </span>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+
+            {prepLists.length === 0 && !loading && (
+              <div className="card-elevated p-12 text-center">
+                <Calendar className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                <p className="text-muted-foreground">No prep lists found</p>
+                {hasEditPermission && (
+                  <Button variant="outline" className="mt-4" onClick={() => setDialogOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create First Prep List
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Add/Edit Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={resetForm}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editingList ? "Edit Prep List" : "New Prep List"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">List Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., AM Prep, Lunch Prep"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  />
                 </div>
-                <button className="p-2 rounded-lg hover:bg-muted transition-colors">
-                  <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                </button>
+                <div className="space-y-2">
+                  <Label htmlFor="assigned">Assigned To</Label>
+                  <Input
+                    id="assigned"
+                    value={formData.assigned_to_name}
+                    onChange={(e) => setFormData({ ...formData, assigned_to_name: e.target.value })}
+                    placeholder="e.g., Maria"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: "pending" | "in_progress" | "completed") => 
+                    setFormData({ ...formData, status: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Tasks */}
-              <div className="divide-y divide-border">
-                {list.tasks.map((task) => {
-                  const StatusIcon = statusIcons[task.status];
-                  
-                  return (
-                    <div 
-                      key={task.id}
-                      className={cn(
-                        "flex items-center gap-4 p-4 border-l-4 hover:bg-muted/30 transition-colors cursor-pointer",
-                        priorityStyles[task.priority]
-                      )}
-                    >
-                      <button className="flex-shrink-0">
-                        <StatusIcon className={cn(
-                          "w-5 h-5",
-                          task.status === "completed" && "text-success",
-                          task.status === "in-progress" && "text-warning",
-                          task.status === "pending" && "text-muted-foreground"
-                        )} />
+              <div className="space-y-2">
+                <Label>Tasks</Label>
+                <div className="space-y-2">
+                  {formData.items.map((item) => (
+                    <div key={item.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted">
+                      <span className="flex-1">{item.task}</span>
+                      <span className="text-sm text-muted-foreground">{item.quantity}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeTaskFromForm(item.id)}
+                        className="p-1 rounded hover:bg-destructive/10"
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
                       </button>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className={cn(
-                            "font-medium",
-                            task.status === "completed" && "line-through text-muted-foreground"
-                          )}>
-                            {task.task}
-                          </p>
-                          <span className="text-sm text-muted-foreground">• {task.quantity}</span>
-                        </div>
-                        {task.recipe && (
-                          <p className="text-sm text-muted-foreground">For: {task.recipe}</p>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-4 flex-shrink-0">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <User className="w-4 h-4" />
-                          <span>{task.assignee}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock className="w-4 h-4" />
-                          <span>{task.dueTime}</span>
-                        </div>
-                      </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Task name"
+                    value={newTask.task}
+                    onChange={(e) => setNewTask({ ...newTask, task: e.target.value })}
+                  />
+                  <Input
+                    placeholder="Qty"
+                    className="w-24"
+                    value={newTask.quantity}
+                    onChange={(e) => setNewTask({ ...newTask, quantity: e.target.value })}
+                  />
+                  <Button type="button" variant="outline" onClick={addTaskToForm}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-            </motion.div>
-          ))}
-        </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Any additional notes..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={resetForm}>Cancel</Button>
+              <Button onClick={handleSubmit}>
+                {editingList ? "Save Changes" : "Create List"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={() => setDeleteDialogOpen(false)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Prep List</DialogTitle>
+            </DialogHeader>
+            <p className="text-muted-foreground">
+              Are you sure you want to delete "{deletingList?.name}"? This action cannot be undone.
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   Search, 
@@ -6,48 +6,194 @@ import {
   Package,
   AlertTriangle,
   TrendingDown,
-  ArrowUpDown
+  ArrowUpDown,
+  Edit,
+  Trash2,
+  Loader2
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface InventoryItem {
   id: string;
   name: string;
-  category: string;
-  currentStock: number;
+  quantity: number;
   unit: string;
-  parLevel: number;
-  cost: number;
-  lastUpdated: string;
-  status: "ok" | "low" | "critical";
+  location: string;
+  expiry_date: string | null;
+  batch_number: string | null;
+  received_date: string | null;
+  min_stock: number;
 }
 
-const mockInventory: InventoryItem[] = [
-  { id: "1", name: "All-Purpose Flour", category: "Dry Goods", currentStock: 25, unit: "lbs", parLevel: 50, cost: 0.45, lastUpdated: "2 hrs ago", status: "low" },
-  { id: "2", name: "Butter (Unsalted)", category: "Dairy", currentStock: 8, unit: "lbs", parLevel: 20, cost: 4.50, lastUpdated: "1 hr ago", status: "low" },
-  { id: "3", name: "Heavy Cream", category: "Dairy", currentStock: 6, unit: "qts", parLevel: 10, cost: 3.25, lastUpdated: "3 hrs ago", status: "ok" },
-  { id: "4", name: "Fresh Salmon", category: "Proteins", currentStock: 2, unit: "lbs", parLevel: 15, cost: 12.99, lastUpdated: "30 min ago", status: "critical" },
-  { id: "5", name: "Olive Oil (EVOO)", category: "Oils", currentStock: 4, unit: "L", parLevel: 6, cost: 15.00, lastUpdated: "1 day ago", status: "ok" },
-  { id: "6", name: "Shallots", category: "Produce", currentStock: 3, unit: "lbs", parLevel: 5, cost: 3.00, lastUpdated: "4 hrs ago", status: "ok" },
-  { id: "7", name: "Duck Breast", category: "Proteins", currentStock: 1, unit: "lbs", parLevel: 8, cost: 18.50, lastUpdated: "2 hrs ago", status: "critical" },
-  { id: "8", name: "White Wine", category: "Beverages", currentStock: 6, unit: "btl", parLevel: 12, cost: 8.00, lastUpdated: "5 hrs ago", status: "low" },
-];
-
 const categories = ["All", "Proteins", "Produce", "Dairy", "Dry Goods", "Oils", "Beverages"];
+const locations = ["Main Storage", "Walk-in Cooler", "Freezer", "Dry Storage", "Prep Area"];
+const units = ["kg", "g", "L", "ml", "lb", "oz", "each", "bunch", "case"];
 
 const Inventory = () => {
+  const { canEdit } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [deletingItem, setDeletingItem] = useState<InventoryItem | null>(null);
 
-  const filteredItems = mockInventory.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+  const [formData, setFormData] = useState({
+    name: "",
+    quantity: 0,
+    unit: "kg",
+    location: "Main Storage",
+    expiry_date: "",
+    batch_number: "",
+    min_stock: 0,
   });
 
-  const criticalCount = mockInventory.filter(i => i.status === "critical").length;
-  const lowCount = mockInventory.filter(i => i.status === "low").length;
+  const hasEditPermission = canEdit("inventory");
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  const fetchInventory = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("inventory")
+      .select("*")
+      .order("name");
+
+    if (error) {
+      console.error("Error fetching inventory:", error);
+      toast.error("Failed to load inventory");
+    } else {
+      setInventory(data || []);
+    }
+    setLoading(false);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Item name is required");
+      return;
+    }
+
+    if (editingItem) {
+      const { error } = await supabase
+        .from("inventory")
+        .update({
+          name: formData.name,
+          quantity: formData.quantity,
+          unit: formData.unit,
+          location: formData.location,
+          expiry_date: formData.expiry_date || null,
+          batch_number: formData.batch_number || null,
+          min_stock: formData.min_stock,
+        })
+        .eq("id", editingItem.id);
+
+      if (error) {
+        toast.error("Failed to update item");
+        console.error(error);
+        return;
+      }
+      toast.success("Inventory item updated");
+    } else {
+      const { error } = await supabase.from("inventory").insert({
+        name: formData.name,
+        quantity: formData.quantity,
+        unit: formData.unit,
+        location: formData.location,
+        expiry_date: formData.expiry_date || null,
+        batch_number: formData.batch_number || null,
+        min_stock: formData.min_stock,
+        received_date: new Date().toISOString().split("T")[0],
+      });
+
+      if (error) {
+        toast.error("Failed to add item");
+        console.error(error);
+        return;
+      }
+      toast.success("Inventory item added");
+    }
+
+    resetForm();
+    fetchInventory();
+  };
+
+  const handleDelete = async () => {
+    if (!deletingItem) return;
+
+    const { error } = await supabase
+      .from("inventory")
+      .delete()
+      .eq("id", deletingItem.id);
+
+    if (error) {
+      toast.error("Failed to delete item");
+      console.error(error);
+      return;
+    }
+
+    toast.success("Item deleted");
+    setDeleteDialogOpen(false);
+    setDeletingItem(null);
+    fetchInventory();
+  };
+
+  const openEditDialog = (item: InventoryItem) => {
+    setEditingItem(item);
+    setFormData({
+      name: item.name,
+      quantity: Number(item.quantity),
+      unit: item.unit,
+      location: item.location,
+      expiry_date: item.expiry_date || "",
+      batch_number: item.batch_number || "",
+      min_stock: Number(item.min_stock),
+    });
+    setDialogOpen(true);
+  };
+
+  const resetForm = () => {
+    setDialogOpen(false);
+    setEditingItem(null);
+    setFormData({
+      name: "",
+      quantity: 0,
+      unit: "kg",
+      location: "Main Storage",
+      expiry_date: "",
+      batch_number: "",
+      min_stock: 0,
+    });
+  };
+
+  const getStatus = (quantity: number, minStock: number) => {
+    if (minStock === 0) return "ok";
+    if (quantity <= minStock * 0.25) return "critical";
+    if (quantity <= minStock * 0.5) return "low";
+    return "ok";
+  };
+
+  const filteredItems = inventory.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
+  });
+
+  const criticalCount = inventory.filter(i => getStatus(Number(i.quantity), Number(i.min_stock)) === "critical").length;
+  const lowCount = inventory.filter(i => getStatus(Number(i.quantity), Number(i.min_stock)) === "low").length;
 
   const statusStyles = {
     ok: "bg-success/10 text-success",
@@ -66,12 +212,14 @@ const Inventory = () => {
         >
           <div>
             <h1 className="page-title font-display">Inventory</h1>
-            <p className="page-subtitle">{mockInventory.length} items tracked</p>
+            <p className="page-subtitle">{inventory.length} items tracked</p>
           </div>
-          <button className="btn-primary">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Item
-          </button>
+          {hasEditPermission && (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Item
+            </Button>
+          )}
         </motion.div>
 
         {/* Alert Cards */}
@@ -99,13 +247,13 @@ const Inventory = () => {
               </div>
               <div>
                 <p className="font-semibold text-foreground">{lowCount} Low Stock Items</p>
-                <p className="text-sm text-muted-foreground">Below par level</p>
+                <p className="text-sm text-muted-foreground">Below minimum level</p>
               </div>
             </div>
           </div>
         </motion.div>
 
-        {/* Search and Categories */}
+        {/* Search */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -122,82 +270,226 @@ const Inventory = () => {
               className="input-field pl-10"
             />
           </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
-                  selectedCategory === category
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-secondary"
-                )}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
         </motion.div>
 
         {/* Inventory Table */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-          className="card-elevated overflow-hidden"
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="text-left p-4 font-medium text-muted-foreground text-sm">
-                    <button className="flex items-center gap-1 hover:text-foreground transition-colors">
-                      Item <ArrowUpDown className="w-4 h-4" />
-                    </button>
-                  </th>
-                  <th className="text-left p-4 font-medium text-muted-foreground text-sm">Category</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground text-sm">Stock</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground text-sm">Par Level</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground text-sm">Cost/Unit</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground text-sm">Status</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground text-sm">Updated</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredItems.map((item) => (
-                  <tr 
-                    key={item.id} 
-                    className="border-b border-border hover:bg-muted/30 transition-colors cursor-pointer"
-                  >
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-muted">
-                          <Package className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                        <span className="font-medium text-foreground">{item.name}</span>
-                      </div>
-                    </td>
-                    <td className="p-4 text-muted-foreground">{item.category}</td>
-                    <td className="p-4 font-medium">{item.currentStock} {item.unit}</td>
-                    <td className="p-4 text-muted-foreground">{item.parLevel} {item.unit}</td>
-                    <td className="p-4">${item.cost.toFixed(2)}</td>
-                    <td className="p-4">
-                      <span className={cn(
-                        "px-2.5 py-1 rounded-full text-xs font-medium capitalize",
-                        statusStyles[item.status]
-                      )}>
-                        {item.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-muted-foreground text-sm">{item.lastUpdated}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
-        </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="card-elevated overflow-hidden"
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="text-left p-4 font-medium text-muted-foreground text-sm">Item</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-sm">Location</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-sm">Stock</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-sm">Min Level</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-sm">Expiry</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-sm">Status</th>
+                    {hasEditPermission && (
+                      <th className="text-right p-4 font-medium text-muted-foreground text-sm">Actions</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredItems.map((item) => {
+                    const status = getStatus(Number(item.quantity), Number(item.min_stock));
+                    return (
+                      <tr 
+                        key={item.id} 
+                        className="border-b border-border hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-muted">
+                              <Package className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                            <div>
+                              <span className="font-medium text-foreground">{item.name}</span>
+                              {item.batch_number && (
+                                <p className="text-xs text-muted-foreground">Batch: {item.batch_number}</p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4 text-muted-foreground">{item.location}</td>
+                        <td className="p-4 font-medium">{Number(item.quantity).toFixed(1)} {item.unit}</td>
+                        <td className="p-4 text-muted-foreground">{Number(item.min_stock).toFixed(1)} {item.unit}</td>
+                        <td className="p-4 text-muted-foreground">
+                          {item.expiry_date ? format(new Date(item.expiry_date), "MMM d, yyyy") : "-"}
+                        </td>
+                        <td className="p-4">
+                          <span className={cn(
+                            "px-2.5 py-1 rounded-full text-xs font-medium capitalize",
+                            statusStyles[status]
+                          )}>
+                            {status}
+                          </span>
+                        </td>
+                        {hasEditPermission && (
+                          <td className="p-4 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => openEditDialog(item)}
+                                className="p-2 rounded-lg hover:bg-muted transition-colors"
+                              >
+                                <Edit className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setDeletingItem(item);
+                                  setDeleteDialogOpen(true);
+                                }}
+                                className="p-2 rounded-lg hover:bg-destructive/10 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                  {filteredItems.length === 0 && (
+                    <tr>
+                      <td colSpan={hasEditPermission ? 7 : 6} className="p-8 text-center text-muted-foreground">
+                        No inventory items found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Add/Edit Dialog */}
+        <Dialog open={dialogOpen} onOpenChange={resetForm}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{editingItem ? "Edit Item" : "Add Inventory Item"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Item Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Fresh Salmon"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Quantity</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="unit">Unit</Label>
+                  <Select
+                    value={formData.unit}
+                    onValueChange={(value) => setFormData({ ...formData, unit: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units.map(unit => (
+                        <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Select
+                    value={formData.location}
+                    onValueChange={(value) => setFormData({ ...formData, location: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {locations.map(loc => (
+                        <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="min_stock">Min Stock Level</Label>
+                  <Input
+                    id="min_stock"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={formData.min_stock}
+                    onChange={(e) => setFormData({ ...formData, min_stock: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="expiry">Expiry Date</Label>
+                  <Input
+                    id="expiry"
+                    type="date"
+                    value={formData.expiry_date}
+                    onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="batch">Batch Number</Label>
+                  <Input
+                    id="batch"
+                    value={formData.batch_number}
+                    onChange={(e) => setFormData({ ...formData, batch_number: e.target.value })}
+                    placeholder="e.g., LOT-2024-001"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={resetForm}>Cancel</Button>
+              <Button onClick={handleSubmit}>
+                {editingItem ? "Save Changes" : "Add Item"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={() => setDeleteDialogOpen(false)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Item</DialogTitle>
+            </DialogHeader>
+            <p className="text-muted-foreground">
+              Are you sure you want to delete "{deletingItem?.name}"? This action cannot be undone.
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );

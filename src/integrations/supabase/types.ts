@@ -14,6 +14,117 @@ export type Database = {
   }
   public: {
     Tables: {
+      allergens: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      calendar_events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string
+          description: string | null
+          end_date: string | null
+          event_type: string
+          id: string
+          location: string | null
+          recurring: string | null
+          status: string | null
+          time: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date: string
+          description?: string | null
+          end_date?: string | null
+          event_type?: string
+          id?: string
+          location?: string | null
+          recurring?: string | null
+          status?: string | null
+          time?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          end_date?: string | null
+          event_type?: string
+          id?: string
+          location?: string | null
+          recurring?: string | null
+          status?: string | null
+          time?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cheatsheets: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          image_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          image_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       direct_messages: {
         Row: {
           created_at: string
@@ -40,6 +151,212 @@ export type Database = {
           sender_id?: string
         }
         Relationships: []
+      }
+      equipment: {
+        Row: {
+          created_at: string
+          id: string
+          last_maintenance: string | null
+          location: string | null
+          maintenance_schedule: string | null
+          manual_url: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          next_maintenance: string | null
+          notes: string | null
+          purchase_date: string | null
+          serial_number: string | null
+          status: string | null
+          tech_contacts: Json | null
+          updated_at: string
+          warranty_expiry: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_maintenance?: string | null
+          location?: string | null
+          maintenance_schedule?: string | null
+          manual_url?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          name: string
+          next_maintenance?: string | null
+          notes?: string | null
+          purchase_date?: string | null
+          serial_number?: string | null
+          status?: string | null
+          tech_contacts?: Json | null
+          updated_at?: string
+          warranty_expiry?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_maintenance?: string | null
+          location?: string | null
+          maintenance_schedule?: string | null
+          manual_url?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          name?: string
+          next_maintenance?: string | null
+          notes?: string | null
+          purchase_date?: string | null
+          serial_number?: string | null
+          status?: string | null
+          tech_contacts?: Json | null
+          updated_at?: string
+          warranty_expiry?: string | null
+        }
+        Relationships: []
+      }
+      food_safety_logs: {
+        Row: {
+          corrective_action: string | null
+          created_at: string
+          date: string
+          id: string
+          location: string | null
+          log_type: string
+          notes: string | null
+          readings: Json | null
+          recorded_by: string | null
+          recorded_by_name: string | null
+          status: string | null
+          time: string
+          updated_at: string
+        }
+        Insert: {
+          corrective_action?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          location?: string | null
+          log_type: string
+          notes?: string | null
+          readings?: Json | null
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          status?: string | null
+          time?: string
+          updated_at?: string
+        }
+        Update: {
+          corrective_action?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          location?: string | null
+          log_type?: string
+          notes?: string | null
+          readings?: Json | null
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          status?: string | null
+          time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ingredients: {
+        Row: {
+          allergens: string[] | null
+          category: string
+          cost_per_unit: number | null
+          created_at: string
+          current_stock: number | null
+          id: string
+          name: string
+          notes: string | null
+          par_level: number | null
+          supplier: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          allergens?: string[] | null
+          category?: string
+          cost_per_unit?: number | null
+          created_at?: string
+          current_stock?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          par_level?: number | null
+          supplier?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          allergens?: string[] | null
+          category?: string
+          cost_per_unit?: number | null
+          created_at?: string
+          current_stock?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          par_level?: number | null
+          supplier?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      inventory: {
+        Row: {
+          batch_number: string | null
+          created_at: string
+          expiry_date: string | null
+          id: string
+          ingredient_id: string | null
+          location: string | null
+          min_stock: number | null
+          name: string
+          quantity: number
+          received_date: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          batch_number?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          ingredient_id?: string | null
+          location?: string | null
+          min_stock?: number | null
+          name: string
+          quantity?: number
+          received_date?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          ingredient_id?: string | null
+          location?: string | null
+          min_stock?: number | null
+          name?: string
+          quantity?: number
+          received_date?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       module_permissions: {
         Row: {
@@ -68,6 +385,48 @@ export type Database = {
           module?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      prep_lists: {
+        Row: {
+          assigned_to: string | null
+          assigned_to_name: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          id: string
+          items: Json | null
+          name: string
+          notes: string | null
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          assigned_to_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          items?: Json | null
+          name: string
+          notes?: string | null
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          assigned_to_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          items?: Json | null
+          name?: string
+          notes?: string | null
+          status?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -110,6 +469,150 @@ export type Database = {
         }
         Relationships: []
       }
+      recipes: {
+        Row: {
+          allergens: string[] | null
+          category: string
+          cook_time: number | null
+          cost_per_serving: number | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          ingredients: Json | null
+          instructions: Json | null
+          name: string
+          prep_time: number | null
+          servings: number | null
+          updated_at: string
+        }
+        Insert: {
+          allergens?: string[] | null
+          category?: string
+          cook_time?: number | null
+          cost_per_serving?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          ingredients?: Json | null
+          instructions?: Json | null
+          name: string
+          prep_time?: number | null
+          servings?: number | null
+          updated_at?: string
+        }
+        Update: {
+          allergens?: string[] | null
+          category?: string
+          cook_time?: number | null
+          cost_per_serving?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          ingredients?: Json | null
+          instructions?: Json | null
+          name?: string
+          prep_time?: number | null
+          servings?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      roster_shifts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string
+          end_time: string
+          id: string
+          notes: string | null
+          position: string | null
+          start_time: string
+          updated_at: string
+          user_id: string | null
+          user_name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          position?: string | null
+          start_time: string
+          updated_at?: string
+          user_id?: string | null
+          user_name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          position?: string | null
+          start_time?: string
+          updated_at?: string
+          user_id?: string | null
+          user_name?: string
+        }
+        Relationships: []
+      }
+      suppliers: {
+        Row: {
+          account_number: string | null
+          category: string
+          created_at: string
+          credit_status: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          products: string | null
+          rep_name: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          category?: string
+          created_at?: string
+          credit_status?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          products?: string | null
+          rep_name?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          category?: string
+          created_at?: string
+          credit_status?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          products?: string | null
+          rep_name?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
       team_invites: {
         Row: {
           accepted_at: string | null
@@ -142,6 +645,86 @@ export type Database = {
           token?: string
         }
         Relationships: []
+      }
+      training_materials: {
+        Row: {
+          category: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          duration_minutes: number | null
+          file_url: string | null
+          id: string
+          required_for: string[] | null
+          title: string
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          category?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_minutes?: number | null
+          file_url?: string | null
+          id?: string
+          required_for?: string[] | null
+          title: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          category?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_minutes?: number | null
+          file_url?: string | null
+          id?: string
+          required_for?: string[] | null
+          title?: string
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
+      training_records: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          material_id: string
+          notes: string | null
+          score: number | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          material_id: string
+          notes?: string | null
+          score?: number | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          material_id?: string
+          notes?: string | null
+          score?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_records_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "training_materials"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
