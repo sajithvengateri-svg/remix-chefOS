@@ -11,12 +11,34 @@ import {
   Phone,
   Mail,
   ExternalLink,
-  Search
+  Search,
+  Pencil,
+  Trash2,
+  X,
+  Save
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 interface SafetyLog {
   id: string;
@@ -49,7 +71,7 @@ const mockLogs: SafetyLog[] = [
   { id: "6", type: "cleaning", location: "Prep Station 1", status: "passed", recordedBy: "James", time: "3:00 PM" },
 ];
 
-const approvedSuppliers: Supplier[] = [
+const initialSuppliers: Supplier[] = [
   // Meat
   { id: "1", name: "Food & Wine Concepts", category: "Meat", products: "Beef, Chicken, Duck", repName: "Daniel", phone: "0412 107 281", email: "sales@fwconcepts.com.au", website: "https://www.fwconcepts.com.au", creditStatus: "done" },
   { id: "2", name: "Stanbroke Meats", category: "Meat", products: "Beef", repName: "Jimmy", phone: "0447 773 372", email: "jamesb@stanbrokefoods.com", website: "https://www.stanbroke.com", creditStatus: "done" },
@@ -91,6 +113,8 @@ const approvedSuppliers: Supplier[] = [
 ];
 
 const categories = ["All", "Meat", "Fish", "Cheese", "Pantry", "Veg", "Supplies"];
+const categoryOptions = ["Meat", "Fish", "Cheese", "Pantry", "Veg", "Supplies"];
+const creditStatusOptions = ["done", "applied", "approved", "pending"];
 
 const statusStyles = {
   passed: { bg: "bg-success/10", text: "text-success", icon: CheckCircle2 },
@@ -98,7 +122,7 @@ const statusStyles = {
   failed: { bg: "bg-destructive/10", text: "text-destructive", icon: AlertTriangle },
 };
 
-const creditStyles = {
+const creditStyles: Record<string, { bg: string; text: string }> = {
   done: { bg: "bg-success/10", text: "text-success" },
   approved: { bg: "bg-success/10", text: "text-success" },
   applied: { bg: "bg-warning/10", text: "text-warning" },
@@ -112,15 +136,37 @@ const typeLabels = {
   cooking: "Cooking Temperature",
 };
 
+const emptySupplier: Supplier = {
+  id: "",
+  name: "",
+  category: "Meat",
+  products: "",
+  repName: "",
+  phone: "",
+  email: "",
+  website: "",
+  creditStatus: "pending",
+};
+
 const FoodSafety = () => {
   const [activeTab, setActiveTab] = useState("logs");
   const [supplierCategory, setSupplierCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
+  
+  // Edit/Add modal state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [formData, setFormData] = useState<Supplier>(emptySupplier);
+  
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
 
   const passedCount = mockLogs.filter(l => l.status === "passed").length;
   const warningCount = mockLogs.filter(l => l.status === "warning").length;
 
-  const filteredSuppliers = approvedSuppliers.filter(s => {
+  const filteredSuppliers = suppliers.filter(s => {
     const matchesCategory = supplierCategory === "All" || s.category === supplierCategory;
     const matchesSearch = !searchQuery || 
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -128,6 +174,54 @@ const FoodSafety = () => {
       s.repName?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const handleAddNew = () => {
+    setEditingSupplier(null);
+    setFormData({ ...emptySupplier, id: `supplier-${Date.now()}` });
+    setEditDialogOpen(true);
+  };
+
+  const handleEdit = (supplier: Supplier) => {
+    setEditingSupplier(supplier);
+    setFormData({ ...supplier });
+    setEditDialogOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!formData.name.trim()) {
+      toast.error("Supplier name is required");
+      return;
+    }
+
+    if (editingSupplier) {
+      // Update existing
+      setSuppliers(prev => prev.map(s => s.id === editingSupplier.id ? formData : s));
+      toast.success("Supplier updated");
+    } else {
+      // Add new
+      setSuppliers(prev => [...prev, formData]);
+      toast.success("Supplier added");
+    }
+    setEditDialogOpen(false);
+  };
+
+  const handleDeleteClick = (supplier: Supplier) => {
+    setSupplierToDelete(supplier);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (supplierToDelete) {
+      setSuppliers(prev => prev.filter(s => s.id !== supplierToDelete.id));
+      toast.success("Supplier deleted");
+    }
+    setDeleteDialogOpen(false);
+    setSupplierToDelete(null);
+  };
+
+  const updateFormField = (field: keyof Supplier, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
   return (
     <AppLayout>
@@ -142,10 +236,13 @@ const FoodSafety = () => {
             <h1 className="page-title font-display">Food Safety</h1>
             <p className="page-subtitle">HACCP compliance, logs & approved suppliers</p>
           </div>
-          <button className="btn-primary">
+          <Button 
+            className="btn-primary"
+            onClick={activeTab === "suppliers" ? handleAddNew : undefined}
+          >
             <Plus className="w-4 h-4 mr-2" />
             {activeTab === "logs" ? "New Log Entry" : "Add Supplier"}
-          </button>
+          </Button>
         </motion.div>
 
         {/* Main Tabs */}
@@ -289,7 +386,7 @@ const FoodSafety = () => {
                   <Truck className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <p className="stat-value">{approvedSuppliers.length}</p>
+                  <p className="stat-value">{suppliers.length}</p>
                   <p className="stat-label">Total Suppliers</p>
                 </div>
               </div>
@@ -298,7 +395,7 @@ const FoodSafety = () => {
                   <CheckCircle2 className="w-5 h-5 text-success" />
                 </div>
                 <div>
-                  <p className="stat-value">{approvedSuppliers.filter(s => s.creditStatus === "done" || s.creditStatus === "approved").length}</p>
+                  <p className="stat-value">{suppliers.filter(s => s.creditStatus === "done" || s.creditStatus === "approved").length}</p>
                   <p className="stat-label">Credit Approved</p>
                 </div>
               </div>
@@ -331,8 +428,8 @@ const FoodSafety = () => {
                           {supplier.creditStatus && (
                             <span className={cn(
                               "text-xs px-2 py-0.5 rounded-full",
-                              creditStyles[supplier.creditStatus].bg,
-                              creditStyles[supplier.creditStatus].text
+                              creditStyles[supplier.creditStatus]?.bg || "bg-muted",
+                              creditStyles[supplier.creditStatus]?.text || "text-muted-foreground"
                             )}>
                               {supplier.creditStatus}
                             </span>
@@ -348,7 +445,7 @@ const FoodSafety = () => {
                         {supplier.phone && (
                           <a 
                             href={`tel:${supplier.phone}`}
-                            className="p-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                            className="p-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                             title="Call"
                           >
                             <Phone className="w-4 h-4" />
@@ -357,7 +454,7 @@ const FoodSafety = () => {
                         {supplier.email && (
                           <a 
                             href={`mailto:${supplier.email}`}
-                            className="p-2.5 rounded-lg bg-muted hover:bg-secondary transition-colors"
+                            className="p-2 rounded-lg bg-muted hover:bg-secondary transition-colors"
                             title="Email"
                           >
                             <Mail className="w-4 h-4" />
@@ -368,12 +465,26 @@ const FoodSafety = () => {
                             href={supplier.website}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-2.5 rounded-lg bg-muted hover:bg-secondary transition-colors"
+                            className="p-2 rounded-lg bg-muted hover:bg-secondary transition-colors"
                             title="Website"
                           >
                             <ExternalLink className="w-4 h-4" />
                           </a>
                         )}
+                        <button
+                          onClick={() => handleEdit(supplier)}
+                          className="p-2 rounded-lg bg-muted hover:bg-secondary transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(supplier)}
+                          className="p-2 rounded-lg bg-destructive/10 hover:bg-destructive/20 text-destructive transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -382,6 +493,149 @@ const FoodSafety = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Edit/Add Supplier Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                {editingSupplier ? "Edit Supplier" : "Add New Supplier"}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label htmlFor="name">Supplier Name *</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => updateFormField("name", e.target.value)}
+                    placeholder="Supplier name"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="category">Category</Label>
+                  <Select 
+                    value={formData.category} 
+                    onValueChange={(value) => updateFormField("category", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categoryOptions.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="creditStatus">Credit Status</Label>
+                  <Select 
+                    value={formData.creditStatus || "pending"} 
+                    onValueChange={(value) => updateFormField("creditStatus", value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {creditStatusOptions.map(status => (
+                        <SelectItem key={status} value={status}>
+                          {status.charAt(0).toUpperCase() + status.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="col-span-2">
+                  <Label htmlFor="products">Products</Label>
+                  <Input
+                    id="products"
+                    value={formData.products}
+                    onChange={(e) => updateFormField("products", e.target.value)}
+                    placeholder="e.g., Beef, Chicken, Pork"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="repName">Rep Name</Label>
+                  <Input
+                    id="repName"
+                    value={formData.repName || ""}
+                    onChange={(e) => updateFormField("repName", e.target.value)}
+                    placeholder="Contact person"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone || ""}
+                    onChange={(e) => updateFormField("phone", e.target.value)}
+                    placeholder="0400 000 000"
+                  />
+                </div>
+                
+                <div className="col-span-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email || ""}
+                    onChange={(e) => updateFormField("email", e.target.value)}
+                    placeholder="email@example.com"
+                  />
+                </div>
+                
+                <div className="col-span-2">
+                  <Label htmlFor="website">Website</Label>
+                  <Input
+                    id="website"
+                    value={formData.website || ""}
+                    onChange={(e) => updateFormField("website", e.target.value)}
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave}>
+                <Save className="w-4 h-4 mr-2" />
+                {editingSupplier ? "Save Changes" : "Add Supplier"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Supplier</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete <strong>{supplierToDelete?.name}</strong>? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleConfirmDelete}>
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
