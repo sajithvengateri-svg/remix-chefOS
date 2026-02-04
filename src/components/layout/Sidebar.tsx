@@ -17,7 +17,8 @@ import {
   Calendar,
   Wrench,
   LogOut,
-  Store
+  Store,
+  LayoutGrid
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -45,6 +46,7 @@ const secondaryNavItems = [
   { path: "/menu-engineering", icon: Menu, label: "Menu Engineering", module: "menu-engineering" },
   { path: "/roster", icon: Users, label: "Roster", module: "roster" },
   { path: "/calendar", icon: Calendar, label: "Calendar", module: "calendar" },
+  { path: "/kitchen-sections", icon: LayoutGrid, label: "Kitchen Sections", module: "calendar" },
   { path: "/equipment", icon: Wrench, label: "Equipment", module: "equipment" },
   { path: "/cheatsheets", icon: BookOpen, label: "Cheatsheets", module: "cheatsheets" },
   { path: "/food-safety", icon: Shield, label: "Food Safety", module: "food-safety" },
