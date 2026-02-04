@@ -86,7 +86,6 @@ const PrepLists = () => {
       }));
       setPrepLists(formattedData);
     }
-    }
     setLoading(false);
   };
 
@@ -105,7 +104,7 @@ const PrepLists = () => {
           assigned_to_name: formData.assigned_to_name || null,
           status: formData.status,
           notes: formData.notes || null,
-          items: formData.items as unknown as Record<string, unknown>[],
+          items: JSON.parse(JSON.stringify(formData.items)),
         })
         .eq("id", editingList.id);
 
@@ -122,7 +121,7 @@ const PrepLists = () => {
         assigned_to_name: formData.assigned_to_name || null,
         status: formData.status,
         notes: formData.notes || null,
-        items: formData.items as unknown as Record<string, unknown>[],
+        items: JSON.parse(JSON.stringify(formData.items)),
         created_by: user?.id,
       });
 
@@ -169,7 +168,7 @@ const PrepLists = () => {
     const { error } = await supabase
       .from("prep_lists")
       .update({
-        items: updatedItems as unknown as Record<string, unknown>[],
+        items: JSON.parse(JSON.stringify(updatedItems)),
         status: allCompleted ? "completed" : anyInProgress ? "in_progress" : "pending",
       })
       .eq("id", list.id);
