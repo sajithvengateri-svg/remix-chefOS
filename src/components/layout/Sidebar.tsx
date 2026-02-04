@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -18,13 +19,34 @@ import {
   Wrench,
   LogOut,
   Store,
-  LayoutGrid
+  LayoutGrid,
+  Pencil,
+  RotateCcw,
+  Check
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import SortableNavItem from "./SortableNavItem";
+import { useNavOrder } from "@/hooks/useNavOrder";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface SidebarProps {
   className?: string;
@@ -54,26 +76,70 @@ const secondaryNavItems = [
   { path: "/team", icon: Users, label: "Team", module: "team" },
 ];
 
+const defaultMainPaths = mainNavItems.map(item => item.path);
+const defaultSecondaryPaths = secondaryNavItems.map(item => item.path);
+
 const Sidebar = ({ className }: SidebarProps) => {
   const location = useLocation();
   const { profile, role, canView, signOut, isHeadChef } = useAuth();
+  const [isEditMode, setIsEditMode] = useState(false);
 
-  const NavLink = ({ path, icon: Icon, label, module }: { path: string; icon: typeof LayoutDashboard; label: string; module: string }) => {
-    const isActive = location.pathname === path || 
-      (path !== "/" && location.pathname.startsWith(path));
-    
-    // Check if user can view this module
-    if (!canView(module)) return null;
-    
-    return (
-      <Link
-        to={path}
-        className={cn("nav-item", isActive && "active")}
-      >
-        <Icon className="w-5 h-5" />
-        <span>{label}</span>
-      </Link>
-    );
+  const {
+    mainNavOrder,
+    secondaryNavOrder,
+    updateMainNavOrder,
+    updateSecondaryNavOrder,
+    resetToDefault
+  } = useNavOrder(defaultMainPaths, defaultSecondaryPaths);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Sort items based on saved order
+  const sortedMainItems = useMemo(() => {
+    return [...mainNavItems]
+      .filter(item => canView(item.module))
+      .sort((a, b) => {
+        const indexA = mainNavOrder.indexOf(a.path);
+        const indexB = mainNavOrder.indexOf(b.path);
+        return indexA - indexB;
+      });
+  }, [mainNavOrder, canView]);
+
+  const sortedSecondaryItems = useMemo(() => {
+    return [...secondaryNavItems]
+      .filter(item => canView(item.module))
+      .sort((a, b) => {
+        const indexA = secondaryNavOrder.indexOf(a.path);
+        const indexB = secondaryNavOrder.indexOf(b.path);
+        return indexA - indexB;
+      });
+  }, [secondaryNavOrder, canView]);
+
+  const handleMainDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = mainNavOrder.indexOf(active.id as string);
+      const newIndex = mainNavOrder.indexOf(over.id as string);
+      updateMainNavOrder(arrayMove(mainNavOrder, oldIndex, newIndex));
+    }
+  };
+
+  const handleSecondaryDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = secondaryNavOrder.indexOf(active.id as string);
+      const newIndex = secondaryNavOrder.indexOf(over.id as string);
+      updateSecondaryNavOrder(arrayMove(secondaryNavOrder, oldIndex, newIndex));
+    }
   };
 
   return (
@@ -117,22 +183,100 @@ const Sidebar = ({ className }: SidebarProps) => {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        <div className="mb-6">
-          <p className="px-4 mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        {/* Edit Mode Controls */}
+        <div className="flex items-center justify-between mb-4">
+          <p className="px-4 text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Main
           </p>
-          {mainNavItems.map((item) => (
-            <NavLink key={item.path} {...item} />
-          ))}
+          <div className="flex items-center gap-1">
+            {isEditMode && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={resetToDefault}
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Reset to default order</TooltipContent>
+              </Tooltip>
+            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn("h-6 w-6", isEditMode && "text-primary")}
+                  onClick={() => setIsEditMode(!isEditMode)}
+                >
+                  {isEditMode ? <Check className="w-3 h-3" /> : <Pencil className="w-3 h-3" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{isEditMode ? "Done editing" : "Reorder tabs"}</TooltipContent>
+            </Tooltip>
+          </div>
         </div>
 
+        {isEditMode && (
+          <p className="text-xs text-muted-foreground px-4 mb-2">
+            Drag items to reorder
+          </p>
+        )}
+
+        {/* Main Nav */}
+        <div className="mb-6">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleMainDragEnd}
+          >
+            <SortableContext
+              items={sortedMainItems.map(item => item.path)}
+              strategy={verticalListSortingStrategy}
+            >
+              {sortedMainItems.map((item) => (
+                <SortableNavItem
+                  key={item.path}
+                  id={item.path}
+                  path={item.path}
+                  icon={item.icon}
+                  label={item.label}
+                  isEditMode={isEditMode}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+        </div>
+
+        {/* Secondary Nav */}
         <div>
           <p className="px-4 mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Operations
           </p>
-          {secondaryNavItems.map((item) => (
-            <NavLink key={item.path} {...item} />
-          ))}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleSecondaryDragEnd}
+          >
+            <SortableContext
+              items={sortedSecondaryItems.map(item => item.path)}
+              strategy={verticalListSortingStrategy}
+            >
+              {sortedSecondaryItems.map((item) => (
+                <SortableNavItem
+                  key={item.path}
+                  id={item.path}
+                  path={item.path}
+                  icon={item.icon}
+                  label={item.label}
+                  isEditMode={isEditMode}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       </nav>
 
