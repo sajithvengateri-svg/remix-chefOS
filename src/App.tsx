@@ -26,6 +26,7 @@ import More from "./pages/More";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Team from "./pages/Team";
+import Marketplace from "./pages/Marketplace";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/prep" element={<ProtectedRoute module="prep"><PrepLists /></ProtectedRoute>} />
             <Route path="/prep/*" element={<ProtectedRoute module="prep"><PrepLists /></ProtectedRoute>} />
             <Route path="/production" element={<ProtectedRoute module="production"><Production /></ProtectedRoute>} />
+            <Route path="/marketplace" element={<ProtectedRoute module="marketplace"><Marketplace /></ProtectedRoute>} />
             <Route path="/menu-engineering" element={<ProtectedRoute module="menu-engineering"><MenuEngineering /></ProtectedRoute>} />
             <Route path="/roster" element={<ProtectedRoute module="roster"><Roster /></ProtectedRoute>} />
             <Route path="/allergens" element={<ProtectedRoute module="allergens"><AllergenDashboard /></ProtectedRoute>} />
