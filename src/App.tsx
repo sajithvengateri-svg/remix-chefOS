@@ -28,6 +28,7 @@ import Auth from "./pages/Auth";
 import Team from "./pages/Team";
 import Marketplace from "./pages/Marketplace";
 import KitchenSections from "./pages/KitchenSections";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/kitchen-sections" element={<ProtectedRoute module="calendar"><KitchenSections /></ProtectedRoute>} />
             <Route path="/equipment" element={<ProtectedRoute module="equipment"><Equipment /></ProtectedRoute>} />
             <Route path="/team" element={<ProtectedRoute module="team"><Team /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
