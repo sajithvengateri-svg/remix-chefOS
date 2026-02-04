@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { 
   Search, 
@@ -9,7 +9,11 @@ import {
   ArrowUpDown,
   Edit,
   Trash2,
-  Loader2
+  Loader2,
+  ClipboardList,
+  FileText,
+  Clock,
+  Calendar
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -17,11 +21,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
+import InventorySyncButton from "@/components/inventory/InventorySyncButton";
+import StocktakeDialog from "@/components/inventory/StocktakeDialog";
+import InvoiceScannerDialog from "@/components/inventory/InvoiceScannerDialog";
 
 interface InventoryItem {
   id: string;
@@ -49,6 +57,9 @@ const Inventory = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [deletingItem, setDeletingItem] = useState<InventoryItem | null>(null);
+  const [stocktakeDialogOpen, setStocktakeDialogOpen] = useState(false);
+  const [invoiceScannerOpen, setInvoiceScannerOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("inventory");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -194,6 +205,15 @@ const Inventory = () => {
 
   const criticalCount = inventory.filter(i => getStatus(Number(i.quantity), Number(i.min_stock)) === "critical").length;
   const lowCount = inventory.filter(i => getStatus(Number(i.quantity), Number(i.min_stock)) === "low").length;
+  
+  // Expiry tracking
+  const expiringItems = useMemo(() => {
+    return inventory.filter(item => {
+      if (!item.expiry_date) return false;
+      const days = differenceInDays(new Date(item.expiry_date), new Date());
+      return days >= 0 && days <= 7;
+    });
+  }, [inventory]);
 
   const statusStyles = {
     ok: "bg-success/10 text-success",
@@ -214,12 +234,25 @@ const Inventory = () => {
             <h1 className="page-title font-display">Inventory</h1>
             <p className="page-subtitle">{inventory.length} items tracked</p>
           </div>
-          {hasEditPermission && (
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Item
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {hasEditPermission && (
+              <>
+                <InventorySyncButton onSync={fetchInventory} />
+                <Button variant="outline" onClick={() => setInvoiceScannerOpen(true)}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Scan Invoice
+                </Button>
+                <Button variant="outline" onClick={() => setStocktakeDialogOpen(true)}>
+                  <ClipboardList className="w-4 h-4 mr-2" />
+                  Stocktake
+                </Button>
+                <Button onClick={() => setDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Item
+                </Button>
+              </>
+            )}
+          </div>
         </motion.div>
 
         {/* Alert Cards */}
@@ -227,7 +260,7 @@ const Inventory = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid sm:grid-cols-2 gap-4"
+          className="grid sm:grid-cols-3 gap-4"
         >
           <div className="card-elevated p-4 border-l-4 border-l-destructive">
             <div className="flex items-center gap-3">
@@ -235,8 +268,8 @@ const Inventory = () => {
                 <AlertTriangle className="w-5 h-5 text-destructive" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">{criticalCount} Critical Items</p>
-                <p className="text-sm text-muted-foreground">Need immediate attention</p>
+                <p className="font-semibold text-foreground">{criticalCount} Critical</p>
+                <p className="text-sm text-muted-foreground">Needs attention</p>
               </div>
             </div>
           </div>
@@ -246,8 +279,19 @@ const Inventory = () => {
                 <TrendingDown className="w-5 h-5 text-warning" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">{lowCount} Low Stock Items</p>
-                <p className="text-sm text-muted-foreground">Below minimum level</p>
+                <p className="font-semibold text-foreground">{lowCount} Low Stock</p>
+                <p className="text-sm text-muted-foreground">Below minimum</p>
+              </div>
+            </div>
+          </div>
+          <div className="card-elevated p-4 border-l-4 border-l-warning">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-warning/10">
+                <Clock className="w-5 h-5 text-warning" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">{expiringItems.length} Expiring</p>
+                <p className="text-sm text-muted-foreground">Within 7 days</p>
               </div>
             </div>
           </div>
@@ -490,6 +534,20 @@ const Inventory = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Stocktake Dialog */}
+        <StocktakeDialog
+          open={stocktakeDialogOpen}
+          onOpenChange={setStocktakeDialogOpen}
+          onComplete={fetchInventory}
+        />
+
+        {/* Invoice Scanner Dialog */}
+        <InvoiceScannerDialog
+          open={invoiceScannerOpen}
+          onOpenChange={setInvoiceScannerOpen}
+          onComplete={fetchInventory}
+        />
       </div>
     </AppLayout>
   );
