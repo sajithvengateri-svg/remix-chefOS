@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
@@ -116,6 +116,8 @@ const RecipeEdit = () => {
   const [saving, setSaving] = useState(false);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [sectionsManagerOpen, setSectionsManagerOpen] = useState(false);
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const isUntitled = recipe?.name === "Untitled Recipe";
   
   const { sections, loading: sectionsLoading } = useRecipeSections();
 
@@ -130,6 +132,14 @@ const RecipeEdit = () => {
       fetchRecipe();
     }
   }, [id, isNewRecipe]);
+
+  // Auto-focus and select the name field when it's "Untitled Recipe"
+  useEffect(() => {
+    if (recipe?.name === "Untitled Recipe" && nameInputRef.current) {
+      nameInputRef.current.focus();
+      nameInputRef.current.select();
+    }
+  }, [recipe?.name]);
 
   const createNewRecipe = async () => {
     setLoading(true);
@@ -282,10 +292,15 @@ const RecipeEdit = () => {
               <div className="flex-1">
                 {hasEditPermission ? (
                   <Input
+                    ref={nameInputRef}
                     value={recipe.name}
                     onChange={(e) => handleFieldUpdate("name", e.target.value)}
-                    className="text-2xl font-bold border-none p-0 h-auto focus-visible:ring-0"
-                    placeholder="Recipe Name"
+                    className={`text-2xl font-bold border-none p-0 h-auto focus-visible:ring-2 focus-visible:ring-primary ${
+                      isUntitled 
+                        ? "text-muted-foreground italic bg-primary/5 px-2 py-1 rounded-lg border-2 border-dashed border-primary/30 animate-pulse" 
+                        : ""
+                    }`}
+                    placeholder="Enter recipe name..."
                   />
                 ) : (
                   <h1 className="page-title font-display">{recipe.name}</h1>
