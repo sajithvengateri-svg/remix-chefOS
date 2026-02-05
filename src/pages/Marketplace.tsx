@@ -23,7 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import DemandInsightsPanel from "@/components/marketplace/DemandInsightsPanel";
+import LiveDemandPanel from "@/components/marketplace/LiveDemandPanel";
 import { supabase } from "@/integrations/supabase/client";
 
 // Placeholder suppliers - will be populated from vendor_profiles
@@ -180,12 +180,12 @@ const Marketplace = () => {
                   Live Ingredient Demand
                 </CardTitle>
                 <CardDescription>
-                  See what ingredients chefs in your area are using most. Data is aggregated weekly.
+                  Real-time ingredient usage from recipes. Shows quantities and categories only - no account information.
                 </CardDescription>
               </CardHeader>
             </Card>
 
-            <DemandInsightsPanel maxItems={15} />
+            <LiveDemandPanel maxItems={20} />
           </TabsContent>
 
           {/* Suppliers Tab */}
