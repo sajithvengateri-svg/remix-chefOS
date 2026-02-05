@@ -18,6 +18,10 @@ import {
   Edit2,
   Loader2,
   Check,
+  X,
+  FolderOpen,
+  Copy,
+  Trash2,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useMenuStore } from "@/stores/menuStore";
@@ -25,6 +29,7 @@ import { MenuItem } from "@/types/menu";
 import { cn } from "@/lib/utils";
 import MenuMatrixChart from "@/components/menu/MenuMatrixChart";
 import MenuItemEditDialog from "@/components/menu/MenuItemEditDialog";
+import MenuManagerDrawer from "@/components/menu/MenuManagerDrawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -34,6 +39,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +75,9 @@ const MenuEngineering = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isNewMenuDialogOpen, setIsNewMenuDialogOpen] = useState(false);
   const [newMenuName, setNewMenuName] = useState("");
+  const [isMenuManagerOpen, setIsMenuManagerOpen] = useState(false);
+  const [isRenamingMenu, setIsRenamingMenu] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Menu parsing state
@@ -81,12 +96,45 @@ const MenuEngineering = () => {
     activateMenu,
     deleteMenuItem,
     addMenuItem,
+    renameMenu,
+    archiveMenu,
+    duplicateMenu,
   } = useMenuStore();
   
   const activeMenu = getActiveMenu();
   const archivedMenus = getArchivedMenus();
   const analytics = activeMenu ? getMenuAnalytics(activeMenu.id) : null;
   const connectedPOS = posConnections.find(p => p.isConnected);
+
+  const handleStartRenameMenu = () => {
+    if (activeMenu) {
+      setRenameValue(activeMenu.name);
+      setIsRenamingMenu(true);
+    }
+  };
+
+  const handleSaveRenameMenu = () => {
+    if (activeMenu && renameValue.trim()) {
+      renameMenu(activeMenu.id, renameValue.trim());
+      toast.success("Menu renamed");
+    }
+    setIsRenamingMenu(false);
+    setRenameValue("");
+  };
+
+  const handleArchiveActiveMenu = () => {
+    if (activeMenu) {
+      archiveMenu(activeMenu.id);
+      toast.success(`"${activeMenu.name}" archived`);
+    }
+  };
+
+  const handleDuplicateActiveMenu = () => {
+    if (activeMenu) {
+      const newMenu = duplicateMenu(activeMenu.id, `${activeMenu.name} (Copy)`);
+      toast.success(`Duplicated as "${newMenu.name}"`);
+    }
+  };
 
   const handleScanMenu = () => {
     if (fileInputRef.current) {
@@ -265,20 +313,20 @@ const MenuEngineering = () => {
             <p className="page-subtitle">Track costs, analyze profitability, optimize your menu</p>
           </div>
           <div className="flex gap-2">
-            <button 
-              onClick={() => setShowArchived(!showArchived)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-input bg-background hover:bg-muted transition-colors"
+            <Button 
+              variant="outline"
+              onClick={() => setIsMenuManagerOpen(true)}
             >
-              <Archive className="w-4 h-4" />
-              <span className="hidden sm:inline">Archived ({archivedMenus.length})</span>
-            </button>
-            <button 
-              className="btn-primary"
+              <FolderOpen className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">All Menus</span>
+              <Badge variant="secondary" className="ml-2">{menus.length}</Badge>
+            </Button>
+            <Button 
               onClick={() => setIsNewMenuDialogOpen(true)}
             >
               <Plus className="w-4 h-4 mr-2" />
               New Menu
-            </button>
+            </Button>
           </div>
         </motion.div>
 
@@ -394,7 +442,38 @@ const MenuEngineering = () => {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-semibold">{activeMenu.name}</h2>
+                      {isRenamingMenu ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            className="h-8 w-48 text-lg font-semibold"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveRenameMenu();
+                              if (e.key === "Escape") setIsRenamingMenu(false);
+                            }}
+                          />
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveRenameMenu}>
+                            <Check className="w-4 h-4 text-success" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsRenamingMenu(false)}>
+                            <X className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <>
+                          <h2 className="text-lg font-semibold">{activeMenu.name}</h2>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-6 w-6"
+                            onClick={handleStartRenameMenu}
+                          >
+                            <Edit2 className="w-3 h-3 text-muted-foreground" />
+                          </Button>
+                        </>
+                      )}
                       <span className="px-2 py-0.5 rounded-full bg-success/10 text-success text-xs font-medium">
                         Active
                       </span>
@@ -404,9 +483,28 @@ const MenuEngineering = () => {
                     </p>
                   </div>
                 </div>
-                <button className="p-2 rounded-lg hover:bg-muted transition-colors">
-                  <MoreVertical className="w-5 h-5 text-muted-foreground" />
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="p-2 rounded-lg hover:bg-muted transition-colors">
+                      <MoreVertical className="w-5 h-5 text-muted-foreground" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleStartRenameMenu}>
+                      <Edit2 className="w-4 h-4 mr-2" />
+                      Rename
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDuplicateActiveMenu}>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Duplicate
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleArchiveActiveMenu}>
+                      <Archive className="w-4 h-4 mr-2" />
+                      Archive
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {/* Key Metrics */}
@@ -702,6 +800,12 @@ const MenuEngineering = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Menu Manager Drawer */}
+      <MenuManagerDrawer 
+        open={isMenuManagerOpen} 
+        onOpenChange={setIsMenuManagerOpen} 
+      />
 
       {/* Loading overlay for parsing */}
       {isParsingMenu && (
