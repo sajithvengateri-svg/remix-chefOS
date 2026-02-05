@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   Store, 
@@ -22,8 +23,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import DemandInsightsPanel from "@/components/marketplace/DemandInsightsPanel";
+import { supabase } from "@/integrations/supabase/client";
 
-// Latin placeholder data - wireframe only
+// Placeholder suppliers - will be populated from vendor_profiles
 const placeholderSuppliers = [
   { 
     id: "1", 
@@ -85,7 +88,20 @@ const placeholderPriceComparison: {
 
 const Marketplace = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("suppliers");
+  const [activeTab, setActiveTab] = useState("demand");
+  const [vendorCount, setVendorCount] = useState(0);
+
+  useEffect(() => {
+    // Fetch approved vendor count
+    const fetchVendorCount = async () => {
+      const { count } = await supabase
+        .from("vendor_profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "approved");
+      setVendorCount(count || 0);
+    };
+    fetchVendorCount();
+  }, []);
 
   return (
     <AppLayout>
@@ -133,6 +149,10 @@ const Marketplace = () => {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="demand" className="gap-2">
+              <TrendingUp className="w-4 h-4" />
+              <span className="hidden sm:inline">Demand</span>
+            </TabsTrigger>
             <TabsTrigger value="suppliers" className="gap-2">
               <Store className="w-4 h-4" />
               <span className="hidden sm:inline">Suppliers</span>
@@ -150,6 +170,23 @@ const Marketplace = () => {
               <span className="hidden sm:inline">Messages</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Demand Insights Tab */}
+          <TabsContent value="demand" className="space-y-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  Live Ingredient Demand
+                </CardTitle>
+                <CardDescription>
+                  See what ingredients chefs in your area are using most. Data is aggregated weekly.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <DemandInsightsPanel maxItems={15} />
+          </TabsContent>
 
           {/* Suppliers Tab */}
           <TabsContent value="suppliers" className="space-y-4">
@@ -202,8 +239,12 @@ const Marketplace = () => {
             )}
 
             <div className="text-center py-8 text-muted-foreground">
-              <p className="text-sm">Supplier connections coming soon...</p>
-              <p className="text-xs mt-1">Vendor app launching Q2 2025</p>
+              <p className="text-sm">
+                {vendorCount > 0 
+                  ? `${vendorCount} approved vendors in the marketplace` 
+                  : "Supplier connections coming soon..."}
+              </p>
+              <p className="text-xs mt-1">Connect with local suppliers to get the best deals</p>
             </div>
           </TabsContent>
 
