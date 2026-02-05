@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import IngredientCombobox from "./IngredientCombobox";
 import NewIngredientDialog from "./NewIngredientDialog";
 import { IngredientMatch } from "@/lib/ingredientMatcher";
+ import { calculateIngredientCost, getConversionExplanation } from "@/lib/unitConversion";
 
 interface Ingredient {
   id: string;
@@ -112,10 +113,18 @@ const RecipeBuilder = ({
     // Enrich recipe ingredients with ingredient details
     const enriched = (recipeIngData || []).map(ri => {
       const ing = (ingData || []).find(i => i.id === ri.ingredient_id) as Ingredient | undefined;
+       const lineCost = ing 
+         ? calculateIngredientCost(
+             Number(ri.quantity),
+             ri.unit,
+             Number(ing.cost_per_unit),
+             ing.unit
+           ) || 0
+         : 0;
       return {
         ...ri,
         ingredient: ing,
-        line_cost: ing ? Number(ing.cost_per_unit) * Number(ri.quantity) : 0,
+        line_cost: lineCost,
       };
     });
     
@@ -443,7 +452,14 @@ const RecipeBuilder = ({
                       )}
                     </td>
                     <td className="px-4 py-3 font-mono text-sm">
-                      ${Number(ri.ingredient?.cost_per_unit || 0).toFixed(2)}/{ri.ingredient?.unit}
+                      <div className="flex flex-col">
+                        <span>${Number(ri.ingredient?.cost_per_unit || 0).toFixed(2)}/{ri.ingredient?.unit}</span>
+                        {ri.unit !== ri.ingredient?.unit && ri.ingredient && (
+                          <span className="text-xs text-muted-foreground">
+                            {getConversionExplanation(Number(ri.quantity), ri.unit, ri.ingredient.unit)}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 font-semibold">
                       ${(ri.line_cost || 0).toFixed(2)}

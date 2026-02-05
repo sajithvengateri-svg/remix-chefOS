@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { Ingredient, Recipe, PriceUpdateEvent, RecipeCostImpact } from '@/types/costing';
+ import { convertUnit } from '@/lib/unitConversion';
 
 // Empty initial state - no mock data
 const initialIngredients: Ingredient[] = [];
@@ -54,7 +55,10 @@ export const useCostingStore = create<CostingStore>((set, get) => ({
         const ing = ingredients.find(i => i.id === ri.ingredientId);
         if (!ing) return total;
         const price = ri.ingredientId === ingredientId ? newPrice : ing.currentPrice;
-        return total + (price * ri.quantity);
+        // Convert recipe unit to ingredient unit for accurate cost
+        const convertedQty = convertUnit(ri.quantity, ri.unit, ing.unit);
+        const qty = convertedQty !== null ? convertedQty : ri.quantity;
+        return total + (price * qty);
       }, 0);
 
       const oldFoodCostPercent = (oldCost / recipe.sellPrice) * 100;
@@ -95,10 +99,17 @@ export const useCostingStore = create<CostingStore>((set, get) => ({
     // Enrich with ingredient details and costs
     const enrichedIngredients = recipe.ingredients.map(ri => {
       const ingredient = ingredients.find(i => i.id === ri.ingredientId);
+      let cost = 0;
+      if (ingredient) {
+        // Convert recipe unit to ingredient unit for accurate cost
+        const convertedQty = convertUnit(ri.quantity, ri.unit, ingredient.unit);
+        const qty = convertedQty !== null ? convertedQty : ri.quantity;
+        cost = ingredient.currentPrice * qty;
+      }
       return {
         ...ri,
         ingredient,
-        cost: ingredient ? ingredient.currentPrice * ri.quantity : 0,
+        cost,
       };
     });
 
@@ -123,7 +134,11 @@ export const useCostingStore = create<CostingStore>((set, get) => ({
     const { ingredients } = get();
     return recipe.ingredients.reduce((total, ri) => {
       const ingredient = ingredients.find(i => i.id === ri.ingredientId);
-      return total + (ingredient ? ingredient.currentPrice * ri.quantity : 0);
+      if (!ingredient) return total;
+      // Convert recipe unit to ingredient unit for accurate cost
+      const convertedQty = convertUnit(ri.quantity, ri.unit, ingredient.unit);
+      const qty = convertedQty !== null ? convertedQty : ri.quantity;
+      return total + (ingredient.currentPrice * qty);
     }, 0);
   },
 
