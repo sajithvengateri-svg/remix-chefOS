@@ -566,6 +566,7 @@ export type Database = {
           id: string
           phone: string | null
           position: string | null
+          postcode: string | null
           updated_at: string
           user_id: string
         }
@@ -578,6 +579,7 @@ export type Database = {
           id?: string
           phone?: string | null
           position?: string | null
+          postcode?: string | null
           updated_at?: string
           user_id: string
         }
@@ -590,6 +592,7 @@ export type Database = {
           id?: string
           phone?: string | null
           position?: string | null
+          postcode?: string | null
           updated_at?: string
           user_id?: string
         }
