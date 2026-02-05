@@ -47,7 +47,7 @@ import { cn } from "@/lib/utils";
 import { useNavOrder } from "@/hooks/useNavOrder";
 
 const mainNavItems = [
-  { path: "/", icon: LayoutDashboard, label: "Dashboard", module: "dashboard" },
+  { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", module: "dashboard" },
   { path: "/recipes", icon: ChefHat, label: "Recipe Bank", module: "recipes" },
   { path: "/ingredients", icon: Utensils, label: "Ingredients", module: "ingredients" },
   { path: "/invoices", icon: Receipt, label: "Invoices", module: "invoices" },
