@@ -28,6 +28,7 @@ import Equipment from "./pages/Equipment";
 import More from "./pages/More";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import PortalSelect from "./pages/PortalSelect";
 import Team from "./pages/Team";
 import Marketplace from "./pages/Marketplace";
 import KitchenSections from "./pages/KitchenSections";
@@ -63,9 +64,12 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            {/* ========== PORTAL SELECTION ========== */}
+            <Route path="/" element={<PortalSelect />} />
+
             {/* ========== CHEF PORTAL ========== */}
             <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<ProtectedRoute module="dashboard"><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute module="dashboard"><Dashboard /></ProtectedRoute>} />
             <Route path="/recipes" element={<ProtectedRoute module="recipes"><Recipes /></ProtectedRoute>} />
             <Route path="/recipes/:id" element={<ProtectedRoute module="recipes"><RecipeDetail /></ProtectedRoute>} />
             <Route path="/recipes/:id/edit" element={<ProtectedRoute module="recipes"><RecipeEdit /></ProtectedRoute>} />

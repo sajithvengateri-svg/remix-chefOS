@@ -22,7 +22,11 @@ const ProtectedRoute = ({ children, module, requireEdit = false }: ProtectedRout
   }
 
   if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+    // Redirect to appropriate auth based on the current path
+    const isVendorRoute = location.pathname.startsWith("/vendor");
+    const isAdminRoute = location.pathname.startsWith("/admin");
+    const authPath = isVendorRoute ? "/vendor/auth" : isAdminRoute ? "/admin/auth" : "/auth";
+    return <Navigate to={authPath} state={{ from: location }} replace />;
   }
 
   // Check module permissions if specified
