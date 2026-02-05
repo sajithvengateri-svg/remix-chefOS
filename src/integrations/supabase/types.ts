@@ -158,6 +158,42 @@ export type Database = {
         }
         Relationships: []
       }
+      demand_insights: {
+        Row: {
+          avg_price_paid: number | null
+          created_at: string
+          id: string
+          ingredient_category: string
+          order_count: number
+          postcode: string
+          total_quantity: number
+          unit: string
+          week_ending: string
+        }
+        Insert: {
+          avg_price_paid?: number | null
+          created_at?: string
+          id?: string
+          ingredient_category: string
+          order_count?: number
+          postcode: string
+          total_quantity?: number
+          unit?: string
+          week_ending: string
+        }
+        Update: {
+          avg_price_paid?: number | null
+          created_at?: string
+          id?: string
+          ingredient_category?: string
+          order_count?: number
+          postcode?: string
+          total_quantity?: number
+          unit?: string
+          week_ending?: string
+        }
+        Relationships: []
+      }
       direct_messages: {
         Row: {
           created_at: string
@@ -1105,6 +1141,320 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_deals: {
+        Row: {
+          applicable_categories: string[] | null
+          created_at: string
+          description: string | null
+          discount_amount: number | null
+          discount_percent: number | null
+          end_date: string
+          id: string
+          is_active: boolean | null
+          min_order_value: number | null
+          start_date: string
+          title: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          applicable_categories?: string[] | null
+          created_at?: string
+          description?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
+          end_date: string
+          id?: string
+          is_active?: boolean | null
+          min_order_value?: number | null
+          start_date?: string
+          title: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          applicable_categories?: string[] | null
+          created_at?: string
+          description?: string | null
+          discount_amount?: number | null
+          discount_percent?: number | null
+          end_date?: string
+          id?: string
+          is_active?: boolean | null
+          min_order_value?: number | null
+          start_date?: string
+          title?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_deals_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_messages: {
+        Row: {
+          chef_user_id: string
+          created_at: string
+          id: string
+          message: string
+          order_id: string | null
+          read_at: string | null
+          sender_id: string
+          sender_type: string
+          vendor_id: string
+        }
+        Insert: {
+          chef_user_id: string
+          created_at?: string
+          id?: string
+          message: string
+          order_id?: string | null
+          read_at?: string | null
+          sender_id: string
+          sender_type: string
+          vendor_id: string
+        }
+        Update: {
+          chef_user_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          order_id?: string | null
+          read_at?: string | null
+          sender_id?: string
+          sender_type?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_messages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_messages_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_orders: {
+        Row: {
+          chef_user_id: string
+          created_at: string
+          delivery_address: string | null
+          delivery_date: string | null
+          delivery_fee: number | null
+          id: string
+          items: Json
+          notes: string | null
+          order_number: string
+          status: string | null
+          subtotal: number
+          total: number
+          updated_at: string
+          vendor_id: string | null
+        }
+        Insert: {
+          chef_user_id: string
+          created_at?: string
+          delivery_address?: string | null
+          delivery_date?: string | null
+          delivery_fee?: number | null
+          id?: string
+          items?: Json
+          notes?: string | null
+          order_number?: string
+          status?: string | null
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Update: {
+          chef_user_id?: string
+          created_at?: string
+          delivery_address?: string | null
+          delivery_date?: string | null
+          delivery_fee?: number | null
+          id?: string
+          items?: Json
+          notes?: string | null
+          order_number?: string
+          status?: string | null
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_pricing: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          ingredient_name: string
+          is_available: boolean | null
+          lead_time_days: number | null
+          max_order_quantity: number | null
+          min_order_quantity: number | null
+          notes: string | null
+          price_per_unit: number
+          unit: string
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+          vendor_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          ingredient_name: string
+          is_available?: boolean | null
+          lead_time_days?: number | null
+          max_order_quantity?: number | null
+          min_order_quantity?: number | null
+          notes?: string | null
+          price_per_unit: number
+          unit?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+          vendor_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          ingredient_name?: string
+          is_available?: boolean | null
+          lead_time_days?: number | null
+          max_order_quantity?: number | null
+          min_order_quantity?: number | null
+          notes?: string | null
+          price_per_unit?: number
+          unit?: string
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_pricing_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_profiles: {
+        Row: {
+          abn: string | null
+          address: string | null
+          business_name: string
+          categories: string[] | null
+          contact_email: string
+          contact_name: string
+          contact_phone: string | null
+          created_at: string
+          delivery_areas: string[] | null
+          id: string
+          logo_url: string | null
+          postcode: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          abn?: string | null
+          address?: string | null
+          business_name: string
+          categories?: string[] | null
+          contact_email: string
+          contact_name: string
+          contact_phone?: string | null
+          created_at?: string
+          delivery_areas?: string[] | null
+          id?: string
+          logo_url?: string | null
+          postcode?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          abn?: string | null
+          address?: string | null
+          business_name?: string
+          categories?: string[] | null
+          contact_email?: string
+          contact_name?: string
+          contact_phone?: string | null
+          created_at?: string
+          delivery_areas?: string[] | null
+          id?: string
+          logo_url?: string | null
+          postcode?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vendor_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["vendor_role"]
+          user_id: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["vendor_role"]
+          user_id: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["vendor_role"]
+          user_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_roles_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1120,6 +1470,7 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }[]
       }
+      get_vendor_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1128,10 +1479,12 @@ export type Database = {
         Returns: boolean
       }
       is_head_chef: { Args: { _user_id: string }; Returns: boolean }
+      is_vendor: { Args: { _user_id: string }; Returns: boolean }
       sync_inventory_from_ingredients: { Args: never; Returns: number }
     }
     Enums: {
       app_role: "head_chef" | "line_chef"
+      vendor_role: "vendor_admin" | "vendor_staff"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1260,6 +1613,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["head_chef", "line_chef"],
+      vendor_role: ["vendor_admin", "vendor_staff"],
     },
   },
 } as const
