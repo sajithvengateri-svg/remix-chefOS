@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
@@ -10,13 +10,15 @@ import {
   Loader2,
   Upload,
   Layers,
-  Trash2
+  Trash2,
+  Settings
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import FoodCostCalculator from "@/components/costing/FoodCostCalculator";
 import RecipeImportDialog from "@/components/recipes/RecipeImportDialog";
 import BulkRecipeImportDialog from "@/components/recipes/BulkRecipeImportDialog";
 import RecipeCard from "@/components/recipes/RecipeCard";
+import RecipeSectionsManager from "@/components/recipes/RecipeSectionsManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +29,7 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRecipeSections } from "@/hooks/useRecipeSections";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -56,7 +59,6 @@ interface Recipe {
   created_at: string;
 }
 
-const categories = ["All", "Mains", "Appetizers", "Soups", "Salads", "Desserts", "Sauces", "Batch Recipes"];
 const ingredientUnits = ["g", "kg", "ml", "L", "each", "bunch", "tbsp", "tsp", "cup"];
 
 const Recipes = () => {
@@ -74,6 +76,15 @@ const Recipes = () => {
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [deletingRecipe, setDeletingRecipe] = useState<Recipe | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const [sectionsManagerOpen, setSectionsManagerOpen] = useState(false);
+  
+  const { sections, loading: sectionsLoading } = useRecipeSections();
+
+  // Build category list from dynamic sections
+  const categories = useMemo(() => {
+    const sectionNames = sections.map(s => s.name);
+    return ["All", ...sectionNames, "Batch Recipes"];
+  }, [sections]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -351,22 +362,40 @@ const Recipes = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
+          className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide items-center"
         >
-          {categories.map((category) => (
+          {categories.map((category) => {
+            const section = sections.find(s => s.name === category);
+            return (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={cn(
+                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all flex items-center gap-2",
+                  selectedCategory === category
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:bg-secondary"
+                )}
+              >
+                {section && (
+                  <span 
+                    className="w-2 h-2 rounded-full" 
+                    style={{ backgroundColor: selectedCategory === category ? 'currentColor' : section.color }}
+                  />
+                )}
+                {category}
+              </button>
+            );
+          })}
+          {hasEditPermission && (
             <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
-                selectedCategory === category
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-secondary"
-              )}
+              onClick={() => setSectionsManagerOpen(true)}
+              className="p-2 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground transition-colors"
+              title="Manage Sections"
             >
-              {category}
+              <Settings className="w-4 h-4" />
             </button>
-          ))}
+          )}
         </motion.div>
 
         {/* Recipe Grid */}
@@ -479,8 +508,16 @@ const Recipes = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.filter(c => c !== "All").map(cat => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      {sections.map(section => (
+                        <SelectItem key={section.id} value={section.name}>
+                          <div className="flex items-center gap-2">
+                            <span 
+                              className="w-2 h-2 rounded-full" 
+                              style={{ backgroundColor: section.color }}
+                            />
+                            {section.name}
+                          </div>
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -631,6 +668,12 @@ const Recipes = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Sections Manager Dialog */}
+        <RecipeSectionsManager 
+          open={sectionsManagerOpen}
+          onOpenChange={setSectionsManagerOpen}
+        />
       </div>
     </AppLayout>
   );

@@ -7,7 +7,8 @@ import {
   Loader2,
   ChefHat,
   Shield,
-  Settings
+  Settings,
+  Pencil
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -18,8 +19,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import RecipeBuilder from "@/components/recipes/RecipeBuilder";
 import RecipeCostSettings from "@/components/recipes/RecipeCostSettings";
+import RecipeSectionsManager from "@/components/recipes/RecipeSectionsManager";
 import { CCPTimelineEditor } from "@/components/ccp/CCPTimelineEditor";
 import { useRecipeCCPs } from "@/hooks/useRecipeCCPs";
+import { useRecipeSections } from "@/hooks/useRecipeSections";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -41,8 +44,6 @@ interface Recipe {
   food_cost_low_alert: number;
   food_cost_high_alert: number;
 }
-
-const categories = ["Mains", "Appetizers", "Soups", "Salads", "Desserts", "Sauces", "Sides", "Breakfast"];
 
 // CCP Section Component with its own data management
 const CCPSection = ({ recipeId, hasEditPermission }: { recipeId: string; hasEditPermission: boolean }) => {
@@ -114,6 +115,9 @@ const RecipeEdit = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [sectionsManagerOpen, setSectionsManagerOpen] = useState(false);
+  
+  const { sections, loading: sectionsLoading } = useRecipeSections();
 
   const isNewRecipe = location.pathname === "/recipes/new";
   const hasEditPermission = canEdit("recipes");
@@ -314,18 +318,37 @@ const RecipeEdit = () => {
           <h3 className="font-semibold mb-4">Basic Information</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label>Category</Label>
+              <div className="flex items-center justify-between">
+                <Label>Category</Label>
+                {hasEditPermission && (
+                  <button
+                    onClick={() => setSectionsManagerOpen(true)}
+                    className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    Edit
+                  </button>
+                )}
+              </div>
               <Select
                 value={recipe.category}
                 onValueChange={(v) => handleFieldUpdate("category", v)}
-                disabled={!hasEditPermission}
+                disabled={!hasEditPermission || sectionsLoading}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder={sectionsLoading ? "Loading..." : "Select category"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  {sections.map(section => (
+                    <SelectItem key={section.id} value={section.name}>
+                      <div className="flex items-center gap-2">
+                        <span 
+                          className="w-2 h-2 rounded-full" 
+                          style={{ backgroundColor: section.color }}
+                        />
+                        {section.name}
+                      </div>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -416,6 +439,12 @@ const RecipeEdit = () => {
         <CCPSection 
           recipeId={recipe.id} 
           hasEditPermission={hasEditPermission}
+        />
+
+        {/* Sections Manager Dialog */}
+        <RecipeSectionsManager 
+          open={sectionsManagerOpen}
+          onOpenChange={setSectionsManagerOpen}
         />
       </div>
     </AppLayout>
