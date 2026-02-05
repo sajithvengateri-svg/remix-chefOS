@@ -5,7 +5,7 @@ import {
   Trash2, 
   GripVertical, 
   Loader2,
-  Lock,
+  Pencil,
   Palette
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -147,31 +147,31 @@ const RecipeSectionsManager = ({ open, onOpenChange }: RecipeSectionsManagerProp
                         autoFocus
                       />
                     ) : (
-                      <button
-                        onClick={() => !section.is_default && handleStartEdit(section)}
-                        className="flex-1 text-left text-sm font-medium text-foreground"
-                      >
+                      <span className="flex-1 text-left text-sm font-medium text-foreground">
                         {section.name}
-                      </button>
+                      </span>
                     )}
 
-                    {section.is_default ? (
-                      <Lock className="w-4 h-4 text-muted-foreground/50" />
-                    ) : (
-                      <button
-                        onClick={() => deleteSection(section.id)}
-                        className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleStartEdit(section)}
+                      className="p-1.5 rounded hover:bg-muted-foreground/10 transition-colors"
+                    >
+                      <Pencil className="w-4 h-4 text-muted-foreground" />
+                    </button>
+
+                    <button
+                      onClick={() => deleteSection(section.id)}
+                      className="p-1.5 rounded hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </button>
                   </motion.div>
                 ))}
               </AnimatePresence>
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Default sections cannot be deleted. Click on a name to edit, click the color to change it.
+              Click the pencil to edit a section name, click the color to change it.
             </p>
           </div>
         )}
