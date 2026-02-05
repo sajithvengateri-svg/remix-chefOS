@@ -17,6 +17,8 @@ import PrepListWidget from "@/components/dashboard/PrepListWidget";
 import QuickActions from "@/components/dashboard/QuickActions";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import { supabase } from "@/integrations/supabase/client";
+ import { useIsMobile } from "@/hooks/use-mobile";
+ import { MobileDeck } from "@/components/mobile/MobileDeck";
 
 interface DashboardStats {
   prepTasksTotal: number;
@@ -39,6 +41,8 @@ const Dashboard = () => {
     targetFoodCost: 30,
   });
   const [loading, setLoading] = useState(true);
+ 
+   const isMobile = useIsMobile();
 
   const currentDate = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -220,6 +224,19 @@ const Dashboard = () => {
           />
         </motion.div>
 
+       {/* Mobile Card Deck - Only visible on mobile */}
+       {isMobile && (
+         <motion.div
+           initial={{ opacity: 0, y: 10 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ delay: 0.15 }}
+           className="card-elevated p-4"
+         >
+           <h2 className="section-header">Your Action Deck</h2>
+           <MobileDeck className="mt-2" />
+         </motion.div>
+       )}
+ 
         {/* Quick Actions */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
