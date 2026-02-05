@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { 
   Menu as MenuIcon,
@@ -33,6 +33,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 const profitabilityConfig = {
   'star': { icon: Star, label: 'Star', color: 'text-warning', bg: 'bg-warning/10', desc: 'High popularity, high margin' },
@@ -47,6 +48,7 @@ const MenuEngineering = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isNewMenuDialogOpen, setIsNewMenuDialogOpen] = useState(false);
   const [newMenuName, setNewMenuName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { 
     menus, 
@@ -65,6 +67,35 @@ const MenuEngineering = () => {
   const archivedMenus = getArchivedMenus();
   const analytics = activeMenu ? getMenuAnalytics(activeMenu.id) : null;
   const connectedPOS = posConnections.find(p => p.isConnected);
+
+  const handleScanMenu = () => {
+    // Trigger file input for camera/image capture
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = "image/*";
+      fileInputRef.current.capture = "environment";
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleUploadPDF = () => {
+    // Trigger file input for PDF upload
+    if (fileInputRef.current) {
+      fileInputRef.current.accept = ".pdf,image/*";
+      fileInputRef.current.removeAttribute("capture");
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      toast.info(`Menu file "${file.name}" selected. AI parsing coming soon!`);
+      // TODO: Implement menu parsing with AI
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const handleItemClick = (item: MenuItem) => {
     setEditingItem(item);
@@ -165,14 +196,23 @@ const MenuEngineering = () => {
                 </p>
               </div>
               <div className="flex gap-3">
-                <button className="btn-primary">
+                <button className="btn-primary" onClick={handleScanMenu}>
                   <Camera className="w-4 h-4 mr-2" />
                   Scan Menu
                 </button>
-                <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-input bg-background hover:bg-muted transition-colors">
+                <button 
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-input bg-background hover:bg-muted transition-colors"
+                  onClick={handleUploadPDF}
+                >
                   <Upload className="w-4 h-4" />
                   Upload PDF
                 </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileSelected}
+                />
               </div>
             </div>
           </div>
