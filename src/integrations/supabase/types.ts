@@ -662,6 +662,7 @@ export type Database = {
           ingredients: Json | null
           instructions: Json | null
           is_batch_recipe: boolean | null
+          is_public: boolean | null
           name: string
           prep_time: number | null
           sell_price: number | null
@@ -690,6 +691,7 @@ export type Database = {
           ingredients?: Json | null
           instructions?: Json | null
           is_batch_recipe?: boolean | null
+          is_public?: boolean | null
           name: string
           prep_time?: number | null
           sell_price?: number | null
@@ -718,6 +720,7 @@ export type Database = {
           ingredients?: Json | null
           instructions?: Json | null
           is_batch_recipe?: boolean | null
+          is_public?: boolean | null
           name?: string
           prep_time?: number | null
           sell_price?: number | null
