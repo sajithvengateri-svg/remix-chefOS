@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import RecipeBuilder from "@/components/recipes/RecipeBuilder";
 import RecipeCostSettings from "@/components/recipes/RecipeCostSettings";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,7 +35,6 @@ interface Recipe {
   yield_unit: string;
   food_cost_low_alert: number;
   food_cost_high_alert: number;
-  is_public: boolean;
 }
 
 const categories = ["Mains", "Appetizers", "Soups", "Salads", "Desserts", "Sauces", "Sides", "Breakfast"];
@@ -79,7 +77,6 @@ const RecipeEdit = () => {
         yield_unit: data.yield_unit || "portions",
         food_cost_low_alert: Number(data.food_cost_low_alert) || 20,
         food_cost_high_alert: Number(data.food_cost_high_alert) || 35,
-        is_public: data.is_public ?? true,
       } as Recipe);
     }
     setLoading(false);
@@ -106,7 +103,7 @@ const RecipeEdit = () => {
         yield_unit: recipe.yield_unit,
         food_cost_low_alert: recipe.food_cost_low_alert,
         food_cost_high_alert: recipe.food_cost_high_alert,
-        is_public: recipe.is_public,
+        is_public: true,
       })
       .eq("id", recipe.id);
 
@@ -184,18 +181,6 @@ const RecipeEdit = () => {
                 <p className="page-subtitle">{recipe.category}</p>
               </div>
               <div className="flex items-center gap-4">
-                {hasEditPermission && (
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="is-public"
-                      checked={recipe.is_public}
-                      onCheckedChange={(checked) => handleFieldUpdate("is_public", checked)}
-                    />
-                    <Label htmlFor="is-public" className="text-sm text-muted-foreground">
-                      Public
-                    </Label>
-                  </div>
-                )}
                 {hasEditPermission && (
                   <Button onClick={handleSave} disabled={saving}>
                     {saving ? (
