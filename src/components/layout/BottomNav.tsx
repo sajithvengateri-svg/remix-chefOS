@@ -1,9 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import { 
-  LayoutDashboard, 
+  Home,
   ChefHat, 
   Package, 
-  ClipboardList, 
+  Menu,
   MoreHorizontal 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,10 +13,10 @@ interface BottomNavProps {
 }
 
 const navItems = [
-  { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { path: "/dashboard", icon: Home, label: "Home" },
   { path: "/recipes", icon: ChefHat, label: "Recipes" },
   { path: "/inventory", icon: Package, label: "Inventory" },
-  { path: "/prep", icon: ClipboardList, label: "Prep" },
+  { path: "/menu-engineering", icon: Menu, label: "Menu" },
   { path: "/more", icon: MoreHorizontal, label: "More" },
 ];
 

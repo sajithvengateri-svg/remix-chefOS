@@ -35,6 +35,7 @@ interface SidebarProps {
 const mainNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", module: "dashboard" },
   { path: "/recipes", icon: ChefHat, label: "Recipe Bank", module: "recipes" },
+  { path: "/menu-engineering", icon: Menu, label: "Menu Engineering", module: "menu-engineering" },
   { path: "/ingredients", icon: Utensils, label: "Ingredients", module: "ingredients" },
   { path: "/invoices", icon: Receipt, label: "Invoices", module: "invoices" },
   { path: "/inventory", icon: Package, label: "Inventory", module: "inventory" },
@@ -45,7 +46,6 @@ const mainNavItems = [
 ];
 
 const secondaryNavItems = [
-  { path: "/menu-engineering", icon: Menu, label: "Menu Engineering", module: "menu-engineering" },
   { path: "/roster", icon: Users, label: "Roster", module: "roster" },
   { path: "/calendar", icon: Calendar, label: "Calendar", module: "calendar" },
   { path: "/kitchen-sections", icon: LayoutGrid, label: "Kitchen Sections", module: "calendar" },
