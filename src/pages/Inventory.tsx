@@ -41,6 +41,12 @@ interface InventoryItem {
   batch_number: string | null;
   received_date: string | null;
   min_stock: number;
+  ingredient_id: string | null;
+  ingredients?: {
+    cost_per_unit: number | null;
+    category: string | null;
+    supplier: string | null;
+  } | null;
 }
 
 const categories = ["All", "Proteins", "Produce", "Dairy", "Dry Goods", "Oils", "Beverages"];
@@ -74,19 +80,37 @@ const Inventory = () => {
   const hasEditPermission = canEdit("inventory");
 
   useEffect(() => {
-    fetchInventory();
+    fetchInventory(true);
   }, []);
 
-  const fetchInventory = async () => {
+  const fetchInventory = async (autoSync = false) => {
     setLoading(true);
     const { data, error } = await supabase
       .from("inventory")
-      .select("*")
+      .select("*, ingredients(cost_per_unit, category, supplier)")
       .order("name");
 
     if (error) {
       console.error("Error fetching inventory:", error);
       toast.error("Failed to load inventory");
+      setLoading(false);
+      return;
+    }
+
+    // Auto-sync from ingredients if inventory is empty on first load
+    if (autoSync && (!data || data.length === 0)) {
+      const { data: syncCount, error: syncError } = await supabase.rpc("sync_inventory_from_ingredients");
+      if (!syncError && syncCount && syncCount > 0) {
+        toast.success(`Auto-synced ${syncCount} ingredients to inventory`);
+        // Refetch after sync
+        const { data: refreshed } = await supabase
+          .from("inventory")
+          .select("*, ingredients(cost_per_unit, category, supplier)")
+          .order("name");
+        setInventory(refreshed || []);
+      } else {
+        setInventory([]);
+      }
     } else {
       setInventory(data || []);
     }
@@ -336,6 +360,7 @@ const Inventory = () => {
                     <th className="text-left p-4 font-medium text-muted-foreground text-sm">Location</th>
                     <th className="text-left p-4 font-medium text-muted-foreground text-sm">Stock</th>
                     <th className="text-left p-4 font-medium text-muted-foreground text-sm">Min Level</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground text-sm">Cost/Unit</th>
                     <th className="text-left p-4 font-medium text-muted-foreground text-sm">Expiry</th>
                     <th className="text-left p-4 font-medium text-muted-foreground text-sm">Status</th>
                     {hasEditPermission && (
@@ -358,6 +383,9 @@ const Inventory = () => {
                             </div>
                             <div>
                               <span className="font-medium text-foreground">{item.name}</span>
+                              {item.ingredients?.category && (
+                                <p className="text-xs text-muted-foreground">{item.ingredients.category}</p>
+                              )}
                               {item.batch_number && (
                                 <p className="text-xs text-muted-foreground">Batch: {item.batch_number}</p>
                               )}
@@ -367,6 +395,11 @@ const Inventory = () => {
                         <td className="p-4 text-muted-foreground">{item.location}</td>
                         <td className="p-4 font-medium">{Number(item.quantity).toFixed(1)} {item.unit}</td>
                         <td className="p-4 text-muted-foreground">{Number(item.min_stock).toFixed(1)} {item.unit}</td>
+                        <td className="p-4 text-muted-foreground">
+                          {item.ingredients?.cost_per_unit 
+                            ? `$${Number(item.ingredients.cost_per_unit).toFixed(2)}` 
+                            : "-"}
+                        </td>
                         <td className="p-4 text-muted-foreground">
                           {item.expiry_date ? format(new Date(item.expiry_date), "MMM d, yyyy") : "-"}
                         </td>
@@ -404,8 +437,8 @@ const Inventory = () => {
                   })}
                   {filteredItems.length === 0 && (
                     <tr>
-                      <td colSpan={hasEditPermission ? 7 : 6} className="p-8 text-center text-muted-foreground">
-                        No inventory items found
+                      <td colSpan={hasEditPermission ? 8 : 7} className="p-8 text-center text-muted-foreground">
+                        No inventory items found. Click "Sync from Ingredients" to populate.
                       </td>
                     </tr>
                   )}
