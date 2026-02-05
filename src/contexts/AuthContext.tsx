@@ -75,13 +75,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
-        .single();
+        .in("role", ["head_chef", "line_chef"]);
 
       if (roleError) throw roleError;
-      setRole(roleData.role as AppRole);
+      
+      // Prioritize head_chef over line_chef
+      const roles = roleData?.map(r => r.role) || [];
+      if (roles.includes("head_chef")) {
+        setRole("head_chef");
+      } else if (roles.includes("line_chef")) {
+        setRole("line_chef");
+      } else {
+        setRole(null);
+      }
 
       // Fetch permissions (only for line chefs)
-      if (roleData.role === "line_chef") {
+      if (roles.includes("line_chef") && !roles.includes("head_chef")) {
         const { data: permData, error: permError } = await supabase
           .from("module_permissions")
           .select("module, can_view, can_edit")
