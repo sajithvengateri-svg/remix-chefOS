@@ -39,6 +39,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import MenuAIRecommendations from "@/components/menu/MenuAIRecommendations";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -579,10 +580,16 @@ const MenuEngineering = () => {
                     Click any row to edit pricing and details
                   </p>
                 </div>
-                <Button size="sm" onClick={handleAddItem}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Item
-                </Button>
+                <div className="flex gap-2">
+                  <MenuAIRecommendations 
+                    menuItems={activeMenu.items} 
+                    menuName={activeMenu.name} 
+                  />
+                  <Button size="sm" onClick={handleAddItem}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Item
+                  </Button>
+                </div>
               </div>
 
               {activeMenu.items.length === 0 ? (
