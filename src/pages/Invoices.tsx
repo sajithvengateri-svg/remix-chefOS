@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Upload, Camera } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import InvoiceScannerDialog from "@/components/inventory/InvoiceScannerDialog";
 
 const Invoices = () => {
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   return (
     <AppLayout>
       <div className="max-w-5xl mx-auto space-y-6">
@@ -37,11 +40,14 @@ const Invoices = () => {
                 </p>
               </div>
               <div className="flex gap-3">
-                <button className="btn-primary">
+                <button className="btn-primary" onClick={() => setIsScannerOpen(true)}>
                   <Camera className="w-4 h-4 mr-2" />
                   Scan Invoice
                 </button>
-                <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-input bg-background hover:bg-muted transition-colors">
+                <button 
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-input bg-background hover:bg-muted transition-colors"
+                  onClick={() => setIsScannerOpen(true)}
+                >
                   <Upload className="w-4 h-4" />
                   Upload File
                 </button>
@@ -74,6 +80,11 @@ const Invoices = () => {
           </div>
         </motion.div>
       </div>
+
+      <InvoiceScannerDialog
+        open={isScannerOpen}
+        onOpenChange={setIsScannerOpen}
+      />
     </AppLayout>
   );
 };
