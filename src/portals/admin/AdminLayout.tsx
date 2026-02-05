@@ -10,19 +10,20 @@
  }
  
  const AdminLayout = ({ children }: AdminLayoutProps) => {
-   const { user, loading, isAdmin } = useAdminAuth();
+  const { user, loading, roleLoading, isAdmin } = useAdminAuth();
    const navigate = useNavigate();
  
    useEffect(() => {
-     if (!loading && !user) {
+    // Wait for both session + role check to settle before redirecting.
+    if (!loading && !roleLoading && !user) {
        navigate("/admin/auth");
      }
-     if (!loading && user && !isAdmin) {
+    if (!loading && !roleLoading && user && !isAdmin) {
        navigate("/admin/auth");
      }
-   }, [user, loading, isAdmin, navigate]);
+  }, [user, loading, roleLoading, isAdmin, navigate]);
  
-   if (loading) {
+  if (loading || roleLoading) {
      return (
        <div className="min-h-screen flex items-center justify-center bg-background">
          <Loader2 className="w-8 h-8 text-primary animate-spin" />

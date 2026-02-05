@@ -5,10 +5,12 @@
  
  export const useAdminAuth = () => {
    const [user, setUser] = useState<User | null>(null);
-   const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
    const [isAdmin, setIsAdmin] = useState(false);
+  const [roleLoading, setRoleLoading] = useState(false);
  
    const checkAdminRole = async (userId: string) => {
+    setRoleLoading(true);
      try {
        const { data, error } = await supabase
          .from("user_roles")
@@ -27,30 +29,45 @@
      } catch (error) {
        console.error("Error in checkAdminRole:", error);
        setIsAdmin(false);
+      } finally {
+        setRoleLoading(false);
      }
    };
  
    useEffect(() => {
-     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-       (event, session) => {
-         setUser(session?.user ?? null);
-         
-         if (session?.user) {
-           setTimeout(() => checkAdminRole(session.user.id), 0);
-         } else {
-           setIsAdmin(false);
-         }
-         setLoading(false);
-       }
-     );
- 
-     supabase.auth.getSession().then(({ data: { session } }) => {
-       setUser(session?.user ?? null);
-       if (session?.user) {
-         checkAdminRole(session.user.id);
-       }
-       setLoading(false);
-     });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        setLoading(true);
+
+        const nextUser = session?.user ?? null;
+        setUser(nextUser);
+
+        if (nextUser) {
+          await checkAdminRole(nextUser.id);
+        } else {
+          setIsAdmin(false);
+          setRoleLoading(false);
+        }
+
+        setLoading(false);
+      }
+    );
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setLoading(true);
+
+      const nextUser = session?.user ?? null;
+      setUser(nextUser);
+
+      if (nextUser) {
+        await checkAdminRole(nextUser.id);
+      } else {
+        setIsAdmin(false);
+        setRoleLoading(false);
+      }
+
+      setLoading(false);
+    });
  
      return () => subscription.unsubscribe();
    }, []);
@@ -68,8 +85,10 @@
 
     // Immediately hydrate admin role to avoid redirect flicker
     if (data.user) {
+      setLoading(true);
       setUser(data.user);
       await checkAdminRole(data.user.id);
+      setLoading(false);
     }
  
      toast.success("Welcome to Control Center!");
@@ -89,6 +108,7 @@
      user,
      loading,
      isAdmin,
+    roleLoading,
      signIn,
      signOut,
    };
