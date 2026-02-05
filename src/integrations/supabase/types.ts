@@ -619,6 +619,86 @@ export type Database = {
         }
         Relationships: []
       }
+      recipe_ccps: {
+        Row: {
+          corrective_action: string | null
+          created_at: string
+          critical_limit_max: number | null
+          critical_limit_min: number | null
+          hazard_description: string | null
+          hazard_type: string | null
+          id: string
+          is_critical: boolean | null
+          monitoring_frequency: string | null
+          monitoring_procedure: string | null
+          recipe_id: string
+          record_keeping_notes: string | null
+          step_name: string
+          step_order: number
+          step_type: string
+          target_temp: number | null
+          temp_unit: string | null
+          time_limit: number | null
+          timeline_position: number | null
+          updated_at: string
+          verification_method: string | null
+        }
+        Insert: {
+          corrective_action?: string | null
+          created_at?: string
+          critical_limit_max?: number | null
+          critical_limit_min?: number | null
+          hazard_description?: string | null
+          hazard_type?: string | null
+          id?: string
+          is_critical?: boolean | null
+          monitoring_frequency?: string | null
+          monitoring_procedure?: string | null
+          recipe_id: string
+          record_keeping_notes?: string | null
+          step_name: string
+          step_order?: number
+          step_type?: string
+          target_temp?: number | null
+          temp_unit?: string | null
+          time_limit?: number | null
+          timeline_position?: number | null
+          updated_at?: string
+          verification_method?: string | null
+        }
+        Update: {
+          corrective_action?: string | null
+          created_at?: string
+          critical_limit_max?: number | null
+          critical_limit_min?: number | null
+          hazard_description?: string | null
+          hazard_type?: string | null
+          id?: string
+          is_critical?: boolean | null
+          monitoring_frequency?: string | null
+          monitoring_procedure?: string | null
+          recipe_id?: string
+          record_keeping_notes?: string | null
+          step_name?: string
+          step_order?: number
+          step_type?: string
+          target_temp?: number | null
+          temp_unit?: string | null
+          time_limit?: number | null
+          timeline_position?: number | null
+          updated_at?: string
+          verification_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ccps_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_ingredients: {
         Row: {
           created_at: string

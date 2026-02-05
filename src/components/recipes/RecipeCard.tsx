@@ -11,13 +11,17 @@ import {
   DollarSign,
   Users,
   Loader2,
-  Beaker
+  Beaker,
+  Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { CCPMiniTimeline } from "@/components/ccp/CCPMiniTimeline";
+import { CCPDialog } from "@/components/ccp/CCPDialog";
+import { useRecipeCCPs } from "@/hooks/useRecipeCCPs";
 
 interface RecipeBase {
   id: string;
@@ -45,7 +49,9 @@ interface RecipeCardProps {
 
 const RecipeCard = ({ recipe, hasEditPermission, onEdit, onDelete, onImageUpdate }: RecipeCardProps) => {
   const [uploading, setUploading] = useState(false);
+  const [ccpDialogOpen, setCcpDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { ccps } = useRecipeCCPs(recipe.id);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -234,6 +240,18 @@ const RecipeCard = ({ recipe, hasEditPermission, onEdit, onDelete, onImageUpdate
           </div>
         </div>
 
+        {/* CCP Mini Timeline */}
+        <div className="pt-3 border-t border-border">
+          <div className="flex items-center gap-2 mb-2">
+            <Shield className="w-3.5 h-3.5 text-primary" />
+            <span className="text-xs font-medium text-muted-foreground">Control Points</span>
+          </div>
+          <CCPMiniTimeline 
+            ccps={ccps} 
+            onClick={() => setCcpDialogOpen(true)}
+          />
+        </div>
+
         {/* Pricing */}
         <div className="flex items-center justify-between pt-3 border-t border-border">
           <div>
@@ -260,6 +278,15 @@ const RecipeCard = ({ recipe, hasEditPermission, onEdit, onDelete, onImageUpdate
           </div>
         </div>
       </div>
+
+      {/* CCP Dialog */}
+      <CCPDialog
+        open={ccpDialogOpen}
+        onOpenChange={setCcpDialogOpen}
+        recipeId={recipe.id}
+        recipeName={recipe.name}
+        hasEditPermission={hasEditPermission}
+      />
     </div>
   );
 };
