@@ -88,12 +88,6 @@ export const useRecipeSections = () => {
   };
 
   const deleteSection = async (id: string) => {
-    const section = sections.find(s => s.id === id);
-    if (section?.is_default) {
-      toast.error("Cannot delete default sections");
-      return false;
-    }
-
     const { error } = await supabase
       .from("recipe_sections")
       .delete()
