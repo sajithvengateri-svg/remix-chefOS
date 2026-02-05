@@ -24,26 +24,31 @@
    const [vendorProfile, setVendorProfile] = useState<VendorProfile | null>(null);
    const [loading, setLoading] = useState(true);
    const [isVendor, setIsVendor] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
  
    const fetchVendorProfile = async (userId: string) => {
+    setProfileLoading(true);
      try {
        const { data, error } = await supabase
          .from("vendor_profiles")
          .select("*")
          .eq("user_id", userId)
-         .single();
+        .maybeSingle();
  
        if (error) {
          console.error("Error fetching vendor profile:", error);
          setIsVendor(false);
+        setProfileLoading(false);
          return;
        }
  
        setVendorProfile(data);
-       setIsVendor(data?.status === "approved" || data?.status === "pending");
+      setIsVendor(data?.status === "approved" || data?.status === "pending" || false);
      } catch (error) {
        console.error("Error in fetchVendorProfile:", error);
        setIsVendor(false);
+    } finally {
+      setProfileLoading(false);
      }
    };
  
@@ -139,7 +144,7 @@
    return {
      user,
      vendorProfile,
-     loading,
+    loading: loading || profileLoading,
      isVendor,
      signIn,
      signUp,
