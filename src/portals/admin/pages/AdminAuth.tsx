@@ -26,7 +26,7 @@
      setIsSubmitting(true);
      try {
        await signIn(email, password);
-       navigate("/admin");
+      // Navigation happens in the effect once isAdmin is set
      } catch (error) {
        // Error handled in hook
      } finally {

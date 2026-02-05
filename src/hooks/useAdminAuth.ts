@@ -56,7 +56,7 @@
    }, []);
  
    const signIn = async (email: string, password: string) => {
-     const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
        email,
        password,
      });
@@ -65,6 +65,12 @@
        toast.error(error.message);
        throw error;
      }
+
+    // Immediately hydrate admin role to avoid redirect flicker
+    if (data.user) {
+      setUser(data.user);
+      await checkAdminRole(data.user.id);
+    }
  
      toast.success("Welcome to Control Center!");
    };
