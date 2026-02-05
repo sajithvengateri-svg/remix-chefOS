@@ -15,7 +15,9 @@ import {
   Camera,
   Upload,
   FileText,
-  Edit2
+  Edit2,
+  Loader2,
+  Check,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useMenuStore } from "@/stores/menuStore";
@@ -34,6 +36,19 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+
+interface ExtractedMenuItem {
+  name: string;
+  description?: string;
+  price?: number;
+  category?: string;
+  confidence: number;
+  selected?: boolean;
+}
 
 const profitabilityConfig = {
   'star': { icon: Star, label: 'Star', color: 'text-warning', bg: 'bg-warning/10', desc: 'High popularity, high margin' },
@@ -49,6 +64,11 @@ const MenuEngineering = () => {
   const [isNewMenuDialogOpen, setIsNewMenuDialogOpen] = useState(false);
   const [newMenuName, setNewMenuName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Menu parsing state
+  const [isParsingMenu, setIsParsingMenu] = useState(false);
+  const [extractedItems, setExtractedItems] = useState<ExtractedMenuItem[]>([]);
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   
   const { 
     menus, 
@@ -69,7 +89,6 @@ const MenuEngineering = () => {
   const connectedPOS = posConnections.find(p => p.isConnected);
 
   const handleScanMenu = () => {
-    // Trigger file input for camera/image capture
     if (fileInputRef.current) {
       fileInputRef.current.accept = "image/*";
       fileInputRef.current.capture = "environment";
@@ -78,7 +97,6 @@ const MenuEngineering = () => {
   };
 
   const handleUploadPDF = () => {
-    // Trigger file input for PDF upload
     if (fileInputRef.current) {
       fileInputRef.current.accept = ".pdf,image/*";
       fileInputRef.current.removeAttribute("capture");
@@ -86,15 +104,102 @@ const MenuEngineering = () => {
     }
   };
 
-  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      toast.info(`Menu file "${file.name}" selected. AI parsing coming soon!`);
-      // TODO: Implement menu parsing with AI
+    if (!file) return;
+
+    setIsParsingMenu(true);
+    toast.info(`Processing "${file.name}"...`);
+
+    try {
+      // Convert file to base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(",")[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // Call the AI extraction function
+      const { data, error } = await supabase.functions.invoke("extract-menu", {
+        body: {
+          file_base64: base64,
+          file_type: file.type,
+        },
+      });
+
+      if (error) throw error;
+
+      const items: ExtractedMenuItem[] = (data.menu_items || []).map((item: ExtractedMenuItem) => ({
+        ...item,
+        selected: item.confidence > 0.7,
+      }));
+
+      if (items.length === 0) {
+        toast.warning("No menu items detected. Try a clearer image.");
+      } else {
+        setExtractedItems(items);
+        setIsReviewDialogOpen(true);
+        toast.success(`Found ${items.length} menu items!`);
+      }
+    } catch (error) {
+      console.error("Failed to parse menu:", error);
+      toast.error("Failed to parse menu. Please try again.");
+    } finally {
+      setIsParsingMenu(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  };
+
+  const toggleExtractedItem = (index: number) => {
+    const updated = [...extractedItems];
+    updated[index].selected = !updated[index].selected;
+    setExtractedItems(updated);
+  };
+
+  const handleImportItems = () => {
+    if (!activeMenu && !addMenuItem) {
+      toast.error("Please create a menu first");
+      return;
     }
+
+    const selectedItems = extractedItems.filter(i => i.selected);
+    
+    // If no active menu, create one first
+    let targetMenuId = activeMenu?.id;
+    if (!targetMenuId) {
+      const newMenu = createMenu("Imported Menu");
+      activateMenu(newMenu.id);
+      targetMenuId = newMenu.id;
+    }
+
+    // Add each selected item
+    selectedItems.forEach(item => {
+      const newItem: MenuItem = {
+        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: item.name,
+        category: item.category || "Uncategorized",
+        sellPrice: item.price || 0,
+        foodCost: 0,
+        foodCostPercent: 0,
+        contributionMargin: item.price || 0,
+        popularity: 0,
+        profitability: "puzzle",
+        isActive: true,
+        menuId: targetMenuId!,
+        allergens: [],
+      };
+      addMenuItem?.(targetMenuId!, newItem);
+    });
+
+    toast.success(`Imported ${selectedItems.length} menu items!`);
+    setIsReviewDialogOpen(false);
+    setExtractedItems([]);
   };
 
   const handleItemClick = (item: MenuItem) => {
@@ -529,6 +634,85 @@ const MenuEngineering = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Menu Import Review Dialog */}
+      <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Review Extracted Menu Items
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {extractedItems.length} items found. Select items to import to your menu.
+          </p>
+
+          <div className="py-4 space-y-2 max-h-[400px] overflow-y-auto">
+            {extractedItems.map((item, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "flex items-center gap-4 p-4 rounded-lg border transition-colors",
+                  item.selected ? "bg-primary/5 border-primary" : "bg-muted/50"
+                )}
+              >
+                <Checkbox
+                  checked={item.selected}
+                  onCheckedChange={() => toggleExtractedItem(index)}
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{item.name}</span>
+                    {item.category && (
+                      <Badge variant="secondary" className="text-xs">
+                        {item.category}
+                      </Badge>
+                    )}
+                  </div>
+                  {item.description && (
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                      {item.description}
+                    </p>
+                  )}
+                </div>
+                {item.price != null && (
+                  <span className="font-semibold">${item.price.toFixed(2)}</span>
+                )}
+                <Badge
+                  variant={item.confidence > 0.8 ? "default" : item.confidence > 0.5 ? "secondary" : "outline"}
+                >
+                  {Math.round(item.confidence * 100)}%
+                </Badge>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReviewDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleImportItems} 
+              disabled={extractedItems.filter(i => i.selected).length === 0}
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Import {extractedItems.filter(i => i.selected).length} Items
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Loading overlay for parsing */}
+      {isParsingMenu && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <Loader2 className="w-12 h-12 text-primary mx-auto animate-spin" />
+            <p className="font-medium">Analyzing menu with AI...</p>
+            <p className="text-sm text-muted-foreground">This may take a moment</p>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 };
