@@ -11,7 +11,7 @@ const QuickActions = () => {
   const navigate = useNavigate();
 
   const handleNewRecipe = () => {
-    navigate("/recipes?new=true");
+    navigate("/recipes/new");
   };
 
   return (
