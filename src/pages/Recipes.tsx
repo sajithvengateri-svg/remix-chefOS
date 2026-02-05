@@ -9,11 +9,13 @@ import {
   Calculator,
   Loader2,
   Upload,
-  Beaker
+  Beaker,
+  Layers
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import FoodCostCalculator from "@/components/costing/FoodCostCalculator";
 import RecipeImportDialog from "@/components/recipes/RecipeImportDialog";
+import BulkRecipeImportDialog from "@/components/recipes/BulkRecipeImportDialog";
 import RecipeCard from "@/components/recipes/RecipeCard";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -60,6 +62,7 @@ const Recipes = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [deletingRecipe, setDeletingRecipe] = useState<Recipe | null>(null);
 
@@ -241,10 +244,15 @@ const Recipes = () => {
             </button>
             {hasEditPermission && (
               <>
-                <Button variant="outline" onClick={() => setShowImport(true)}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Import</span>
-                </Button>
+                <div className="flex gap-1">
+                  <Button variant="outline" onClick={() => setShowImport(true)}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">Import</span>
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={() => setShowBulkImport(true)} title="Bulk Import">
+                    <Layers className="w-4 h-4" />
+                  </Button>
+                </div>
                 <Button onClick={() => setDialogOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   New Recipe
@@ -360,6 +368,16 @@ const Recipes = () => {
           onImport={(recipeId) => {
             fetchRecipes();
             navigate(`/recipes/${recipeId}/edit`);
+          }}
+        />
+
+        {/* Bulk Recipe Import Dialog */}
+        <BulkRecipeImportDialog
+          isOpen={showBulkImport}
+          onClose={() => setShowBulkImport(false)}
+          onImportComplete={(recipeIds) => {
+            fetchRecipes();
+            toast.success(`${recipeIds.length} recipes imported!`);
           }}
         />
 
