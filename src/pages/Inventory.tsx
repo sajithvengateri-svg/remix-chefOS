@@ -13,7 +13,9 @@ import {
   ClipboardList,
   FileText,
   Clock,
-  Calendar
+  Calendar,
+  MapPin,
+  Settings2
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -30,6 +32,8 @@ import { format, differenceInDays } from "date-fns";
 import InventorySyncButton from "@/components/inventory/InventorySyncButton";
 import StocktakeDialog from "@/components/inventory/StocktakeDialog";
 import InvoiceScannerDialog from "@/components/inventory/InvoiceScannerDialog";
+import InventoryLocationsManager from "@/components/inventory/InventoryLocationsManager";
+import { useInventoryLocations } from "@/hooks/useInventoryLocations";
 
 interface InventoryItem {
   id: string;
@@ -50,11 +54,11 @@ interface InventoryItem {
 }
 
 const categories = ["All", "Proteins", "Produce", "Dairy", "Dry Goods", "Oils", "Beverages"];
-const locations = ["Main Storage", "Walk-in Cooler", "Freezer", "Dry Storage", "Prep Area"];
 const units = ["kg", "g", "L", "ml", "lb", "oz", "each", "bunch", "case"];
 
 const Inventory = () => {
   const { canEdit } = useAuth();
+  const { locations, loading: locationsLoading, refetch: refetchLocations } = useInventoryLocations();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -65,17 +69,25 @@ const Inventory = () => {
   const [deletingItem, setDeletingItem] = useState<InventoryItem | null>(null);
   const [stocktakeDialogOpen, setStocktakeDialogOpen] = useState(false);
   const [invoiceScannerOpen, setInvoiceScannerOpen] = useState(false);
+  const [locationsManagerOpen, setLocationsManagerOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("inventory");
 
   const [formData, setFormData] = useState({
     name: "",
     quantity: 0,
     unit: "kg",
-    location: "Main Storage",
+    location: "",
     expiry_date: "",
     batch_number: "",
     min_stock: 0,
   });
+
+  // Set default location when locations load
+  useEffect(() => {
+    if (locations.length > 0 && !formData.location) {
+      setFormData(prev => ({ ...prev, location: locations[0].name }));
+    }
+  }, [locations]);
 
   const hasEditPermission = canEdit("inventory");
 
@@ -208,7 +220,7 @@ const Inventory = () => {
       name: "",
       quantity: 0,
       unit: "kg",
-      location: "Main Storage",
+      location: locations.length > 0 ? locations[0].name : "",
       expiry_date: "",
       batch_number: "",
       min_stock: 0,
@@ -269,6 +281,10 @@ const Inventory = () => {
                 <Button variant="outline" onClick={() => setStocktakeDialogOpen(true)}>
                   <ClipboardList className="w-4 h-4 mr-2" />
                   Stocktake
+                </Button>
+                <Button variant="outline" onClick={() => setLocationsManagerOpen(true)}>
+                  <MapPin className="w-4 h-4 mr-2" />
+                  Locations
                 </Button>
                 <Button onClick={() => setDialogOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
@@ -392,7 +408,22 @@ const Inventory = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="p-4 text-muted-foreground">{item.location}</td>
+                        <td className="p-4 text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const loc = locations.find(l => l.name === item.location);
+                              return loc ? (
+                                <>
+                                  <div 
+                                    className="w-2 h-2 rounded-full" 
+                                    style={{ backgroundColor: loc.color }}
+                                  />
+                                  {item.location}
+                                </>
+                              ) : item.location;
+                            })()}
+                          </div>
+                        </td>
                         <td className="p-4 font-medium">{Number(item.quantity).toFixed(1)} {item.unit}</td>
                         <td className="p-4 text-muted-foreground">{Number(item.min_stock).toFixed(1)} {item.unit}</td>
                         <td className="p-4 text-muted-foreground">
@@ -495,18 +526,43 @@ const Inventory = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="location">Location</Label>
+                    {hasEditPermission && (
+                      <button
+                        type="button"
+                        onClick={() => setLocationsManagerOpen(true)}
+                        className="text-xs text-primary hover:underline flex items-center gap-1"
+                      >
+                        <Settings2 className="w-3 h-3" />
+                        Manage
+                      </button>
+                    )}
+                  </div>
                   <Select
                     value={formData.location}
                     onValueChange={(value) => setFormData({ ...formData, location: value })}
                   >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select location" />
                     </SelectTrigger>
                     <SelectContent>
                       {locations.map(loc => (
-                        <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                        <SelectItem key={loc.id} value={loc.name}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-2 h-2 rounded-full" 
+                              style={{ backgroundColor: loc.color }}
+                            />
+                            {loc.name}
+                          </div>
+                        </SelectItem>
                       ))}
+                      {locations.length === 0 && (
+                        <SelectItem value="" disabled>
+                          No locations - click Manage to add
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -580,6 +636,15 @@ const Inventory = () => {
           open={invoiceScannerOpen}
           onOpenChange={setInvoiceScannerOpen}
           onComplete={fetchInventory}
+        />
+
+        {/* Locations Manager Dialog */}
+        <InventoryLocationsManager
+          open={locationsManagerOpen}
+          onOpenChange={(open) => {
+            setLocationsManagerOpen(open);
+            if (!open) refetchLocations();
+          }}
         />
       </div>
     </AppLayout>
