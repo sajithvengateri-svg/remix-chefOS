@@ -71,6 +71,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<ProtectedRoute module="dashboard"><Dashboard /></ProtectedRoute>} />
             <Route path="/recipes" element={<ProtectedRoute module="recipes"><Recipes /></ProtectedRoute>} />
+            <Route path="/recipes/new" element={<ProtectedRoute module="recipes"><RecipeEdit /></ProtectedRoute>} />
             <Route path="/recipes/:id" element={<ProtectedRoute module="recipes"><RecipeDetail /></ProtectedRoute>} />
             <Route path="/recipes/:id/edit" element={<ProtectedRoute module="recipes"><RecipeEdit /></ProtectedRoute>} />
             <Route path="/ingredients" element={<ProtectedRoute module="ingredients"><Ingredients /></ProtectedRoute>} />

@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
   ArrowLeft,
   Save,
   Loader2,
-  ChefHat
+  ChefHat,
+  Shield,
+  Settings
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -13,8 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import RecipeBuilder from "@/components/recipes/RecipeBuilder";
 import RecipeCostSettings from "@/components/recipes/RecipeCostSettings";
+import { CCPTimelineEditor } from "@/components/ccp/CCPTimelineEditor";
+import { useRecipeCCPs } from "@/hooks/useRecipeCCPs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -39,21 +44,124 @@ interface Recipe {
 
 const categories = ["Mains", "Appetizers", "Soups", "Salads", "Desserts", "Sauces", "Sides", "Breakfast"];
 
+// CCP Section Component with its own data management
+const CCPSection = ({ recipeId, hasEditPermission }: { recipeId: string; hasEditPermission: boolean }) => {
+  const [haccpMode, setHaccpMode] = useState(false);
+  const { ccps, addCCP, updateCCP, deleteCCP, loading } = useRecipeCCPs(recipeId);
+
+  if (loading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="card-elevated p-5"
+      >
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.4 }}
+      className="card-elevated p-5"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Shield className="w-5 h-5 text-primary" />
+          <h3 className="font-semibold">Critical Control Points</h3>
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+            {ccps.length} points
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="haccp-mode" className="text-sm text-muted-foreground flex items-center gap-1.5">
+            <Settings className="w-3.5 h-3.5" />
+            Full HACCP
+          </Label>
+          <Switch
+            id="haccp-mode"
+            checked={haccpMode}
+            onCheckedChange={setHaccpMode}
+          />
+        </div>
+      </div>
+      <p className="text-sm text-muted-foreground mb-4">
+        Click on the timeline to add control points. Drag points to reposition.
+      </p>
+      <CCPTimelineEditor
+        ccps={ccps}
+        onAdd={addCCP}
+        onUpdate={updateCCP}
+        onDelete={deleteCCP}
+        haccpMode={haccpMode}
+        readOnly={!hasEditPermission}
+      />
+    </motion.div>
+  );
+};
+
 const RecipeEdit = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { canEdit } = useAuth();
+  const location = useLocation();
+  const { user, canEdit } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
 
+  const isNewRecipe = location.pathname === "/recipes/new";
   const hasEditPermission = canEdit("recipes");
 
   useEffect(() => {
-    if (id) {
+    if (isNewRecipe) {
+      // Create a new recipe immediately
+      createNewRecipe();
+    } else if (id) {
       fetchRecipe();
     }
-  }, [id]);
+  }, [id, isNewRecipe]);
+
+  const createNewRecipe = async () => {
+    setLoading(true);
+    
+    const { data, error } = await supabase
+      .from("recipes")
+      .insert({
+        name: "Untitled Recipe",
+        category: "Mains",
+        prep_time: 0,
+        cook_time: 0,
+        servings: 4,
+        cost_per_serving: 0,
+        sell_price: 0,
+        target_food_cost_percent: 30,
+        gst_percent: 10,
+        total_yield: 4,
+        yield_unit: "portions",
+        food_cost_low_alert: 20,
+        food_cost_high_alert: 35,
+        created_by: user?.id,
+        is_public: true,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating recipe:", error);
+      toast.error("Failed to create recipe");
+      navigate("/recipes");
+    } else {
+      // Redirect to the edit page for the new recipe
+      navigate(`/recipes/${data.id}/edit`, { replace: true });
+    }
+    setLoading(false);
+  };
 
   const fetchRecipe = async () => {
     setLoading(true);
@@ -303,6 +411,12 @@ const RecipeEdit = () => {
             hasEditPermission={hasEditPermission}
           />
         </motion.div>
+
+        {/* Critical Control Points Timeline */}
+        <CCPSection 
+          recipeId={recipe.id} 
+          hasEditPermission={hasEditPermission}
+        />
       </div>
     </AppLayout>
   );

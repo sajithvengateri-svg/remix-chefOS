@@ -314,7 +314,7 @@ const Recipes = () => {
                     <Layers className="w-4 h-4" />
                   </Button>
                 </div>
-                <Button onClick={() => setDialogOpen(true)}>
+                <Button onClick={() => navigate("/recipes/new")}>
                   <Plus className="w-4 h-4 mr-2" />
                   New Recipe
                 </Button>
@@ -406,7 +406,7 @@ const Recipes = () => {
                 <ChefHat className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
                 <p className="text-muted-foreground">No recipes found</p>
                 {hasEditPermission && (
-                  <Button variant="outline" className="mt-4" onClick={() => setDialogOpen(true)}>
+                  <Button variant="outline" className="mt-4" onClick={() => navigate("/recipes/new")}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add First Recipe
                   </Button>
