@@ -27,7 +27,7 @@ const Auth = () => {
     setIsLoading(true);
     try {
       await signIn(loginEmail, loginPassword);
-      navigate("/");
+      navigate("/dashboard");
     } catch (error) {
       // Error is handled in context
     } finally {
