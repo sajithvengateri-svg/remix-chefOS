@@ -13,8 +13,7 @@
        const { data, error } = await supabase
          .from("user_roles")
          .select("role")
-         .eq("user_id", userId)
-         .single();
+        .eq("user_id", userId);
  
        if (error) {
          console.error("Error checking admin role:", error);
@@ -22,7 +21,9 @@
          return;
        }
  
-       setIsAdmin(data?.role === "admin");
+      // Check if any of the user's roles is 'admin'
+      const roles = data?.map(r => r.role) || [];
+      setIsAdmin(roles.includes("admin"));
      } catch (error) {
        console.error("Error in checkAdminRole:", error);
        setIsAdmin(false);
