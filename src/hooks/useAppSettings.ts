@@ -36,6 +36,11 @@ export interface AppSettings {
   showActivityStatus: boolean;
   shareAnalytics: boolean;
   sessionTimeout: string;
+  
+  // AI Features (opt-in)
+  aiLlmEnabled: boolean;
+  aiVoiceEnabled: boolean;
+  aiOcrEnabled: boolean;
 }
 
 const defaultSettings: AppSettings = {
@@ -72,6 +77,11 @@ const defaultSettings: AppSettings = {
   showActivityStatus: true,
   shareAnalytics: false,
   sessionTimeout: "4h",
+  
+  // AI Features (all off by default - opt-in)
+  aiLlmEnabled: false,
+  aiVoiceEnabled: false,
+  aiOcrEnabled: false,
 };
 
 export const useAppSettings = () => {

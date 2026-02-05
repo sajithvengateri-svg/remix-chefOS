@@ -15,7 +15,8 @@ import {
   RotateCcw,
   Moon,
   Sun,
-  Smartphone
+   Smartphone,
+   Sparkles
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +30,7 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import NavigationSettings from "@/components/settings/NavigationSettings";
 import ProfileSettings from "@/components/settings/ProfileSettings";
+ import AISettings from "@/components/settings/AISettings";
 import { useAppSettings, AppSettings } from "@/hooks/useAppSettings";
 
 const Settings = () => {
@@ -53,7 +55,7 @@ const Settings = () => {
         </motion.div>
 
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-5">
+           <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 lg:grid-cols-6">
             <TabsTrigger value="general" className="gap-2">
               <SettingsIcon className="w-4 h-4" />
               <span className="hidden sm:inline">General</span>
@@ -61,6 +63,10 @@ const Settings = () => {
             <TabsTrigger value="profile" className="gap-2">
               <User className="w-4 h-4" />
               <span className="hidden sm:inline">Profile</span>
+            </TabsTrigger>
+            <TabsTrigger value="ai" className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              <span className="hidden sm:inline">AI</span>
             </TabsTrigger>
             <TabsTrigger value="units" className="gap-2">
               <Scale className="w-4 h-4" />
@@ -277,6 +283,11 @@ const Settings = () => {
           {/* Profile Settings */}
           <TabsContent value="profile">
             <ProfileSettings />
+          </TabsContent>
+ 
+          {/* AI Settings */}
+          <TabsContent value="ai">
+            <AISettings />
           </TabsContent>
 
           {/* Units Settings */}
