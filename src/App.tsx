@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
  import ChefAIChat from "@/components/ai/ChefAIChat";
+ 
+ // Chef Portal Pages
 import Dashboard from "./pages/Dashboard";
 import Recipes from "./pages/Recipes";
 import RecipeDetail from "./pages/RecipeDetail";
@@ -30,6 +32,26 @@ import Team from "./pages/Team";
 import Marketplace from "./pages/Marketplace";
 import KitchenSections from "./pages/KitchenSections";
 import Settings from "./pages/Settings";
+ 
+ // Vendor Portal
+ import VendorLayout from "./portals/vendor/VendorLayout";
+ import VendorAuth from "./portals/vendor/pages/VendorAuth";
+ import VendorDashboard from "./portals/vendor/pages/VendorDashboard";
+ import VendorInsights from "./portals/vendor/pages/VendorInsights";
+ import VendorPricing from "./portals/vendor/pages/VendorPricing";
+ import VendorOrders from "./portals/vendor/pages/VendorOrders";
+ import VendorDeals from "./portals/vendor/pages/VendorDeals";
+ import VendorMessages from "./portals/vendor/pages/VendorMessages";
+ import VendorSettings from "./portals/vendor/pages/VendorSettings";
+ 
+ // Admin Portal
+ import AdminLayout from "./portals/admin/AdminLayout";
+ import AdminAuth from "./portals/admin/pages/AdminAuth";
+ import AdminDashboard from "./portals/admin/pages/AdminDashboard";
+ import AdminCRM from "./portals/admin/pages/AdminCRM";
+ import AdminAnalytics from "./portals/admin/pages/AdminAnalytics";
+ import AdminMarketing from "./portals/admin/pages/AdminMarketing";
+ import AdminSettings from "./portals/admin/pages/AdminSettings";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +63,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
+            {/* ========== CHEF PORTAL ========== */}
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<ProtectedRoute module="dashboard"><Dashboard /></ProtectedRoute>} />
             <Route path="/recipes" element={<ProtectedRoute module="recipes"><Recipes /></ProtectedRoute>} />
@@ -67,7 +90,30 @@ const App = () => (
             <Route path="/team" element={<ProtectedRoute module="team"><Team /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+ 
+            {/* ========== VENDOR PORTAL ========== */}
+            <Route path="/vendor/auth" element={<VendorAuth />} />
+            <Route path="/vendor" element={<VendorLayout />}>
+              <Route path="dashboard" element={<VendorDashboard />} />
+              <Route path="insights" element={<VendorInsights />} />
+              <Route path="pricing" element={<VendorPricing />} />
+              <Route path="orders" element={<VendorOrders />} />
+              <Route path="deals" element={<VendorDeals />} />
+              <Route path="messages" element={<VendorMessages />} />
+              <Route path="settings" element={<VendorSettings />} />
+            </Route>
+ 
+            {/* ========== ADMIN PORTAL ========== */}
+            <Route path="/admin/auth" element={<AdminAuth />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="crm" element={<AdminCRM />} />
+              <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="marketing" element={<AdminMarketing />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
+ 
+            {/* CATCH-ALL 404 */}
             <Route path="*" element={<NotFound />} />
           </Routes>
           <ChefAIChat />
