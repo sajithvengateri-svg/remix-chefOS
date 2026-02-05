@@ -35,7 +35,7 @@
      setIsSubmitting(true);
      try {
        await signIn(loginEmail, loginPassword);
-       navigate("/vendor/dashboard");
+      // Navigation happens in the effect once vendor profile is loaded
      } catch (error) {
        // Error handled in hook
      } finally {

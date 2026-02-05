@@ -19,7 +19,7 @@
    abn: string | null;
  }
  
- export const useVendorAuth = () => {
+  export const useVendorAuth = () => {
    const [user, setUser] = useState<User | null>(null);
    const [vendorProfile, setVendorProfile] = useState<VendorProfile | null>(null);
    const [loading, setLoading] = useState(true);
@@ -80,8 +80,8 @@
      return () => subscription.unsubscribe();
    }, []);
  
-   const signIn = async (email: string, password: string) => {
-     const { error } = await supabase.auth.signInWithPassword({
+    const signIn = async (email: string, password: string) => {
+      const { data, error } = await supabase.auth.signInWithPassword({
        email,
        password,
      });
@@ -90,6 +90,12 @@
        toast.error(error.message);
        throw error;
      }
+
+      // Immediately hydrate vendor profile to avoid redirect flicker
+      if (data.user) {
+        setUser(data.user);
+        await fetchVendorProfile(data.user.id);
+      }
  
      toast.success("Welcome back!");
    };
