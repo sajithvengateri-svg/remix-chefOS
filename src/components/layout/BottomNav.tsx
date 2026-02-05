@@ -13,7 +13,7 @@ interface BottomNavProps {
 }
 
 const navItems = [
-  { path: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { path: "/recipes", icon: ChefHat, label: "Recipes" },
   { path: "/inventory", icon: Package, label: "Inventory" },
   { path: "/prep", icon: ClipboardList, label: "Prep" },
