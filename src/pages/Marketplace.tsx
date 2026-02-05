@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Store, 
   Search, 
   Filter, 
   TrendingUp, 
-  Zap, 
+  Tag, 
   MessageSquare, 
   Star, 
   MapPin,
@@ -14,7 +14,8 @@ import {
   DollarSign,
   BarChart3,
   Lock,
-  Bell
+  Bell,
+  Percent
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { cn } from "@/lib/utils";
 import LiveDemandPanel from "@/components/marketplace/LiveDemandPanel";
 import { supabase } from "@/integrations/supabase/client";
+import { format, differenceInDays } from "date-fns";
+
+interface VendorDeal {
+  id: string;
+  title: string;
+  description: string | null;
+  discount_percent: number | null;
+  discount_amount: number | null;
+  min_order_value: number | null;
+  start_date: string;
+  end_date: string;
+  applicable_categories: string[] | null;
+  business_name: string;
+}
 
 // Placeholder suppliers - will be populated from vendor_profiles
 const placeholderSuppliers = [
@@ -35,7 +50,7 @@ const placeholderSuppliers = [
     rating: 0, 
     location: "Consectetur",
     deliveryDays: ["Dies", "Lunae"],
-    specialsCount: 0,
+    dealsCount: 0,
     verified: false
   },
   { 
@@ -45,7 +60,7 @@ const placeholderSuppliers = [
     rating: 0, 
     location: "Adipiscing",
     deliveryDays: ["Martis"],
-    specialsCount: 0,
+    dealsCount: 0,
     verified: false
   },
   { 
@@ -55,7 +70,7 @@ const placeholderSuppliers = [
     rating: 0, 
     location: "Tempor",
     deliveryDays: ["Mercurii"],
-    specialsCount: 0,
+    dealsCount: 0,
     verified: false
   },
   { 
@@ -65,21 +80,10 @@ const placeholderSuppliers = [
     rating: 0, 
     location: "Incididunt",
     deliveryDays: ["Iovis"],
-    specialsCount: 0,
+    dealsCount: 0,
     verified: false
   },
 ];
-
-const placeholderSpecials: {
-  id: string;
-  supplier: string;
-  item: string;
-  originalPrice: number;
-  specialPrice: number;
-  unit: string;
-  expiresIn: string;
-  category: string;
-}[] = [];
 
 const placeholderPriceComparison: {
   ingredient: string;
@@ -91,8 +95,50 @@ const Marketplace = () => {
   const [activeTab, setActiveTab] = useState("demand");
   const [vendorCount, setVendorCount] = useState(0);
 
+  // Fetch live vendor deals
+  const { data: deals, isLoading: dealsLoading } = useQuery({
+    queryKey: ["vendor-deals-marketplace"],
+    queryFn: async () => {
+      const today = format(new Date(), "yyyy-MM-dd");
+      const { data, error } = await supabase
+        .from("vendor_deals")
+        .select(`
+          id,
+          title,
+          description,
+          discount_percent,
+          discount_amount,
+          min_order_value,
+          start_date,
+          end_date,
+          applicable_categories,
+          vendor_profiles!inner (
+            business_name
+          )
+        `)
+        .eq("is_active", true)
+        .lte("start_date", today)
+        .gte("end_date", today)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).map((deal) => ({
+        id: deal.id,
+        title: deal.title,
+        description: deal.description,
+        discount_percent: deal.discount_percent,
+        discount_amount: deal.discount_amount,
+        min_order_value: deal.min_order_value,
+        start_date: deal.start_date,
+        end_date: deal.end_date,
+        applicable_categories: deal.applicable_categories,
+        business_name: (deal.vendor_profiles as { business_name: string })?.business_name || "Vendor",
+      })) as VendorDeal[];
+    },
+  });
+
   useEffect(() => {
-    // Fetch approved vendor count
     const fetchVendorCount = async () => {
       const { count } = await supabase
         .from("vendor_profiles")
@@ -102,6 +148,13 @@ const Marketplace = () => {
     };
     fetchVendorCount();
   }, []);
+
+  const getDaysRemaining = (endDate: string) => {
+    const days = differenceInDays(new Date(endDate), new Date());
+    if (days <= 0) return "Expires today";
+    if (days === 1) return "1 day left";
+    return `${days} days left`;
+  };
 
   return (
     <AppLayout>
@@ -157,17 +210,18 @@ const Marketplace = () => {
               <Store className="w-4 h-4" />
               <span className="hidden sm:inline">Suppliers</span>
             </TabsTrigger>
-            <TabsTrigger value="specials" className="gap-2">
-              <Zap className="w-4 h-4" />
-              <span className="hidden sm:inline">Specials</span>
+            <TabsTrigger value="deals" className="gap-2">
+              <Tag className="w-4 h-4" />
+              <span className="hidden sm:inline">Deals</span>
+              {deals && deals.length > 0 && (
+                <Badge variant="destructive" className="ml-1 h-5 px-1.5 text-xs">
+                  {deals.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="compare" className="gap-2">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Compare</span>
-            </TabsTrigger>
-            <TabsTrigger value="messages" className="gap-2">
-              <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">Messages</span>
             </TabsTrigger>
           </TabsList>
 
@@ -248,66 +302,103 @@ const Marketplace = () => {
             </div>
           </TabsContent>
 
-          {/* Specials Tab */}
-          <TabsContent value="specials" className="space-y-4">
+          {/* Deals Tab (formerly Specials) */}
+          <TabsContent value="deals" className="space-y-4">
             <Card className="border-dashed">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-primary" />
-                  Live Deals
+                  <Tag className="w-4 h-4 text-primary" />
+                  Live Vendor Deals
                 </CardTitle>
                 <CardDescription>
-                  Prices updated weekly to prevent market manipulation
+                  Active deals from vendors. Synced in real-time during testing.
                 </CardDescription>
               </CardHeader>
             </Card>
 
-            {placeholderSpecials.length > 0 ? (
+            {dealsLoading ? (
               <div className="grid gap-4">
-                {placeholderSpecials.map((special) => (
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="card-elevated p-4 animate-pulse">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-muted" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-muted rounded w-1/3" />
+                        <div className="h-3 bg-muted rounded w-1/4" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : deals && deals.length > 0 ? (
+              <div className="grid gap-4">
+                {deals.map((deal, index) => (
                   <motion.div
-                    key={special.id}
+                    key={deal.id}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="card-elevated p-4 flex items-center gap-4"
+                    transition={{ delay: index * 0.05 }}
+                    className="card-elevated p-4"
                   >
-                    <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
-                      <DollarSign className="w-6 h-6 text-success" />
-                    </div>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{special.item}</h3>
-                        <Badge variant="outline" className="text-xs">{special.category}</Badge>
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center">
+                        {deal.discount_percent ? (
+                          <Percent className="w-6 h-6 text-success" />
+                        ) : (
+                          <DollarSign className="w-6 h-6 text-success" />
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground">{special.supplier}</p>
-                    </div>
-
-                    <div className="text-right">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground line-through">
-                          ${special.originalPrice.toFixed(2)}
-                        </span>
-                        <span className="text-lg font-bold text-success">
-                          ${special.specialPrice.toFixed(2)}
-                        </span>
-                        <span className="text-sm text-muted-foreground">/{special.unit}</span>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold">{deal.title}</h3>
+                          {deal.applicable_categories && deal.applicable_categories.length > 0 && (
+                            deal.applicable_categories.map((cat) => (
+                              <Badge key={cat} variant="outline" className="text-xs">{cat}</Badge>
+                            ))
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{deal.business_name}</p>
+                        {deal.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{deal.description}</p>
+                        )}
                       </div>
-                      <p className="text-xs text-warning">Expires in {special.expiresIn}</p>
-                    </div>
 
-                    <Button variant="outline" size="sm">
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Contact
-                    </Button>
+                      <div className="text-right">
+                        <div className="flex items-center gap-2 justify-end">
+                          {deal.discount_percent ? (
+                            <span className="text-lg font-bold text-success">
+                              {deal.discount_percent}% OFF
+                            </span>
+                          ) : deal.discount_amount ? (
+                            <span className="text-lg font-bold text-success">
+                              ${deal.discount_amount.toFixed(2)} OFF
+                            </span>
+                          ) : null}
+                        </div>
+                        {deal.min_order_value && deal.min_order_value > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            Min. order ${deal.min_order_value}
+                          </p>
+                        )}
+                        <p className="text-xs text-warning mt-1">
+                          {getDaysRemaining(deal.end_date)}
+                        </p>
+                      </div>
+
+                      <Button variant="outline" size="sm">
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Contact
+                      </Button>
+                    </div>
                   </motion.div>
                 ))}
               </div>
             ) : (
               <div className="text-center py-12 text-muted-foreground">
-                <Zap className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                <p>No active specials</p>
-                <p className="text-sm mt-1">Deals will appear here when suppliers post them</p>
+                <Tag className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                <p>No active deals</p>
+                <p className="text-sm mt-1">Deals will appear here when vendors post them</p>
               </div>
             )}
           </TabsContent>
@@ -377,28 +468,6 @@ const Marketplace = () => {
               </div>
             )}
           </TabsContent>
-
-          {/* Messages Tab */}
-          <TabsContent value="messages" className="space-y-4">
-            <Card className="border-dashed">
-              <CardContent className="pt-6">
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
-                    <MessageSquare className="w-8 h-8 text-muted-foreground" />
-                  </div>
-                  <h3 className="font-semibold mb-2">Direct Messaging Coming Soon</h3>
-                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                    Connect directly with suppliers to negotiate deals, ask questions, 
-                    and arrange orders. Messages are private and secure.
-                  </p>
-                  <Button className="mt-6" disabled>
-                    <Bell className="w-4 h-4 mr-2" />
-                    Notify Me When Available
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
 
         {/* Data Privacy Notice */}
@@ -414,7 +483,7 @@ const Marketplace = () => {
               <h4 className="font-medium text-sm">Your Data is Protected</h4>
               <p className="text-xs text-muted-foreground mt-1">
                 Your recipes remain completely private. Only anonymized, aggregated ingredient 
-                usage data (by suburb) may be shared with suppliers to help them understand 
+                usage data may be shared with suppliers to help them understand 
                 market demand. No chef or business information is ever disclosed.
               </p>
             </div>
