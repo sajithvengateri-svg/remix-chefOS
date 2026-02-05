@@ -1,16 +1,1 @@
-project_id = "ojjaagslzddptwtyogqr"
-
-[functions.verify-cleaning]
-verify_jwt = false
-
-[functions.extract-recipe]
-verify_jwt = false
-
-[functions.extract-invoice]
-verify_jwt = false
- 
- [functions.chef-ai-chat]
- verify_jwt = false
- 
- [functions.scan-asset-label]
- verify_jwt = false
+project_id = "wiussxofryaaxrmozysi"
