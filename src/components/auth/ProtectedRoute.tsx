@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
+import { DEV_MODE } from "@/lib/devMode";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -12,6 +13,11 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children, module, requireEdit = false }: ProtectedRouteProps) => {
   const { user, isLoading, canView, canEdit } = useAuth();
   const location = useLocation();
+
+  // Bypass auth in dev mode
+  if (DEV_MODE) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (
