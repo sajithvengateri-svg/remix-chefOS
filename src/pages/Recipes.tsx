@@ -9,8 +9,8 @@ import {
   Calculator,
   Loader2,
   Upload,
-  Beaker,
-  Layers
+  Layers,
+  Trash2
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import FoodCostCalculator from "@/components/costing/FoodCostCalculator";
@@ -24,10 +24,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+
+interface RecipeIngredientInput {
+  name: string;
+  quantity: number;
+  unit: string;
+}
 
 interface Recipe {
   id: string;
@@ -50,6 +57,7 @@ interface Recipe {
 }
 
 const categories = ["All", "Mains", "Appetizers", "Soups", "Salads", "Desserts", "Sauces", "Batch Recipes"];
+const ingredientUnits = ["g", "kg", "ml", "L", "each", "bunch", "tbsp", "tsp", "cup"];
 
 const Recipes = () => {
   const navigate = useNavigate();
@@ -79,6 +87,12 @@ const Recipes = () => {
     tasting_notes: "",
     is_batch_recipe: false,
   });
+
+  // Ingredient list state for the form
+  const [formIngredients, setFormIngredients] = useState<RecipeIngredientInput[]>([]);
+  const [newIngName, setNewIngName] = useState("");
+  const [newIngQty, setNewIngQty] = useState<number>(0);
+  const [newIngUnit, setNewIngUnit] = useState("kg");
 
   const hasEditPermission = canEdit("recipes");
 
@@ -117,6 +131,13 @@ const Recipes = () => {
       return;
     }
 
+    // Prepare ingredients JSONB
+    const ingredientsJson = formIngredients.map(ing => ({
+      name: ing.name,
+      quantity: ing.quantity,
+      unit: ing.unit,
+    }));
+
     if (editingRecipe) {
       const { error } = await supabase
         .from("recipes")
@@ -130,6 +151,7 @@ const Recipes = () => {
           cost_per_serving: formData.cost_per_serving,
           tasting_notes: formData.tasting_notes || null,
           is_batch_recipe: formData.is_batch_recipe,
+          ingredients: ingredientsJson,
         })
         .eq("id", editingRecipe.id);
 
@@ -151,6 +173,8 @@ const Recipes = () => {
         tasting_notes: formData.tasting_notes || null,
         is_batch_recipe: formData.is_batch_recipe,
         created_by: user?.id,
+        ingredients: ingredientsJson,
+        is_public: true,
       });
 
       if (error) {
@@ -198,6 +222,11 @@ const Recipes = () => {
       tasting_notes: recipe.tasting_notes || "",
       is_batch_recipe: recipe.is_batch_recipe || false,
     });
+    // Load existing ingredients from JSONB
+    const existingIngs = Array.isArray(recipe.ingredients) 
+      ? (recipe.ingredients as RecipeIngredientInput[])
+      : [];
+    setFormIngredients(existingIngs);
     setDialogOpen(true);
   };
 
@@ -215,6 +244,28 @@ const Recipes = () => {
       tasting_notes: "",
       is_batch_recipe: false,
     });
+    setFormIngredients([]);
+    setNewIngName("");
+    setNewIngQty(0);
+    setNewIngUnit("kg");
+  };
+
+  const addFormIngredient = () => {
+    if (!newIngName.trim() || newIngQty <= 0) {
+      toast.error("Enter ingredient name and quantity");
+      return;
+    }
+    setFormIngredients(prev => [
+      ...prev,
+      { name: newIngName.trim(), quantity: newIngQty, unit: newIngUnit }
+    ]);
+    setNewIngName("");
+    setNewIngQty(0);
+    setNewIngUnit("kg");
+  };
+
+  const removeFormIngredient = (index: number) => {
+    setFormIngredients(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleImageUpdate = (recipeId: string, imageUrl: string) => {
@@ -393,11 +444,12 @@ const Recipes = () => {
 
         {/* Add/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={resetForm}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>{editingRecipe ? "Edit Recipe" : "New Recipe"}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
+            <ScrollArea className="flex-1 pr-4">
+              <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Recipe Name *</Label>
                 <Input
@@ -477,6 +529,61 @@ const Recipes = () => {
                   />
                 </div>
               </div>
+
+              {/* Ingredients Section */}
+              <div className="space-y-3 pt-2 border-t">
+                <Label>Ingredients</Label>
+                {formIngredients.length > 0 && (
+                  <div className="space-y-2">
+                    {formIngredients.map((ing, idx) => (
+                      <div key={idx} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                        <span className="flex-1 text-sm font-medium">{ing.name}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {ing.quantity} {ing.unit}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeFormIngredient(idx)}
+                          className="p-1 hover:bg-destructive/10 rounded"
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Ingredient name"
+                    value={newIngName}
+                    onChange={(e) => setNewIngName(e.target.value)}
+                    className="flex-1"
+                  />
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    placeholder="Qty"
+                    value={newIngQty || ""}
+                    onChange={(e) => setNewIngQty(parseFloat(e.target.value) || 0)}
+                    className="w-20"
+                  />
+                  <Select value={newIngUnit} onValueChange={setNewIngUnit}>
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ingredientUnits.map(u => (
+                        <SelectItem key={u} value={u}>{u}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" size="icon" variant="outline" onClick={addFormIngredient}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="tasting_notes">Tasting Notes</Label>
                 <Textarea
@@ -498,7 +605,8 @@ const Recipes = () => {
                   onCheckedChange={(checked) => setFormData({ ...formData, is_batch_recipe: checked })}
                 />
               </div>
-            </div>
+              </div>
+            </ScrollArea>
             <DialogFooter>
               <Button variant="outline" onClick={resetForm}>Cancel</Button>
               <Button onClick={handleSubmit}>
