@@ -259,6 +259,55 @@
   .bottom-nav-item:hover {
     @apply text-primary;
   }
+ 
+   /* Swipeable card deck styles */
+   .card-deck-container {
+     @apply relative overflow-hidden;
+     perspective: 1000px;
+   }
+ 
+   .swipe-card {
+     @apply absolute inset-0 rounded-2xl shadow-2xl;
+     transform-style: preserve-3d;
+     backface-visibility: hidden;
+   }
+ 
+   /* Voice pulse animation */
+   @keyframes voice-pulse {
+     0%, 100% {
+       box-shadow: 0 0 0 0 hsl(var(--primary) / 0.4);
+     }
+     50% {
+       box-shadow: 0 0 0 12px hsl(var(--primary) / 0);
+     }
+   }
+ 
+   .voice-active {
+     animation: voice-pulse 1.5s ease-in-out infinite;
+   }
+ 
+   /* Card throw animation */
+   @keyframes card-throw-left {
+     to {
+       transform: translateX(-150%) rotate(-20deg);
+       opacity: 0;
+     }
+   }
+ 
+   @keyframes card-throw-right {
+     to {
+       transform: translateX(150%) rotate(20deg);
+       opacity: 0;
+     }
+   }
+ 
+   .throwing-left {
+     animation: card-throw-left 0.3s ease-out forwards;
+   }
+ 
+   .throwing-right {
+     animation: card-throw-right 0.3s ease-out forwards;
+   }
 }
 
 /* Safe area insets for mobile */
