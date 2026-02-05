@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          permission_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permission_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permission_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       allergens: {
         Row: {
           color: string | null
@@ -1484,12 +1505,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_head_chef: { Args: { _user_id: string }; Returns: boolean }
       is_vendor: { Args: { _user_id: string }; Returns: boolean }
       sync_inventory_from_ingredients: { Args: never; Returns: number }
     }
     Enums: {
-      app_role: "head_chef" | "line_chef"
+      app_role: "head_chef" | "line_chef" | "admin"
       vendor_role: "vendor_admin" | "vendor_staff"
     }
     CompositeTypes: {
@@ -1618,7 +1640,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["head_chef", "line_chef"],
+      app_role: ["head_chef", "line_chef", "admin"],
       vendor_role: ["vendor_admin", "vendor_staff"],
     },
   },
