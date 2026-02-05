@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { 
   Search, 
   Plus, 
@@ -65,6 +65,7 @@ const Recipes = () => {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [deletingRecipe, setDeletingRecipe] = useState<Recipe | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -84,6 +85,15 @@ const Recipes = () => {
   useEffect(() => {
     fetchRecipes();
   }, []);
+
+  // Handle ?new=true query param to open dialog
+  useEffect(() => {
+    if (searchParams.get("new") === "true") {
+      setDialogOpen(true);
+      // Clear the query param
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   const fetchRecipes = async () => {
     setLoading(true);
