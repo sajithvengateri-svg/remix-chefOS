@@ -8,7 +8,8 @@ import {
   Package,
   Edit,
   Trash2,
-  Loader2
+  Loader2,
+  Truck
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -35,6 +36,12 @@ interface Ingredient {
   notes: string | null;
 }
 
+interface Supplier {
+  id: string;
+  name: string;
+  category: string;
+}
+
 const categories = ["All", "Proteins", "Produce", "Dairy", "Dry Goods", "Oils", "Beverages", "Prepared"];
 const units = ["kg", "g", "L", "ml", "lb", "oz", "each", "bunch", "case"];
 
@@ -43,6 +50,7 @@ const Ingredients = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -64,7 +72,21 @@ const Ingredients = () => {
 
   useEffect(() => {
     fetchIngredients();
+    fetchSuppliers();
   }, []);
+
+  const fetchSuppliers = async () => {
+    const { data, error } = await supabase
+      .from("suppliers")
+      .select("id, name, category")
+      .order("name");
+
+    if (error) {
+      console.error("Error fetching suppliers:", error);
+    } else {
+      setSuppliers(data || []);
+    }
+  };
 
   const fetchIngredients = async () => {
     setLoading(true);
@@ -442,12 +464,33 @@ const Ingredients = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="supplier">Supplier</Label>
-                <Input
-                  id="supplier"
-                  value={formData.supplier}
-                  onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                  placeholder="e.g., Fresh Farms Co."
-                />
+                <Select
+                  value={formData.supplier || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, supplier: value === "none" ? "" : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a supplier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">
+                      <span className="text-muted-foreground">No supplier</span>
+                    </SelectItem>
+                    {suppliers.map(supplier => (
+                      <SelectItem key={supplier.id} value={supplier.name}>
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-3 h-3 text-muted-foreground" />
+                          <span>{supplier.name}</span>
+                          <span className="text-xs text-muted-foreground">({supplier.category})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {suppliers.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No suppliers found. Add suppliers in Food Safety → Suppliers.
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
