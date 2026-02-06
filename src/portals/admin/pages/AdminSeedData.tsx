@@ -17,6 +17,7 @@ import {
   Building2,
   Tag,
   Trash2,
+  TrendingUp,
 } from "lucide-react";
 
 const AdminSeedData = () => {
@@ -24,137 +25,15 @@ const AdminSeedData = () => {
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
 
   const seedOptions = [
-    { id: "ingredients", label: "Ingredients", icon: Package, count: 50 },
-    { id: "recipes", label: "Recipes", icon: ChefHat, count: 20 },
-    { id: "vendors", label: "Vendor Profiles", icon: Building2, count: 10 },
-    { id: "deals", label: "Vendor Deals", icon: Tag, count: 15 },
-    { id: "users", label: "Test Users", icon: Users, count: 5 },
+    { id: "ingredients", label: "Ingredients", icon: Package, count: 15 },
+    { id: "recipes", label: "Recipes", icon: ChefHat, count: 5 },
+    { id: "demand", label: "Demand Insights", icon: Tag, count: 7 },
   ];
 
   const toggleSection = (id: string) => {
     setSelectedSections((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
     );
-  };
-
-  const seedIngredients = async () => {
-    const ingredients = [
-      { name: "Olive Oil", category: "Oils & Fats", unit: "L", cost_per_unit: 12.5 },
-      { name: "Butter", category: "Dairy", unit: "kg", cost_per_unit: 18.0 },
-      { name: "Garlic", category: "Produce", unit: "kg", cost_per_unit: 8.5 },
-      { name: "Onion", category: "Produce", unit: "kg", cost_per_unit: 2.5 },
-      { name: "Chicken Breast", category: "Meat", unit: "kg", cost_per_unit: 14.0 },
-      { name: "Salmon Fillet", category: "Seafood", unit: "kg", cost_per_unit: 32.0 },
-      { name: "Parmesan Cheese", category: "Dairy", unit: "kg", cost_per_unit: 45.0 },
-      { name: "Heavy Cream", category: "Dairy", unit: "L", cost_per_unit: 8.0 },
-      { name: "Fresh Basil", category: "Herbs", unit: "bunch", cost_per_unit: 3.5 },
-      { name: "Lemon", category: "Produce", unit: "each", cost_per_unit: 0.8 },
-    ];
-
-    const { error } = await supabase.from("ingredients").insert(ingredients);
-    if (error) throw error;
-    return ingredients.length;
-  };
-
-  const seedRecipes = async () => {
-    const recipes = [
-      {
-        name: "Classic Risotto",
-        category: "Main",
-        description: "Creamy Italian rice dish",
-        prep_time: 15,
-        cook_time: 25,
-        servings: 4,
-        sell_price: 28.0,
-        cost_per_serving: 6.5,
-      },
-      {
-        name: "Grilled Salmon",
-        category: "Main",
-        description: "Fresh Atlantic salmon with herbs",
-        prep_time: 10,
-        cook_time: 15,
-        servings: 2,
-        sell_price: 35.0,
-        cost_per_serving: 12.0,
-      },
-      {
-        name: "Caesar Salad",
-        category: "Starter",
-        description: "Classic romaine with house dressing",
-        prep_time: 15,
-        cook_time: 0,
-        servings: 2,
-        sell_price: 16.0,
-        cost_per_serving: 3.5,
-      },
-      {
-        name: "Tiramisu",
-        category: "Dessert",
-        description: "Italian coffee-flavored dessert",
-        prep_time: 30,
-        cook_time: 0,
-        servings: 8,
-        sell_price: 14.0,
-        cost_per_serving: 2.8,
-      },
-      {
-        name: "Beef Bourguignon",
-        category: "Main",
-        description: "French braised beef stew",
-        prep_time: 30,
-        cook_time: 180,
-        servings: 6,
-        sell_price: 32.0,
-        cost_per_serving: 8.5,
-      },
-    ];
-
-    const { error } = await supabase.from("recipes").insert(recipes);
-    if (error) throw error;
-    return recipes.length;
-  };
-
-  const seedVendorDeals = async () => {
-    // First get vendor IDs
-    const { data: vendors } = await supabase.from("vendor_profiles").select("id").limit(3);
-    if (!vendors?.length) {
-      toast.error("No vendors found. Seed vendors first.");
-      return 0;
-    }
-
-    const today = new Date();
-    const nextMonth = new Date(today);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-
-    const deals = vendors.flatMap((vendor) => [
-      {
-        vendor_id: vendor.id,
-        title: "Summer Special",
-        description: "10% off all produce orders",
-        discount_percent: 10,
-        start_date: today.toISOString().split("T")[0],
-        end_date: nextMonth.toISOString().split("T")[0],
-        is_active: true,
-        min_order_value: 100,
-        applicable_categories: ["Produce", "Herbs"],
-      },
-      {
-        vendor_id: vendor.id,
-        title: "Bulk Meat Discount",
-        description: "$50 off orders over $500",
-        discount_amount: 50,
-        start_date: today.toISOString().split("T")[0],
-        end_date: nextMonth.toISOString().split("T")[0],
-        is_active: true,
-        min_order_value: 500,
-        applicable_categories: ["Meat", "Seafood"],
-      },
-    ]);
-
-    const { error } = await supabase.from("vendor_deals").insert(deals);
-    if (error) throw error;
-    return deals.length;
   };
 
   const handleSeed = async () => {
@@ -167,22 +46,38 @@ const AdminSeedData = () => {
     const results: string[] = [];
 
     try {
-      if (selectedSections.includes("ingredients")) {
-        const count = await seedIngredients();
-        results.push(`${count} ingredients`);
+      for (const section of selectedSections) {
+        let action = "";
+        switch (section) {
+          case "ingredients":
+            action = "seed_ingredients";
+            break;
+          case "recipes":
+            action = "seed_recipes";
+            break;
+          case "demand":
+            action = "seed_demand_insights";
+            break;
+          default:
+            continue;
+        }
+
+        const { data, error } = await supabase.functions.invoke("seed-data", {
+          body: { action },
+        });
+
+        if (error) {
+          toast.error(`Failed to seed ${section}: ${error.message}`);
+        } else if (data?.success) {
+          results.push(`${data.count} ${section}`);
+        } else {
+          toast.error(`Failed to seed ${section}: ${data?.error || "Unknown error"}`);
+        }
       }
 
-      if (selectedSections.includes("recipes")) {
-        const count = await seedRecipes();
-        results.push(`${count} recipes`);
+      if (results.length > 0) {
+        toast.success(`Seeded: ${results.join(", ")}`);
       }
-
-      if (selectedSections.includes("deals")) {
-        const count = await seedVendorDeals();
-        results.push(`${count} vendor deals`);
-      }
-
-      toast.success(`Seeded: ${results.join(", ")}`);
     } catch (error: any) {
       toast.error(`Seed failed: ${error.message}`);
     }
@@ -192,9 +87,13 @@ const AdminSeedData = () => {
 
   const handleClearData = async (table: string) => {
     try {
-      // Use a type assertion to allow dynamic table names
-      const { error } = await (supabase.from(table as any).delete() as any).neq("id", "00000000-0000-0000-0000-000000000000");
+      const { data, error } = await supabase.functions.invoke("seed-data", {
+        body: { action: "clear_table", data: { table } },
+      });
+
       if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Unknown error");
+      
       toast.success(`Cleared ${table} table`);
     } catch (error: any) {
       toast.error(`Failed to clear ${table}: ${error.message}`);
@@ -313,9 +212,9 @@ const DataStatusGrid = () => {
   const items = [
     { label: "Ingredients", count: counts?.ingredients || 0, icon: Package },
     { label: "Recipes", count: counts?.recipes || 0, icon: ChefHat },
+    { label: "Demand Insights", count: counts?.demand || 0, icon: TrendingUp },
     { label: "Vendors", count: counts?.vendors || 0, icon: Building2 },
     { label: "Vendor Deals", count: counts?.deals || 0, icon: Tag },
-    { label: "Users", count: counts?.users || 0, icon: Users },
   ];
 
   return (
@@ -340,12 +239,12 @@ const useDataCounts = () => {
   // Use useEffect properly for data fetching
   React.useEffect(() => {
     const fetchCounts = async () => {
-      const [ingredients, recipes, vendors, deals, users] = await Promise.all([
+      const [ingredients, recipes, vendors, deals, demand] = await Promise.all([
         supabase.from("ingredients").select("*", { count: "exact", head: true }),
         supabase.from("recipes").select("*", { count: "exact", head: true }),
         supabase.from("vendor_profiles").select("*", { count: "exact", head: true }),
         supabase.from("vendor_deals").select("*", { count: "exact", head: true }),
-        supabase.from("profiles").select("*", { count: "exact", head: true }),
+        supabase.from("demand_insights").select("*", { count: "exact", head: true }),
       ]);
 
       setData({
@@ -353,7 +252,7 @@ const useDataCounts = () => {
         recipes: recipes.count || 0,
         vendors: vendors.count || 0,
         deals: deals.count || 0,
-        users: users.count || 0,
+        demand: demand.count || 0,
       });
     };
 
