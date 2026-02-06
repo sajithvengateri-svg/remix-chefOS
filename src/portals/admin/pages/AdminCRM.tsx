@@ -21,16 +21,28 @@
  const AdminCRM = () => {
    const [searchTerm, setSearchTerm] = useState("");
  
-   const { data: users, isLoading: usersLoading } = useQuery({
-     queryKey: ["admin-users"],
-     queryFn: async () => {
-       const { data } = await supabase
-         .from("profiles")
-         .select("*, user_roles(role)")
-         .order("created_at", { ascending: false });
-       return data || [];
-     },
-   });
+  const { data: users, isLoading: usersLoading } = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: async () => {
+      // Fetch profiles and roles separately since there's no FK relationship
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id, role");
+
+      // Merge roles into profiles
+      const profilesWithRoles = (profiles || []).map((profile) => {
+        const userRole = roles?.find((r) => r.user_id === profile.user_id);
+        return { ...profile, role: userRole?.role || "user" };
+      });
+
+      return profilesWithRoles;
+    },
+  });
  
    const { data: vendors, isLoading: vendorsLoading } = useQuery({
      queryKey: ["admin-vendors"],
@@ -118,11 +130,11 @@
                              {user.full_name}
                            </TableCell>
                            <TableCell>{user.email}</TableCell>
-                           <TableCell>
-                             <Badge variant="secondary">
-                               {(user.user_roles as any)?.[0]?.role || "user"}
-                             </Badge>
-                           </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {user.role}
+                              </Badge>
+                            </TableCell>
                            <TableCell>{user.position || "—"}</TableCell>
                            <TableCell>
                              {format(new Date(user.created_at), "MMM d, yyyy")}
