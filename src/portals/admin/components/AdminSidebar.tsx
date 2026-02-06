@@ -1,31 +1,33 @@
  import { useLocation, useNavigate } from "react-router-dom";
  import { motion } from "framer-motion";
- import {
-   LayoutDashboard,
-   Users,
-   BarChart3,
-   Megaphone,
-   Settings,
-   LogOut,
-   Shield,
-   TestTube,
-   Rocket,
-   Database,
- } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  BarChart3,
+  Megaphone,
+  Settings,
+  LogOut,
+  Shield,
+  TestTube,
+  Rocket,
+  Database,
+  Tag,
+} from "lucide-react";
  import { cn } from "@/lib/utils";
  import { useAdminAuth } from "@/hooks/useAdminAuth";
  import { Button } from "@/components/ui/button";
  import { useState } from "react";
  
- const navItems = [
-   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
-   { title: "CRM", href: "/admin/crm", icon: Users },
-   { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
-   { title: "Marketing", href: "/admin/marketing", icon: Megaphone },
-   { title: "Testing", href: "/admin/testing", icon: TestTube },
-   { title: "Seed Data", href: "/admin/seed", icon: Database },
-   { title: "Launcher", href: "/admin/launcher", icon: Rocket },
- ];
+const navItems = [
+  { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { title: "Vendor Deals", href: "/admin/vendor-deals", icon: Tag },
+  { title: "CRM", href: "/admin/crm", icon: Users },
+  { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+  { title: "Marketing", href: "/admin/marketing", icon: Megaphone },
+  { title: "Testing", href: "/admin/testing", icon: TestTube },
+  { title: "Seed Data", href: "/admin/seed", icon: Database },
+  { title: "Launcher", href: "/admin/launcher", icon: Rocket },
+];
  
  const AdminSidebar = () => {
    const location = useLocation();
