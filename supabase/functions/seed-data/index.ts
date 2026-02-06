@@ -48,6 +48,15 @@ serve(async (req) => {
       }
 
       case 'seed_recipes': {
+        // First, get existing ingredients to link
+        const { data: existingIngredients } = await supabase
+          .from("ingredients")
+          .select("id, name, category");
+
+        const ingredientMap = new Map(
+          existingIngredients?.map(i => [i.name.toLowerCase().trim(), i]) || []
+        );
+
         const recipes = [
           {
             name: "Classic Risotto",
@@ -59,6 +68,14 @@ serve(async (req) => {
             sell_price: 28.0,
             cost_per_serving: 6.5,
             is_public: true,
+            ingredientLinks: [
+              { name: "Arborio Rice", quantity: 0.4, unit: "kg" },
+              { name: "Parmesan Cheese", quantity: 0.15, unit: "kg" },
+              { name: "Butter", quantity: 0.1, unit: "kg" },
+              { name: "Onion", quantity: 0.15, unit: "kg" },
+              { name: "White Wine", quantity: 0.2, unit: "L" },
+              { name: "Vegetable Stock", quantity: 1, unit: "L" },
+            ],
           },
           {
             name: "Grilled Salmon",
@@ -70,6 +87,13 @@ serve(async (req) => {
             sell_price: 35.0,
             cost_per_serving: 12.0,
             is_public: true,
+            ingredientLinks: [
+              { name: "Salmon Fillet", quantity: 0.4, unit: "kg" },
+              { name: "Butter", quantity: 0.05, unit: "kg" },
+              { name: "Lemon", quantity: 2, unit: "each" },
+              { name: "Olive Oil", quantity: 0.03, unit: "L" },
+              { name: "Fresh Basil", quantity: 1, unit: "bunch" },
+            ],
           },
           {
             name: "Caesar Salad",
@@ -81,6 +105,12 @@ serve(async (req) => {
             sell_price: 16.0,
             cost_per_serving: 3.5,
             is_public: true,
+            ingredientLinks: [
+              { name: "Parmesan Cheese", quantity: 0.05, unit: "kg" },
+              { name: "Garlic", quantity: 0.02, unit: "kg" },
+              { name: "Olive Oil", quantity: 0.05, unit: "L" },
+              { name: "Lemon", quantity: 1, unit: "each" },
+            ],
           },
           {
             name: "Tiramisu",
@@ -92,6 +122,9 @@ serve(async (req) => {
             sell_price: 14.0,
             cost_per_serving: 2.8,
             is_public: true,
+            ingredientLinks: [
+              { name: "Heavy Cream", quantity: 0.5, unit: "L" },
+            ],
           },
           {
             name: "Beef Bourguignon",
@@ -103,11 +136,61 @@ serve(async (req) => {
             sell_price: 32.0,
             cost_per_serving: 8.5,
             is_public: true,
+            ingredientLinks: [
+              { name: "Beef Tenderloin", quantity: 1, unit: "kg" },
+              { name: "Onion", quantity: 0.3, unit: "kg" },
+              { name: "Garlic", quantity: 0.05, unit: "kg" },
+              { name: "Shallots", quantity: 0.2, unit: "kg" },
+              { name: "Butter", quantity: 0.1, unit: "kg" },
+              { name: "Vegetable Stock", quantity: 0.5, unit: "L" },
+            ],
           },
         ];
 
-        const { data: inserted, error } = await supabase.from("recipes").insert(recipes).select();
-        result = { success: !error, count: inserted?.length || 0, error: error?.message };
+        // Insert recipes (without ingredientLinks field)
+        const recipesToInsert = recipes.map(({ ingredientLinks, ...recipe }) => recipe);
+        const { data: insertedRecipes, error: recipeError } = await supabase
+          .from("recipes")
+          .insert(recipesToInsert)
+          .select();
+
+        if (recipeError) {
+          result = { success: false, error: recipeError.message };
+          break;
+        }
+
+        // Create recipe_ingredients links
+        const recipeIngredients: any[] = [];
+        insertedRecipes?.forEach((insertedRecipe, idx) => {
+          const originalRecipe = recipes[idx];
+          originalRecipe.ingredientLinks?.forEach(link => {
+            const ingredient = ingredientMap.get(link.name.toLowerCase().trim());
+            if (ingredient) {
+              recipeIngredients.push({
+                recipe_id: insertedRecipe.id,
+                ingredient_id: ingredient.id,
+                quantity: link.quantity,
+                unit: link.unit,
+              });
+            }
+          });
+        });
+
+        if (recipeIngredients.length > 0) {
+          const { error: linkError } = await supabase
+            .from("recipe_ingredients")
+            .insert(recipeIngredients);
+
+          if (linkError) {
+            console.error("Error linking ingredients:", linkError);
+          }
+        }
+
+        result = { 
+          success: true, 
+          count: insertedRecipes?.length || 0,
+          ingredientsLinked: recipeIngredients.length
+        };
         break;
       }
 
