@@ -45,14 +45,18 @@ import Settings from "./pages/Settings";
  import VendorMessages from "./portals/vendor/pages/VendorMessages";
  import VendorSettings from "./portals/vendor/pages/VendorSettings";
  
- // Admin Portal
- import AdminLayout from "./portals/admin/AdminLayout";
- import AdminAuth from "./portals/admin/pages/AdminAuth";
- import AdminDashboard from "./portals/admin/pages/AdminDashboard";
- import AdminCRM from "./portals/admin/pages/AdminCRM";
- import AdminAnalytics from "./portals/admin/pages/AdminAnalytics";
- import AdminMarketing from "./portals/admin/pages/AdminMarketing";
- import AdminSettings from "./portals/admin/pages/AdminSettings";
+// Admin Portal
+import AdminLayout from "./portals/admin/AdminLayout";
+import AdminAuth from "./portals/admin/pages/AdminAuth";
+import AdminDashboard from "./portals/admin/pages/AdminDashboard";
+import AdminCRM from "./portals/admin/pages/AdminCRM";
+import AdminAnalytics from "./portals/admin/pages/AdminAnalytics";
+import AdminMarketing from "./portals/admin/pages/AdminMarketing";
+import AdminSettings from "./portals/admin/pages/AdminSettings";
+import AdminVendorDeals from "./portals/admin/pages/AdminVendorDeals";
+import AdminTesting from "./portals/admin/pages/AdminTesting";
+import AdminSeedData from "./portals/admin/pages/AdminSeedData";
+import AdminLauncher from "./portals/admin/pages/AdminLauncher";
 
 const queryClient = new QueryClient();
 
@@ -112,9 +116,13 @@ const App = () => (
             <Route path="/admin/auth" element={<AdminAuth />} />
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
+              <Route path="vendor-deals" element={<AdminVendorDeals />} />
               <Route path="crm" element={<AdminCRM />} />
               <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="marketing" element={<AdminMarketing />} />
+              <Route path="testing" element={<AdminTesting />} />
+              <Route path="seed" element={<AdminSeedData />} />
+              <Route path="launcher" element={<AdminLauncher />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
  
