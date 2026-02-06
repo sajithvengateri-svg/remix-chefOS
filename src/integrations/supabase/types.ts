@@ -538,6 +538,117 @@ export type Database = {
         }
         Relationships: []
       }
+      menu_items: {
+        Row: {
+          allergens: string[] | null
+          category: string
+          contribution_margin: number
+          created_at: string
+          description: string | null
+          food_cost: number
+          food_cost_percent: number
+          id: string
+          is_active: boolean
+          menu_id: string
+          name: string
+          popularity: number
+          profitability: string
+          recipe_id: string | null
+          sell_price: number
+          updated_at: string
+        }
+        Insert: {
+          allergens?: string[] | null
+          category?: string
+          contribution_margin?: number
+          created_at?: string
+          description?: string | null
+          food_cost?: number
+          food_cost_percent?: number
+          id?: string
+          is_active?: boolean
+          menu_id: string
+          name: string
+          popularity?: number
+          profitability?: string
+          recipe_id?: string | null
+          sell_price?: number
+          updated_at?: string
+        }
+        Update: {
+          allergens?: string[] | null
+          category?: string
+          contribution_margin?: number
+          created_at?: string
+          description?: string | null
+          food_cost?: number
+          food_cost_percent?: number
+          id?: string
+          is_active?: boolean
+          menu_id?: string
+          name?: string
+          popularity?: number
+          profitability?: string
+          recipe_id?: string | null
+          sell_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_menu_id_fkey"
+            columns: ["menu_id"]
+            isOneToOne: false
+            referencedRelation: "menus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_items_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menus: {
+        Row: {
+          avg_food_cost_percent: number | null
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          avg_food_cost_percent?: number | null
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          avg_food_cost_percent?: number | null
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       module_permissions: {
         Row: {
           can_edit: boolean
