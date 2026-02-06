@@ -10,7 +10,10 @@ import {
   AggregatedIngredient,
   PrepTaskWithIngredients
 } from '@/types/production';
-import { useCostingStore } from './costingStore';
+
+// Import the ingredient costs cache from the hook
+// This is populated when useScalableRecipes runs
+import { ingredientCostsCache } from '@/hooks/useScalableRecipes';
 
 // Empty initial state - no mock data
 const initialScalableRecipes: ScalableRecipe[] = [];
@@ -21,6 +24,9 @@ interface ProductionStore {
   batches: ProductionBatch[];
   schedules: ProductionSchedule[];
   generatedOrders: GeneratedOrder[];
+
+  // Recipe loading
+  setScalableRecipes: (recipes: ScalableRecipe[]) => void;
 
   // Scaling functions
   scaleRecipe: (input: ScalingInput) => ScaledRecipe | null;
@@ -42,12 +48,12 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
   schedules: [],
   generatedOrders: [],
 
+  setScalableRecipes: (recipes: ScalableRecipe[]) => set({ scalableRecipes: recipes }),
+
   scaleRecipe: (input: ScalingInput) => {
     const { scalableRecipes } = get();
     const recipe = scalableRecipes.find(r => r.id === input.recipeId);
     if (!recipe) return null;
-
-    const costingStore = useCostingStore.getState();
     
     // Calculate scale factor
     let scaleFactor: number;
@@ -66,21 +72,21 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
       return null;
     }
 
-    // Scale ingredients with yield calculations
+    // Scale ingredients with yield calculations using the cached costs
     const scaledIngredients = recipe.ingredients.map(ing => {
-      const ingredient = costingStore.ingredients.find(i => i.id === ing.ingredientId);
+      const cachedIngredient = ingredientCostsCache.get(ing.ingredientId);
       const scaledQuantity = ing.quantity * scaleFactor;
       
       // Calculate gross quantity needed (accounting for waste and cooking loss)
       const wasteMultiplier = 1 / (1 - ing.wastePercent / 100);
       const grossQuantity = scaledQuantity * wasteMultiplier;
       
-      const unitCost = ingredient?.currentPrice || 0;
+      const unitCost = cachedIngredient?.price || 0;
       const lineCost = grossQuantity * unitCost;
 
       return {
         ingredientId: ing.ingredientId,
-        name: ingredient?.name || 'Unknown',
+        name: cachedIngredient?.name || 'Unknown',
         originalQuantity: ing.quantity,
         scaledQuantity,
         grossQuantity,
@@ -143,13 +149,12 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
   },
 
   aggregateIngredientsFromTasks: (tasks: PrepTaskWithIngredients[]) => {
-    const costingStore = useCostingStore.getState();
     const aggregated: Map<string, AggregatedIngredient> = new Map();
 
     tasks.forEach(task => {
       task.ingredients.forEach(ing => {
         const existing = aggregated.get(ing.ingredientId);
-        const ingredient = costingStore.ingredients.find(i => i.id === ing.ingredientId);
+        const cachedIngredient = ingredientCostsCache.get(ing.ingredientId);
         
         if (existing) {
           existing.totalRequired += ing.requiredQuantity * task.scaleFactor;
@@ -161,8 +166,8 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
             unit: ing.unit,
             currentStock: 0, // Would come from inventory
             shortfall: 0,
-            supplier: ingredient?.supplier || 'Unknown',
-            estimatedCost: (ingredient?.currentPrice || 0) * ing.requiredQuantity * task.scaleFactor,
+            supplier: 'Unknown',
+            estimatedCost: (cachedIngredient?.price || 0) * ing.requiredQuantity * task.scaleFactor,
           });
         }
       });
@@ -178,14 +183,13 @@ export const useProductionStore = create<ProductionStore>((set, get) => ({
 
   generateOrderFromPrepList: (prepListId: string, tasks: PrepTaskWithIngredients[]) => {
     const { generatedOrders } = get();
-    const costingStore = useCostingStore.getState();
     const aggregated = get().aggregateIngredientsFromTasks(tasks);
 
     const orderItems: OrderLineItem[] = aggregated
       .filter(item => item.shortfall > 0)
       .map(item => {
-        const ingredient = costingStore.ingredients.find(i => i.id === item.ingredientId);
-        const unitPrice = ingredient?.currentPrice || 0;
+        const cachedIngredient = ingredientCostsCache.get(item.ingredientId);
+        const unitPrice = cachedIngredient?.price || 0;
         
         return {
           ingredientId: item.ingredientId,
