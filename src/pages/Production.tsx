@@ -7,13 +7,15 @@ import {
   ShoppingCart,
   Calendar,
   TrendingUp,
-  ArrowRight
+  ArrowRight,
+  Loader2
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import RecipeScaler from "@/components/production/RecipeScaler";
 import BatchTracker from "@/components/production/BatchTracker";
 import OrderGenerator from "@/components/production/OrderGenerator";
 import { useProductionStore } from "@/stores/productionStore";
+import { useScalableRecipes } from "@/hooks/useScalableRecipes";
 import { cn } from "@/lib/utils";
 
 type ProductionView = 'overview' | 'scaling' | 'batches' | 'orders';
@@ -21,6 +23,9 @@ type ProductionView = 'overview' | 'scaling' | 'batches' | 'orders';
 const Production = () => {
   const [activeView, setActiveView] = useState<ProductionView>('overview');
   const [showScaler, setShowScaler] = useState(false);
+  
+  // Load recipes from database into the store
+  const { isLoading: recipesLoading } = useScalableRecipes();
   
   const { batches, scalableRecipes, generatedOrders } = useProductionStore();
   
