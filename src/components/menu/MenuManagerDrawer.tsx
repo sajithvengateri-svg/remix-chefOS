@@ -17,6 +17,7 @@ import {
   MoreHorizontal,
   Star,
 } from "lucide-react";
+import { useMenus } from "@/hooks/useMenus";
 import { useMenuStore } from "@/stores/menuStore";
 import { Menu } from "@/types/menu";
 import { cn } from "@/lib/utils";
@@ -73,8 +74,10 @@ const MenuManagerDrawer = ({ open, onOpenChange }: MenuManagerDrawerProps) => {
     deleteMenu,
     activateMenu,
     duplicateMenu,
-    compareMenus,
-  } = useMenuStore();
+  } = useMenus();
+
+  // Use store for compareMenus (can be computed locally)
+  const { compareMenus } = useMenuStore();
 
   const activeMenu = getActiveMenu();
   const archivedMenus = getArchivedMenus();
@@ -101,7 +104,7 @@ const MenuManagerDrawer = ({ open, onOpenChange }: MenuManagerDrawerProps) => {
 
   const handleSaveRename = () => {
     if (editingMenuId && editingName.trim()) {
-      renameMenu(editingMenuId, editingName.trim());
+      renameMenu({ menuId: editingMenuId, newName: editingName.trim() });
       toast.success("Menu renamed");
     }
     setEditingMenuId(null);
@@ -113,12 +116,16 @@ const MenuManagerDrawer = ({ open, onOpenChange }: MenuManagerDrawerProps) => {
     setEditingName("");
   };
 
-  const handleCreateMenu = () => {
+  const handleCreateMenu = async () => {
     if (newMenuName.trim()) {
-      const menu = createMenu(newMenuName.trim());
-      toast.success(`Created "${menu.name}"`);
-      setNewMenuName("");
-      setIsNewMenuDialogOpen(false);
+      try {
+        const menu = await createMenu(newMenuName.trim());
+        toast.success(`Created "${menu.name}"`);
+        setNewMenuName("");
+        setIsNewMenuDialogOpen(false);
+      } catch (err) {
+        toast.error("Failed to create menu");
+      }
     }
   };
 
@@ -128,13 +135,17 @@ const MenuManagerDrawer = ({ open, onOpenChange }: MenuManagerDrawerProps) => {
     setIsDuplicateDialogOpen(true);
   };
 
-  const handleConfirmDuplicate = () => {
+  const handleConfirmDuplicate = async () => {
     if (duplicateSourceId && duplicateName.trim()) {
-      const newMenu = duplicateMenu(duplicateSourceId, duplicateName.trim());
-      toast.success(`Duplicated as "${newMenu.name}"`);
-      setIsDuplicateDialogOpen(false);
-      setDuplicateSourceId(null);
-      setDuplicateName("");
+      try {
+        const newMenu = await duplicateMenu({ menuId: duplicateSourceId, newName: duplicateName.trim() });
+        toast.success(`Duplicated as "${newMenu?.name}"`);
+        setIsDuplicateDialogOpen(false);
+        setDuplicateSourceId(null);
+        setDuplicateName("");
+      } catch (err) {
+        toast.error("Failed to duplicate menu");
+      }
     }
   };
 

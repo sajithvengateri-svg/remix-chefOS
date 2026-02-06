@@ -24,8 +24,9 @@ import {
   Trash2,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
+import { useMenus } from "@/hooks/useMenus";
 import { useMenuStore } from "@/stores/menuStore";
-import { MenuItem } from "@/types/menu";
+import { MenuItem, MenuAnalytics } from "@/types/menu";
 import { cn } from "@/lib/utils";
 import MenuMatrixChart from "@/components/menu/MenuMatrixChart";
 import MenuItemEditDialog from "@/components/menu/MenuItemEditDialog";
@@ -53,6 +54,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ExtractedMenuItem {
   name: string;
@@ -86,21 +88,26 @@ const MenuEngineering = () => {
   const [extractedItems, setExtractedItems] = useState<ExtractedMenuItem[]>([]);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   
+  // Use database-backed hook
   const { 
     menus, 
+    isLoading,
     getActiveMenu, 
-    getArchivedMenus, 
-    getMenuAnalytics,
-    posConnections,
-    updateMenuItem,
+    getArchivedMenus,
     createMenu,
     activateMenu,
     deleteMenuItem,
     addMenuItem,
+    batchAddMenuItems,
+    updateMenuItem,
     renameMenu,
     archiveMenu,
     duplicateMenu,
-  } = useMenuStore();
+    isPending,
+  } = useMenus();
+  
+  // Still use store for POS and analytics (these can be migrated later)
+  const { posConnections, getMenuAnalytics } = useMenuStore();
   
   const activeMenu = getActiveMenu();
   const archivedMenus = getArchivedMenus();
@@ -116,7 +123,7 @@ const MenuEngineering = () => {
 
   const handleSaveRenameMenu = () => {
     if (activeMenu && renameValue.trim()) {
-      renameMenu(activeMenu.id, renameValue.trim());
+      renameMenu({ menuId: activeMenu.id, newName: renameValue.trim() });
       toast.success("Menu renamed");
     }
     setIsRenamingMenu(false);
@@ -130,10 +137,14 @@ const MenuEngineering = () => {
     }
   };
 
-  const handleDuplicateActiveMenu = () => {
+  const handleDuplicateActiveMenu = async () => {
     if (activeMenu) {
-      const newMenu = duplicateMenu(activeMenu.id, `${activeMenu.name} (Copy)`);
-      toast.success(`Duplicated as "${newMenu.name}"`);
+      try {
+        const newMenu = await duplicateMenu({ menuId: activeMenu.id, newName: `${activeMenu.name} (Copy)` });
+        toast.success(`Duplicated as "${newMenu?.name}"`);
+      } catch (err) {
+        toast.error("Failed to duplicate menu");
+      }
     }
   };
 
@@ -211,44 +222,46 @@ const MenuEngineering = () => {
     setExtractedItems(updated);
   };
 
-  const handleImportItems = () => {
-    if (!activeMenu && !addMenuItem) {
-      toast.error("Please create a menu first");
+  const handleImportItems = async () => {
+    const selectedItems = extractedItems.filter(i => i.selected);
+    if (selectedItems.length === 0) {
+      toast.error("Please select at least one item to import");
       return;
     }
-
-    const selectedItems = extractedItems.filter(i => i.selected);
     
-    // If no active menu, create one first
-    let targetMenuId = activeMenu?.id;
-    if (!targetMenuId) {
-      const newMenu = createMenu("Imported Menu");
-      activateMenu(newMenu.id);
-      targetMenuId = newMenu.id;
-    }
+    try {
+      // If no active menu, create one first
+      let targetMenuId = activeMenu?.id;
+      if (!targetMenuId) {
+        const newMenu = await createMenu("Imported Menu");
+        activateMenu(newMenu.id);
+        targetMenuId = newMenu.id;
+      }
 
-    // Add each selected item
-    selectedItems.forEach(item => {
-      const newItem: MenuItem = {
-        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      // Batch add all selected items
+      const itemsToAdd = selectedItems.map(item => ({
         name: item.name,
+        description: item.description,
         category: item.category || "Uncategorized",
         sellPrice: item.price || 0,
         foodCost: 0,
         foodCostPercent: 0,
         contributionMargin: item.price || 0,
         popularity: 0,
-        profitability: "puzzle",
+        profitability: "puzzle" as const,
         isActive: true,
-        menuId: targetMenuId!,
         allergens: [],
-      };
-      addMenuItem?.(targetMenuId!, newItem);
-    });
+      }));
+      
+      await batchAddMenuItems({ menuId: targetMenuId, items: itemsToAdd });
 
-    toast.success(`Imported ${selectedItems.length} menu items!`);
-    setIsReviewDialogOpen(false);
-    setExtractedItems([]);
+      toast.success(`Imported ${selectedItems.length} menu items!`);
+      setIsReviewDialogOpen(false);
+      setExtractedItems([]);
+    } catch (err) {
+      console.error("Failed to import items:", err);
+      toast.error("Failed to import menu items");
+    }
   };
 
   const handleItemClick = (item: MenuItem) => {
@@ -257,48 +270,71 @@ const MenuEngineering = () => {
   };
 
   const handleItemSave = (item: MenuItem) => {
-    if (activeMenu) {
-      updateMenuItem(activeMenu.id, item);
-    }
+    updateMenuItem(item);
+    toast.success("Item updated");
   };
 
   const handleItemDelete = (itemId: string) => {
-    if (activeMenu && deleteMenuItem) {
-      deleteMenuItem(activeMenu.id, itemId);
-    }
+    deleteMenuItem(itemId);
+    toast.success("Item deleted");
   };
 
-  const handleCreateMenu = () => {
+  const handleCreateMenu = async () => {
     if (newMenuName.trim()) {
-      const newMenu = createMenu(newMenuName.trim());
-      activateMenu(newMenu.id);
-      setNewMenuName("");
-      setIsNewMenuDialogOpen(false);
+      try {
+        const newMenu = await createMenu(newMenuName.trim());
+        activateMenu(newMenu.id);
+        setNewMenuName("");
+        setIsNewMenuDialogOpen(false);
+        toast.success(`Created "${newMenu.name}"`);
+      } catch (err) {
+        toast.error("Failed to create menu");
+      }
     }
   };
 
-  const handleAddItem = () => {
-    if (!activeMenu || !addMenuItem) return;
+  const handleAddItem = async () => {
+    if (!activeMenu) return;
     
-    const newItem: MenuItem = {
-      id: `item-${Date.now()}`,
-      name: "New Item",
-      category: "Mains",
-      sellPrice: 0,
-      foodCost: 0,
-      foodCostPercent: 0,
-      contributionMargin: 0,
-      popularity: 0,
-      profitability: "puzzle",
-      isActive: true,
-      menuId: activeMenu.id,
-      allergens: [],
-    };
-    
-    addMenuItem(activeMenu.id, newItem);
-    setEditingItem(newItem);
-    setIsEditDialogOpen(true);
+    try {
+      const newItem = await addMenuItem({
+        menuId: activeMenu.id,
+        item: {
+          name: "New Item",
+          category: "Mains",
+          sellPrice: 0,
+          foodCost: 0,
+          foodCostPercent: 0,
+          contributionMargin: 0,
+          popularity: 0,
+          profitability: "puzzle",
+          isActive: true,
+          allergens: [],
+        },
+      });
+      
+      setEditingItem(newItem);
+      setIsEditDialogOpen(true);
+    } catch (err) {
+      toast.error("Failed to add item");
+    }
   };
+  
+  // Show loading state
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
