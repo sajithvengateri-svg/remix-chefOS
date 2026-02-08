@@ -53,12 +53,31 @@ const PrepListWidget = () => {
       // Flatten all items from today's prep lists
       const allItems: PrepItem[] = [];
       (data || []).forEach((list) => {
-        const items = (Array.isArray(list.items) ? list.items : []) as unknown as PrepItem[];
+        const items = (Array.isArray(list.items) ? list.items : []) as unknown as Array<{
+          id?: string;
+          task?: string;
+          quantity?: string;
+          assignee?: string;
+          status?: string;
+          completed?: boolean;
+          priority?: string;
+        }>;
         items.forEach((item, index) => {
+          // Map completed boolean to status string if status is not present
+          let status: "pending" | "in-progress" | "completed" = "pending";
+          if (item.status) {
+            status = item.status as "pending" | "in-progress" | "completed";
+          } else if (item.completed !== undefined) {
+            status = item.completed ? "completed" : "pending";
+          }
+          
           allItems.push({
-            ...item,
             id: item.id || `${list.id}-${index}`,
-            assignee: item.assignee || list.assigned_to_name || 'Lorem',
+            task: item.task || '',
+            quantity: item.quantity || '',
+            assignee: item.assignee || list.assigned_to_name || 'Unassigned',
+            status,
+            priority: (item.priority as "high" | "medium" | "low") || "medium",
           });
         });
       });
