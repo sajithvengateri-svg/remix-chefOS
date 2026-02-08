@@ -4,8 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { VoiceCommandProvider } from "@/contexts/VoiceCommandContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
- import ChefAIChat from "@/components/ai/ChefAIChat";
+import ChefAIChat from "@/components/ai/ChefAIChat";
+import FloatingVoiceMic from "@/components/voice/FloatingVoiceMic";
  
  // Chef Portal Pages
 import Dashboard from "./pages/Dashboard";
@@ -67,69 +69,72 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            {/* ========== PORTAL SELECTION ========== */}
-            <Route path="/" element={<PortalSelect />} />
+          <VoiceCommandProvider>
+            <Routes>
+              {/* ========== PORTAL SELECTION ========== */}
+              <Route path="/" element={<PortalSelect />} />
 
-            {/* ========== CHEF PORTAL ========== */}
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/dashboard" element={<ProtectedRoute module="dashboard"><Dashboard /></ProtectedRoute>} />
-            <Route path="/recipes" element={<ProtectedRoute module="recipes"><Recipes /></ProtectedRoute>} />
-            <Route path="/recipes/new" element={<ProtectedRoute module="recipes"><RecipeEdit /></ProtectedRoute>} />
-            <Route path="/recipes/:id" element={<ProtectedRoute module="recipes"><RecipeDetail /></ProtectedRoute>} />
-            <Route path="/recipes/:id/edit" element={<ProtectedRoute module="recipes"><RecipeEdit /></ProtectedRoute>} />
-            <Route path="/ingredients" element={<ProtectedRoute module="ingredients"><Ingredients /></ProtectedRoute>} />
-            <Route path="/inventory" element={<ProtectedRoute module="inventory"><Inventory /></ProtectedRoute>} />
-            <Route path="/inventory/*" element={<ProtectedRoute module="inventory"><Inventory /></ProtectedRoute>} />
-            <Route path="/prep" element={<ProtectedRoute module="prep"><PrepLists /></ProtectedRoute>} />
-            <Route path="/prep/*" element={<ProtectedRoute module="prep"><PrepLists /></ProtectedRoute>} />
-            <Route path="/production" element={<ProtectedRoute module="production"><Production /></ProtectedRoute>} />
-            <Route path="/marketplace" element={<ProtectedRoute module="marketplace"><Marketplace /></ProtectedRoute>} />
-            <Route path="/menu-engineering" element={<ProtectedRoute module="menu-engineering"><MenuEngineering /></ProtectedRoute>} />
-            <Route path="/roster" element={<ProtectedRoute module="roster"><Roster /></ProtectedRoute>} />
-            <Route path="/allergens" element={<ProtectedRoute module="allergens"><AllergenDashboard /></ProtectedRoute>} />
-            <Route path="/food-safety" element={<ProtectedRoute module="food-safety"><FoodSafety /></ProtectedRoute>} />
-            <Route path="/training" element={<ProtectedRoute module="training"><Training /></ProtectedRoute>} />
-            <Route path="/invoices" element={<ProtectedRoute module="invoices"><Invoices /></ProtectedRoute>} />
-            <Route path="/invoices/*" element={<ProtectedRoute module="invoices"><Invoices /></ProtectedRoute>} />
-            <Route path="/cheatsheets" element={<ProtectedRoute module="cheatsheets"><CookingCheatsheets /></ProtectedRoute>} />
-            <Route path="/calendar" element={<ProtectedRoute module="calendar"><OperationsCalendar /></ProtectedRoute>} />
-            <Route path="/kitchen-sections" element={<ProtectedRoute module="calendar"><KitchenSections /></ProtectedRoute>} />
-            <Route path="/equipment" element={<ProtectedRoute module="equipment"><Equipment /></ProtectedRoute>} />
-            <Route path="/team" element={<ProtectedRoute module="team"><Team /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
- 
-            {/* ========== VENDOR PORTAL ========== */}
-            <Route path="/vendor/auth" element={<VendorAuth />} />
-            <Route path="/vendor" element={<VendorLayout />}>
-              <Route path="dashboard" element={<VendorDashboard />} />
-              <Route path="insights" element={<VendorInsights />} />
-              <Route path="pricing" element={<VendorPricing />} />
-              <Route path="orders" element={<VendorOrders />} />
-              <Route path="deals" element={<VendorDeals />} />
-              <Route path="messages" element={<VendorMessages />} />
-              <Route path="settings" element={<VendorSettings />} />
-            </Route>
- 
-            {/* ========== ADMIN PORTAL ========== */}
-            <Route path="/admin/auth" element={<AdminAuth />} />
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="vendor-deals" element={<AdminVendorDeals />} />
-              <Route path="crm" element={<AdminCRM />} />
-              <Route path="analytics" element={<AdminAnalytics />} />
-              <Route path="marketing" element={<AdminMarketing />} />
-              <Route path="testing" element={<AdminTesting />} />
-              <Route path="seed" element={<AdminSeedData />} />
-              <Route path="launcher" element={<AdminLauncher />} />
-              <Route path="settings" element={<AdminSettings />} />
-            </Route>
- 
-            {/* CATCH-ALL 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <ChefAIChat />
+              {/* ========== CHEF PORTAL ========== */}
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/dashboard" element={<ProtectedRoute module="dashboard"><Dashboard /></ProtectedRoute>} />
+              <Route path="/recipes" element={<ProtectedRoute module="recipes"><Recipes /></ProtectedRoute>} />
+              <Route path="/recipes/new" element={<ProtectedRoute module="recipes"><RecipeEdit /></ProtectedRoute>} />
+              <Route path="/recipes/:id" element={<ProtectedRoute module="recipes"><RecipeDetail /></ProtectedRoute>} />
+              <Route path="/recipes/:id/edit" element={<ProtectedRoute module="recipes"><RecipeEdit /></ProtectedRoute>} />
+              <Route path="/ingredients" element={<ProtectedRoute module="ingredients"><Ingredients /></ProtectedRoute>} />
+              <Route path="/inventory" element={<ProtectedRoute module="inventory"><Inventory /></ProtectedRoute>} />
+              <Route path="/inventory/*" element={<ProtectedRoute module="inventory"><Inventory /></ProtectedRoute>} />
+              <Route path="/prep" element={<ProtectedRoute module="prep"><PrepLists /></ProtectedRoute>} />
+              <Route path="/prep/*" element={<ProtectedRoute module="prep"><PrepLists /></ProtectedRoute>} />
+              <Route path="/production" element={<ProtectedRoute module="production"><Production /></ProtectedRoute>} />
+              <Route path="/marketplace" element={<ProtectedRoute module="marketplace"><Marketplace /></ProtectedRoute>} />
+              <Route path="/menu-engineering" element={<ProtectedRoute module="menu-engineering"><MenuEngineering /></ProtectedRoute>} />
+              <Route path="/roster" element={<ProtectedRoute module="roster"><Roster /></ProtectedRoute>} />
+              <Route path="/allergens" element={<ProtectedRoute module="allergens"><AllergenDashboard /></ProtectedRoute>} />
+              <Route path="/food-safety" element={<ProtectedRoute module="food-safety"><FoodSafety /></ProtectedRoute>} />
+              <Route path="/training" element={<ProtectedRoute module="training"><Training /></ProtectedRoute>} />
+              <Route path="/invoices" element={<ProtectedRoute module="invoices"><Invoices /></ProtectedRoute>} />
+              <Route path="/invoices/*" element={<ProtectedRoute module="invoices"><Invoices /></ProtectedRoute>} />
+              <Route path="/cheatsheets" element={<ProtectedRoute module="cheatsheets"><CookingCheatsheets /></ProtectedRoute>} />
+              <Route path="/calendar" element={<ProtectedRoute module="calendar"><OperationsCalendar /></ProtectedRoute>} />
+              <Route path="/kitchen-sections" element={<ProtectedRoute module="calendar"><KitchenSections /></ProtectedRoute>} />
+              <Route path="/equipment" element={<ProtectedRoute module="equipment"><Equipment /></ProtectedRoute>} />
+              <Route path="/team" element={<ProtectedRoute module="team"><Team /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/more" element={<ProtectedRoute><More /></ProtectedRoute>} />
+
+              {/* ========== VENDOR PORTAL ========== */}
+              <Route path="/vendor/auth" element={<VendorAuth />} />
+              <Route path="/vendor" element={<VendorLayout />}>
+                <Route path="dashboard" element={<VendorDashboard />} />
+                <Route path="insights" element={<VendorInsights />} />
+                <Route path="pricing" element={<VendorPricing />} />
+                <Route path="orders" element={<VendorOrders />} />
+                <Route path="deals" element={<VendorDeals />} />
+                <Route path="messages" element={<VendorMessages />} />
+                <Route path="settings" element={<VendorSettings />} />
+              </Route>
+
+              {/* ========== ADMIN PORTAL ========== */}
+              <Route path="/admin/auth" element={<AdminAuth />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="vendor-deals" element={<AdminVendorDeals />} />
+                <Route path="crm" element={<AdminCRM />} />
+                <Route path="analytics" element={<AdminAnalytics />} />
+                <Route path="marketing" element={<AdminMarketing />} />
+                <Route path="testing" element={<AdminTesting />} />
+                <Route path="seed" element={<AdminSeedData />} />
+                <Route path="launcher" element={<AdminLauncher />} />
+                <Route path="settings" element={<AdminSettings />} />
+              </Route>
+
+              {/* CATCH-ALL 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <ChefAIChat />
+            <FloatingVoiceMic />
+          </VoiceCommandProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
