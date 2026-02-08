@@ -22,6 +22,7 @@ import {
   FolderOpen,
   Copy,
   Trash2,
+  Table as TableIcon,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useMenus } from "@/hooks/useMenus";
@@ -31,6 +32,7 @@ import { cn } from "@/lib/utils";
 import MenuMatrixChart from "@/components/menu/MenuMatrixChart";
 import MenuItemEditDialog from "@/components/menu/MenuItemEditDialog";
 import MenuManagerDrawer from "@/components/menu/MenuManagerDrawer";
+import MenuInlineEditTable from "@/components/menu/MenuInlineEditTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -82,6 +84,7 @@ const MenuEngineering = () => {
   const [isRenamingMenu, setIsRenamingMenu] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isMasterEditMode, setIsMasterEditMode] = useState(false);
   
   // Menu parsing state
   const [isParsingMenu, setIsParsingMenu] = useState(false);
@@ -277,6 +280,14 @@ const MenuEngineering = () => {
   const handleItemDelete = (itemId: string) => {
     deleteMenuItem(itemId);
     toast.success("Item deleted");
+  };
+
+  // Master edit: save all items at once
+  const handleMasterSaveAll = (updatedItems: MenuItem[]) => {
+    updatedItems.forEach(item => {
+      updateMenuItem(item);
+    });
+    setIsMasterEditMode(false);
   };
 
   const handleCreateMenu = async () => {
@@ -613,24 +624,48 @@ const MenuEngineering = () => {
                 <div>
                   <h2 className="section-header mb-0">All Menu Items</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Click any row to edit pricing and details
+                    {isMasterEditMode 
+                      ? "Edit all fields directly in the table below" 
+                      : "Click any row to edit pricing and details"}
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <MenuAIRecommendations 
-                    menuItems={activeMenu.items} 
-                    menuName={activeMenu.name} 
-                  />
-                  <Button size="sm" onClick={handleAddItem}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Item
-                  </Button>
+                  {!isMasterEditMode && (
+                    <>
+                      <MenuAIRecommendations 
+                        menuItems={activeMenu.items} 
+                        menuName={activeMenu.name} 
+                      />
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setIsMasterEditMode(true)}
+                        disabled={activeMenu.items.length === 0}
+                      >
+                        <TableIcon className="w-4 h-4 mr-2" />
+                        Master Edit
+                      </Button>
+                      <Button size="sm" onClick={handleAddItem}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Item
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
 
               {activeMenu.items.length === 0 ? (
                 <div className="p-12 text-center text-muted-foreground">
                   <p>No menu items yet. Add your first item to get started.</p>
+                </div>
+              ) : isMasterEditMode ? (
+                <div className="p-4">
+                  <MenuInlineEditTable
+                    items={activeMenu.items}
+                    onSaveAll={handleMasterSaveAll}
+                    onDeleteItem={handleItemDelete}
+                    onCancel={() => setIsMasterEditMode(false)}
+                  />
                 </div>
               ) : (
                 <div className="overflow-x-auto">
