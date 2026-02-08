@@ -16,15 +16,17 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       {/* Desktop Sidebar */}
       <Sidebar className="hidden lg:flex" />
       
-      {/* Main Content with Pull to Refresh on mobile */}
+      {/* Main Content */}
       <main className="lg:pl-64 pb-20 lg:pb-0 min-h-screen">
-        <div className="lg:hidden h-screen">
+        {/* Mobile with Pull to Refresh */}
+        <div className="lg:hidden min-h-screen">
           <PullToRefresh>
-            <div className="safe-top px-4 py-6">
+            <div className="safe-top px-4 py-6 pb-24">
               {children}
             </div>
           </PullToRefresh>
         </div>
+        {/* Desktop */}
         <div className="hidden lg:block safe-top px-8 py-6">
           {children}
         </div>
