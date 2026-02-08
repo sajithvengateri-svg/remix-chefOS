@@ -1,19 +1,19 @@
 import { Link, useLocation } from "react-router-dom";
 import { 
-  Home,
   ChefHat, 
   Package, 
   Menu,
   MoreHorizontal 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import chefOSLogo from "@/assets/chefos-logo.png";
 
 interface BottomNavProps {
   className?: string;
 }
 
 const navItems = [
-  { path: "/dashboard", icon: Home, label: "Home" },
+  { path: "/dashboard", icon: null, label: "Home", isLogo: true },
   { path: "/recipes", icon: ChefHat, label: "Recipes" },
   { path: "/inventory", icon: Package, label: "Inventory" },
   { path: "/menu-engineering", icon: Menu, label: "Menu" },
@@ -36,7 +36,11 @@ const BottomNav = ({ className }: BottomNavProps) => {
               to={item.path}
               className={cn("bottom-nav-item", isActive && "active")}
             >
-              <item.icon className="w-5 h-5" />
+              {item.isLogo ? (
+                <img src={chefOSLogo} alt="Home" className="w-6 h-6 rounded" />
+              ) : (
+                item.icon && <item.icon className="w-5 h-5" />
+              )}
               <span className="text-xs font-medium">{item.label}</span>
             </Link>
           );
