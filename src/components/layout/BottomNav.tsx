@@ -3,10 +3,14 @@ import {
   ChefHat, 
   Package, 
   Menu,
-  MoreHorizontal 
+  MoreHorizontal,
+  Mic,
+  MicOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import chefOSLogo from "@/assets/chefos-logo.png";
+import { useVoiceCommands } from "@/contexts/VoiceCommandContext";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 interface BottomNavProps {
   className?: string;
@@ -22,6 +26,10 @@ const navItems = [
 
 const BottomNav = ({ className }: BottomNavProps) => {
   const location = useLocation();
+  const { settings } = useAppSettings();
+  const { isListening, toggleListening, isSupported } = useVoiceCommands();
+
+  const showVoice = settings.aiVoiceEnabled && isSupported;
 
   return (
     <nav className={cn("bottom-nav", className)}>
@@ -45,6 +53,24 @@ const BottomNav = ({ className }: BottomNavProps) => {
             </Link>
           );
         })}
+        
+        {/* Voice toggle button */}
+        {showVoice && (
+          <button
+            onClick={toggleListening}
+            className={cn(
+              "bottom-nav-item",
+              isListening && "text-primary"
+            )}
+          >
+            {isListening ? (
+              <Mic className="w-5 h-5 text-primary animate-pulse" />
+            ) : (
+              <MicOff className="w-5 h-5" />
+            )}
+            <span className="text-xs font-medium">Voice</span>
+          </button>
+        )}
       </div>
     </nav>
   );

@@ -7,7 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { VoiceCommandProvider } from "@/contexts/VoiceCommandContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import ChefAIChat from "@/components/ai/ChefAIChat";
-import FloatingVoiceMic from "@/components/voice/FloatingVoiceMic";
+
  
  // Chef Portal Pages
 import Dashboard from "./pages/Dashboard";
@@ -133,7 +133,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             <ChefAIChat />
-            <FloatingVoiceMic />
+            
           </VoiceCommandProvider>
         </AuthProvider>
       </BrowserRouter>
