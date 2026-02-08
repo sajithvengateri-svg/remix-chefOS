@@ -16,9 +16,12 @@ import StatCard from "@/components/dashboard/StatCard";
 import PrepListWidget from "@/components/dashboard/PrepListWidget";
 import QuickActions from "@/components/dashboard/QuickActions";
 import RecentActivity from "@/components/dashboard/RecentActivity";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { supabase } from "@/integrations/supabase/client";
- import { useIsMobile } from "@/hooks/use-mobile";
- import { MobileDeck } from "@/components/mobile/MobileDeck";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileDeck } from "@/components/mobile/MobileDeck";
+
+console.log("[Dashboard] Module loaded");
 
 interface DashboardStats {
   prepTasksTotal: number;
@@ -31,6 +34,8 @@ interface DashboardStats {
 }
 
 const Dashboard = () => {
+  console.log("[Dashboard] Component rendering");
+  
   const [stats, setStats] = useState<DashboardStats>({
     prepTasksTotal: 0,
     prepTasksCompleted: 0,
@@ -42,7 +47,8 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
  
-   const isMobile = useIsMobile();
+  const isMobile = useIsMobile();
+  console.log("[Dashboard] isMobile:", isMobile);
 
   const currentDate = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -233,7 +239,9 @@ const Dashboard = () => {
            className="card-elevated p-4"
          >
            <h2 className="section-header">Your Action Deck</h2>
-           <MobileDeck className="mt-2" />
+           <ErrorBoundary fallbackMessage="Could not load action deck">
+             <MobileDeck className="mt-2" />
+           </ErrorBoundary>
          </motion.div>
        )}
  
@@ -255,7 +263,9 @@ const Dashboard = () => {
             transition={{ delay: 0.3 }}
             className="lg:col-span-2"
           >
-            <PrepListWidget />
+            <ErrorBoundary fallbackMessage="Could not load prep list">
+              <PrepListWidget />
+            </ErrorBoundary>
           </motion.div>
 
           {/* Recent Activity */}
@@ -264,7 +274,9 @@ const Dashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <RecentActivity />
+            <ErrorBoundary fallbackMessage="Could not load recent activity">
+              <RecentActivity />
+            </ErrorBoundary>
           </motion.div>
         </div>
 
