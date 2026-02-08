@@ -191,13 +191,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isHeadChef = role === "head_chef";
 
   const canView = (module: string): boolean => {
-    if (isHeadChef) return true;
+    // Head chefs and users without roles (default access) can view all
+    if (isHeadChef || role === null) return true;
     const perm = permissions.find((p) => p.module === module);
     return perm?.can_view ?? false;
   };
 
   const canEdit = (module: string): boolean => {
-    if (isHeadChef) return true;
+    // Head chefs and users without roles (default access) can edit all
+    if (isHeadChef || role === null) return true;
     const perm = permissions.find((p) => p.module === module);
     return perm?.can_edit ?? false;
   };
