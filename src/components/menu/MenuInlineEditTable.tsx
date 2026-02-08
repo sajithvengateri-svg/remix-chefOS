@@ -72,6 +72,8 @@ export default function MenuInlineEditTable({
     setEditedItems(items.map(item => ({ ...item })));
   }, [items]);
 
+  const GST_RATE = 0.10; // 10% GST
+
   const updateItem = useCallback((id: string, field: keyof MenuItem, value: any) => {
     setEditedItems(prev => {
       const updated = prev.map(item => {
@@ -80,12 +82,18 @@ export default function MenuInlineEditTable({
         const newItem = { ...item, [field]: value };
         
         // Auto-calculate derived fields when sell price or food cost changes
+        // GST is factored in: sell price is GST-inclusive, so we calculate ex-GST revenue
         if (field === "sellPrice" || field === "foodCost") {
-          const sellPrice = field === "sellPrice" ? Number(value) : item.sellPrice;
+          const sellPriceIncGST = field === "sellPrice" ? Number(value) : item.sellPrice;
           const foodCost = field === "foodCost" ? Number(value) : item.foodCost;
           
-          newItem.contributionMargin = sellPrice - foodCost;
-          newItem.foodCostPercent = sellPrice > 0 ? (foodCost / sellPrice) * 100 : 0;
+          // Calculate ex-GST sell price
+          const sellPriceExGST = sellPriceIncGST / (1 + GST_RATE);
+          
+          // Contribution margin is ex-GST revenue minus food cost
+          newItem.contributionMargin = sellPriceExGST - foodCost;
+          // Food cost % is based on ex-GST sell price
+          newItem.foodCostPercent = sellPriceExGST > 0 ? (foodCost / sellPriceExGST) * 100 : 0;
         }
         
         return newItem;
