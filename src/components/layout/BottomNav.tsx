@@ -11,6 +11,7 @@ import {
   Shield,
   GraduationCap,
   Users,
+  Users2,
   AlertTriangle,
   BookOpen,
   Calendar,
@@ -18,48 +19,46 @@ import {
   Store,
   LayoutGrid,
   Receipt,
-  Utensils,
   Factory,
-  Settings
+  Settings,
+  Home
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import chefOSIcon from "@/assets/chefos-icon.png";
 import { motion, AnimatePresence } from "framer-motion";
+import { useBottomNavPrefs } from "@/hooks/useBottomNavPrefs";
 
 interface BottomNavProps {
   className?: string;
 }
 
-// Primary nav items (always visible)
-const primaryNavItems = [
-  { path: "/dashboard", icon: null, label: "Home", isLogo: true },
-  { path: "/prep", icon: ClipboardList, label: "Prep" },
-  { path: "/recipes", icon: ChefHat, label: "Recipes" },
-  { path: "/ingredients", icon: DollarSign, label: "Costing" },
-  { path: "/menu-engineering", icon: Menu, label: "Menu" },
-];
-
-// Secondary nav items (scroll wheel)
-const secondaryNavItems = [
-  { path: "/inventory", icon: Package, label: "Inventory" },
-  { path: "/invoices", icon: Receipt, label: "Invoices" },
-  { path: "/production", icon: Factory, label: "Production" },
-  { path: "/marketplace", icon: Store, label: "Marketplace" },
-  { path: "/allergens", icon: AlertTriangle, label: "Allergens" },
-  { path: "/roster", icon: Users, label: "Roster" },
-  { path: "/calendar", icon: Calendar, label: "Calendar" },
-  { path: "/kitchen-sections", icon: LayoutGrid, label: "Sections" },
-  { path: "/equipment", icon: Wrench, label: "Equipment" },
-  { path: "/cheatsheets", icon: BookOpen, label: "Cheatsheets" },
-  { path: "/food-safety", icon: Shield, label: "Safety" },
-  { path: "/training", icon: GraduationCap, label: "Training" },
-  { path: "/team", icon: Users, label: "Team" },
-  { path: "/settings", icon: Settings, label: "Settings" },
-];
+// Icon mapping
+const iconMap: Record<string, React.ElementType> = {
+  Home,
+  ClipboardList,
+  ChefHat,
+  DollarSign,
+  Menu,
+  Package,
+  Receipt,
+  Factory,
+  Store,
+  AlertTriangle,
+  Users,
+  Users2,
+  Calendar,
+  LayoutGrid,
+  Wrench,
+  BookOpen,
+  Shield,
+  GraduationCap,
+  Settings,
+};
 
 const BottomNav = ({ className }: BottomNavProps) => {
   const location = useLocation();
   const [showSecondary, setShowSecondary] = useState(false);
+  const { primaryItems, secondaryItems } = useBottomNavPrefs();
 
   return (
     <div className={cn("fixed bottom-0 left-0 right-0 z-50", className)}>
@@ -75,10 +74,10 @@ const BottomNav = ({ className }: BottomNavProps) => {
           >
             <div className="overflow-x-auto scrollbar-hide">
               <div className="flex gap-1 px-2 py-3 min-w-max">
-                {secondaryNavItems.map((item) => {
+                {secondaryItems.map((item) => {
                   const isActive = location.pathname === item.path || 
                     (item.path !== "/" && location.pathname.startsWith(item.path));
-                  const Icon = item.icon;
+                  const Icon = iconMap[item.icon] || Menu;
                   
                   return (
                     <Link
@@ -118,9 +117,11 @@ const BottomNav = ({ className }: BottomNavProps) => {
       {/* Primary bottom nav */}
       <nav className="bottom-nav">
         <div className="flex items-center justify-around">
-          {primaryNavItems.map((item) => {
+          {primaryItems.map((item) => {
             const isActive = location.pathname === item.path || 
               (item.path !== "/" && location.pathname.startsWith(item.path));
+            const Icon = iconMap[item.icon] || Menu;
+            const isHome = item.path === "/dashboard";
             
             return (
               <Link
@@ -128,10 +129,10 @@ const BottomNav = ({ className }: BottomNavProps) => {
                 to={item.path}
                 className={cn("bottom-nav-item", isActive && "active")}
               >
-                {item.isLogo ? (
+                {isHome ? (
                   <img src={chefOSIcon} alt="Home" className="w-6 h-6 rounded object-contain" />
                 ) : (
-                  item.icon && <item.icon className="w-5 h-5" />
+                  <Icon className="w-5 h-5" />
                 )}
                 <span className="text-xs font-medium">{item.label}</span>
               </Link>
