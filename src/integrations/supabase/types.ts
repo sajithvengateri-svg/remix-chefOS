@@ -893,6 +893,94 @@ export type Database = {
           },
         ]
       }
+      prep_list_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          prep_list_id: string
+          task_id: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          prep_list_id: string
+          task_id?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          prep_list_id?: string
+          task_id?: string | null
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prep_list_comments_prep_list_id_fkey"
+            columns: ["prep_list_id"]
+            isOneToOne: false
+            referencedRelation: "prep_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prep_list_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          default_assignee_name: string | null
+          id: string
+          is_active: boolean | null
+          items: Json
+          name: string
+          schedule_days: string[] | null
+          schedule_type: string
+          section_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          default_assignee_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          items?: Json
+          name: string
+          schedule_days?: string[] | null
+          schedule_type?: string
+          section_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          default_assignee_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          items?: Json
+          name?: string
+          schedule_days?: string[] | null
+          schedule_type?: string
+          section_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prep_list_templates_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prep_lists: {
         Row: {
           assigned_to: string | null
@@ -904,7 +992,9 @@ export type Database = {
           items: Json | null
           name: string
           notes: string | null
+          section_id: string | null
           status: string | null
+          template_id: string | null
           updated_at: string
         }
         Insert: {
@@ -917,7 +1007,9 @@ export type Database = {
           items?: Json | null
           name: string
           notes?: string | null
+          section_id?: string | null
           status?: string | null
+          template_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -930,10 +1022,27 @@ export type Database = {
           items?: Json | null
           name?: string
           notes?: string | null
+          section_id?: string | null
           status?: string | null
+          template_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "prep_lists_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prep_lists_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "prep_list_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1626,6 +1735,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          linked_prep_list_id: string | null
           post_type: string
           updated_at: string
           user_avatar_url: string | null
@@ -1637,6 +1747,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          linked_prep_list_id?: string | null
           post_type?: string
           updated_at?: string
           user_avatar_url?: string | null
@@ -1648,13 +1759,22 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          linked_prep_list_id?: string | null
           post_type?: string
           updated_at?: string
           user_avatar_url?: string | null
           user_id?: string
           user_name?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "team_posts_linked_prep_list_id_fkey"
+            columns: ["linked_prep_list_id"]
+            isOneToOne: false
+            referencedRelation: "prep_lists"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       training_materials: {
         Row: {
