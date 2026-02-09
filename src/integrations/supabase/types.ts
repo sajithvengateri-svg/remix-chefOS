@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_log: {
+        Row: {
+          action_type: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string
+          id: string
+          section_id: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          section_id?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          section_id?: string | null
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_log_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_permissions: {
         Row: {
           created_at: string
@@ -538,6 +585,100 @@ export type Database = {
         }
         Relationships: []
       }
+      kitchen_tasks: {
+        Row: {
+          actual_minutes: number | null
+          approved_at: string | null
+          approved_by: string | null
+          assigned_by: string | null
+          assigned_to: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          estimated_minutes: number | null
+          id: string
+          prep_list_id: string | null
+          priority: string
+          recipe_id: string | null
+          rejection_reason: string | null
+          section_id: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          actual_minutes?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_by?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          due_time?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          prep_list_id?: string | null
+          priority?: string
+          recipe_id?: string | null
+          rejection_reason?: string | null
+          section_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          actual_minutes?: number | null
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_by?: string | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          due_time?: string | null
+          estimated_minutes?: number | null
+          id?: string
+          prep_list_id?: string | null
+          priority?: string
+          recipe_id?: string | null
+          rejection_reason?: string | null
+          section_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_tasks_prep_list_id_fkey"
+            columns: ["prep_list_id"]
+            isOneToOne: false
+            referencedRelation: "prep_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_tasks_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_tasks_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_items: {
         Row: {
           allergens: string[] | null
@@ -1056,6 +1197,47 @@ export type Database = {
         }
         Relationships: []
       }
+      section_assignments: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          created_at: string
+          id: string
+          role: string
+          section_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          role?: string
+          section_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string
+          id?: string
+          role?: string
+          section_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "section_assignments_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_movements: {
         Row: {
           created_at: string
@@ -1290,6 +1472,47 @@ export type Database = {
           website?: string | null
         }
         Relationships: []
+      }
+      task_comments: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_system_message: boolean | null
+          task_id: string
+          updated_at: string
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_system_message?: boolean | null
+          task_id: string
+          updated_at?: string
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_system_message?: boolean | null
+          task_id?: string
+          updated_at?: string
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_comments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_invites: {
         Row: {
@@ -1754,6 +1977,13 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }[]
       }
+      get_user_sections: {
+        Args: { _user_id: string }
+        Returns: {
+          role: string
+          section_id: string
+        }[]
+      }
       get_vendor_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -1764,6 +1994,10 @@ export type Database = {
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_head_chef: { Args: { _user_id: string }; Returns: boolean }
+      is_section_leader: {
+        Args: { _section_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_vendor: { Args: { _user_id: string }; Returns: boolean }
       sync_inventory_from_ingredients: { Args: never; Returns: number }
     }
