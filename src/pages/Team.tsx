@@ -26,8 +26,10 @@ import {
   ChefHat,
   Shield,
   Edit,
-  X
+  X,
+  ClipboardList
 } from "lucide-react";
+import TasksTab from "@/components/team/TasksTab";
 import { format } from "date-fns";
 
 interface TeamMember {
@@ -381,6 +383,12 @@ const Team = () => {
               Members
             </TabsTrigger>
             {isHeadChef && (
+              <TabsTrigger value="tasks" className="flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" />
+                Tasks
+              </TabsTrigger>
+            )}
+            {isHeadChef && (
               <TabsTrigger value="invites" className="flex items-center gap-2">
                 <UserPlus className="w-4 h-4" />
                 Pending Invites
@@ -506,6 +514,12 @@ const Team = () => {
               ))}
             </div>
           </TabsContent>
+
+          {isHeadChef && (
+            <TabsContent value="tasks" className="space-y-4">
+              <TasksTab />
+            </TabsContent>
+          )}
 
           {isHeadChef && (
             <TabsContent value="invites" className="space-y-4">
