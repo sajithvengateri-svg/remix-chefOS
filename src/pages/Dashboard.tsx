@@ -21,6 +21,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import TaskInbox from "@/components/tasks/TaskInbox";
 import ActivityFeed from "@/components/activity/ActivityFeed";
 import ContributionStats from "@/components/activity/ContributionStats";
+import TeamFeed from "@/components/feed/TeamFeed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -272,19 +273,24 @@ const Dashboard = () => {
 
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Prep List Widget - Takes 2 columns */}
+          {/* Left Column - Prep List & Team Feed */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="lg:col-span-2"
+            className="lg:col-span-2 space-y-6"
           >
             <ErrorBoundary fallbackMessage="Could not load prep list">
               <PrepListWidget />
             </ErrorBoundary>
+
+            {/* Team Feed / Kitchen Wall */}
+            <ErrorBoundary fallbackMessage="Could not load team feed">
+              <TeamFeed />
+            </ErrorBoundary>
           </motion.div>
 
-          {/* Recent Activity with ActivityFeed */}
+          {/* Right Column - Activity & Stats */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
