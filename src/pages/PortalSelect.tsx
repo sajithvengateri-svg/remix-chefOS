@@ -25,7 +25,7 @@ const PortalSelect = () => {
           <motion.img
             src={chefOSLogo}
             alt="ChefOS"
-            className="w-32 h-32 mx-auto mb-8 rounded-3xl shadow-2xl"
+            className="w-40 max-w-[160px] h-auto mx-auto mb-8 rounded-3xl shadow-2xl object-contain"
             initial={{ y: -20 }}
             animate={{ y: 0 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
