@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Circle, Clock, ClipboardList } from "lucide-react";
+import { CheckCircle2, Circle, Clock, ClipboardList, Flag } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+
+type UrgencyLevel = "priority" | "end_of_day" | "within_48h";
 
 interface PrepItem {
   id: string;
@@ -11,6 +13,7 @@ interface PrepItem {
   assignee: string;
   status: "pending" | "in-progress" | "completed";
   priority: "high" | "medium" | "low";
+  urgency?: UrgencyLevel;
 }
 
 interface PrepList {
@@ -32,6 +35,12 @@ const priorityStyles = {
   "high": "border-l-destructive",
   "medium": "border-l-warning",
   "low": "border-l-muted-foreground",
+};
+
+const URGENCY_CONFIG: Record<UrgencyLevel, { color: string; bgColor: string; label: string }> = {
+  priority: { color: "text-red-600", bgColor: "bg-red-500", label: "Priority" },
+  end_of_day: { color: "text-yellow-600", bgColor: "bg-yellow-500", label: "End of Day" },
+  within_48h: { color: "text-green-600", bgColor: "bg-green-500", label: "48 Hours" },
 };
 
 const PrepListWidget = () => {
@@ -61,6 +70,7 @@ const PrepListWidget = () => {
           status?: string;
           completed?: boolean;
           priority?: string;
+          urgency?: string;
         }>;
         items.forEach((item, index) => {
           // Map completed boolean to status string if status is not present
@@ -71,6 +81,16 @@ const PrepListWidget = () => {
             status = item.completed ? "completed" : "pending";
           }
           
+          // Determine urgency from priority if not explicitly set
+          let urgency: UrgencyLevel = "within_48h";
+          if (item.urgency) {
+            urgency = item.urgency as UrgencyLevel;
+          } else if (item.priority === "high") {
+            urgency = "priority";
+          } else if (item.priority === "medium") {
+            urgency = "end_of_day";
+          }
+          
           allItems.push({
             id: item.id || `${list.id}-${index}`,
             task: item.task || '',
@@ -78,6 +98,7 @@ const PrepListWidget = () => {
             assignee: item.assignee || list.assigned_to_name || 'Unassigned',
             status,
             priority: (item.priority as "high" | "medium" | "low") || "medium",
+            urgency,
           });
         });
       });
@@ -180,12 +201,26 @@ const PrepListWidget = () => {
                 )} />
                 
                 <div className="flex-1 min-w-0">
-                  <p className={cn(
-                    "text-sm font-medium truncate",
-                    item.status === "completed" && "line-through text-muted-foreground"
-                  )}>
-                    {item.task}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className={cn(
+                      "text-sm font-medium truncate",
+                      item.status === "completed" && "line-through text-muted-foreground"
+                    )}>
+                      {item.task}
+                    </p>
+                    {/* Urgency Flag */}
+                    {item.urgency && item.status !== "completed" && (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Flag className={cn("w-3 h-3", URGENCY_CONFIG[item.urgency].color)} />
+                        <span className={cn(
+                          "text-xs font-medium",
+                          URGENCY_CONFIG[item.urgency].color
+                        )}>
+                          {URGENCY_CONFIG[item.urgency].label}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">{item.quantity}</p>
                 </div>
 
