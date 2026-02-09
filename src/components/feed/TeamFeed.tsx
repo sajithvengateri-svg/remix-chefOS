@@ -11,7 +11,8 @@ import {
   Loader2,
   Camera,
   AlertTriangle,
-  Wrench
+  Wrench,
+  ClipboardList
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -417,6 +418,7 @@ const TeamFeed = () => {
               const isOwnPost = post.user_id === user?.id;
 
               const isMaintenance = post.post_type === "maintenance_request";
+              const isPrepListShared = post.post_type === "prep_list_shared";
 
               return (
                 <motion.div
@@ -426,7 +428,8 @@ const TeamFeed = () => {
                   exit={{ opacity: 0 }}
                   className={cn(
                     "p-4",
-                    isMaintenance && "bg-destructive/5 border-l-4 border-destructive"
+                    isMaintenance && "bg-destructive/5 border-l-4 border-destructive",
+                    isPrepListShared && "bg-primary/5 border-l-4 border-primary"
                   )}
                 >
                   {/* Maintenance Badge */}
@@ -439,10 +442,20 @@ const TeamFeed = () => {
                     </div>
                   )}
 
+                  {/* Prep List Shared Badge */}
+                  {isPrepListShared && (
+                    <div className="flex items-center gap-2 mb-3 text-primary">
+                      <ClipboardList className="w-4 h-4" />
+                      <span className="text-xs font-semibold uppercase tracking-wide">
+                        Prep List Handoff
+                      </span>
+                    </div>
+                  )}
+
                   {/* Post Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <Avatar className={cn("w-10 h-10", isMaintenance && "ring-2 ring-destructive")}>
+                      <Avatar className={cn("w-10 h-10", isMaintenance && "ring-2 ring-destructive", isPrepListShared && "ring-2 ring-primary")}>
                         <AvatarImage src={post.user_avatar_url || undefined} />
                         <AvatarFallback>{getInitials(post.user_name)}</AvatarFallback>
                       </Avatar>

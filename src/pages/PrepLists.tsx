@@ -10,7 +10,11 @@ import {
   Edit,
   Trash2,
   Loader2,
-  Flag
+  Flag,
+  MessageSquare,
+  Share2,
+  FileText,
+  CalendarDays
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -19,11 +23,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { PrepListTemplatesManager } from "@/components/prep/PrepListTemplatesManager";
+import { WeeklyPrepView } from "@/components/prep/WeeklyPrepView";
+import { PrepListComments } from "@/components/prep/PrepListComments";
+import { useSectionLeaderStatus } from "@/hooks/useSectionLeaderStatus";
 
 type UrgencyLevel = "priority" | "end_of_day" | "within_48h";
 
@@ -49,10 +59,12 @@ interface PrepList {
   assigned_to_name: string | null;
   status: "pending" | "in_progress" | "completed";
   notes: string | null;
+  section_id: string | null;
 }
 
 const PrepLists = () => {
-  const { user, canEdit } = useAuth();
+  const { user, canEdit, profile } = useAuth();
+  const { canManageTemplates } = useSectionLeaderStatus();
   const [selectedDate, setSelectedDate] = useState("today");
   const [prepLists, setPrepLists] = useState<PrepList[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +72,8 @@ const PrepLists = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingList, setEditingList] = useState<PrepList | null>(null);
   const [deletingList, setDeletingList] = useState<PrepList | null>(null);
+  const [expandedListId, setExpandedListId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("today");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -167,7 +181,10 @@ const PrepLists = () => {
     fetchPrepLists();
   };
 
+  // ALL authenticated users can tick tasks
   const toggleTaskComplete = async (list: PrepList, taskId: string) => {
+    if (!user) return;
+
     const updatedItems = list.items.map(item =>
       item.id === taskId ? { ...item, completed: !item.completed } : item
     );
@@ -189,6 +206,30 @@ const PrepLists = () => {
     }
 
     fetchPrepLists();
+  };
+
+  const postToWall = async (list: PrepList) => {
+    if (!user) return;
+
+    const completedCount = list.items.filter(i => i.completed).length;
+    const totalCount = list.items.length;
+    const content = `📋 Prep list "${list.name}" - ${completedCount}/${totalCount} tasks done`;
+
+    const { error } = await supabase.from("team_posts").insert({
+      user_id: user.id,
+      user_name: profile?.full_name || user.email?.split("@")[0],
+      content,
+      post_type: "prep_list_shared",
+      linked_prep_list_id: list.id,
+    });
+
+    if (error) {
+      toast.error("Failed to post to wall");
+      console.error(error);
+      return;
+    }
+
+    toast.success("Posted to Kitchen Wall!");
   };
 
   const addTaskToForm = () => {
@@ -271,187 +312,248 @@ const PrepLists = () => {
           )}
         </motion.div>
 
-        {/* Progress Overview */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="card-elevated p-5"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="section-header mb-0">Today's Progress</h2>
-              <p className="text-sm text-muted-foreground">
-                {completedTasks} of {totalTasks} tasks completed
-              </p>
-            </div>
-          </div>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="today" className="gap-2">
+              <Calendar className="w-4 h-4" />
+              <span className="hidden sm:inline">Today</span>
+            </TabsTrigger>
+            <TabsTrigger value="week" className="gap-2">
+              <CalendarDays className="w-4 h-4" />
+              <span className="hidden sm:inline">Week View</span>
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="gap-2">
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline">Templates</span>
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="h-3 bg-muted rounded-full overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="h-full bg-primary rounded-full"
-            />
-          </div>
+          {/* Today Tab - Current Prep Lists */}
+          <TabsContent value="today" className="space-y-6">
+            {/* Progress Overview */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="card-elevated p-5"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="section-header mb-0">Today's Progress</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {completedTasks} of {totalTasks} tasks completed
+                  </p>
+                </div>
+              </div>
 
-          <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-success">{completedTasks}</p>
-              <p className="text-xs text-muted-foreground">Completed</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-warning">
-                {prepLists.filter(l => l.status === "in_progress").length}
-              </p>
-              <p className="text-xs text-muted-foreground">In Progress</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-muted-foreground">
-                {prepLists.filter(l => l.status === "pending").length}
-              </p>
-              <p className="text-xs text-muted-foreground">Pending</p>
-            </div>
-          </div>
-        </motion.div>
+              <div className="h-3 bg-muted rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="h-full bg-primary rounded-full"
+                />
+              </div>
 
-        {/* Prep Lists */}
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {prepLists.map((list, listIndex) => {
-              const StatusIcon = statusIcons[list.status];
-              
-              return (
-                <motion.div
-                  key={list.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 + listIndex * 0.1 }}
-                  className="card-elevated overflow-hidden"
-                >
-                  {/* List Header */}
-                  <div className="p-4 bg-muted/50 border-b border-border flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "px-3 py-1 rounded-full text-sm font-medium",
-                        list.status === "completed" ? "bg-success/10 text-success" :
-                        list.status === "in_progress" ? "bg-warning/10 text-warning" :
-                        "bg-muted text-muted-foreground"
-                      )}>
-                        {list.name}
-                      </div>
-                      <span className="text-sm text-muted-foreground">
-                        {format(new Date(list.date), "MMM d, yyyy")}
-                      </span>
-                      {list.assigned_to_name && (
-                        <span className="text-sm text-muted-foreground flex items-center gap-1">
-                          <User className="w-3 h-3" />
-                          {list.assigned_to_name}
-                        </span>
-                      )}
-                    </div>
-                    {hasEditPermission && (
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => openEditDialog(list)}
-                          className="p-2 rounded-lg hover:bg-muted transition-colors"
-                        >
-                          <Edit className="w-4 h-4 text-muted-foreground" />
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setDeletingList(list);
-                            setDeleteDialogOpen(true);
-                          }}
-                          className="p-2 rounded-lg hover:bg-destructive/10 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
+              <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-border">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-success">{completedTasks}</p>
+                  <p className="text-xs text-muted-foreground">Completed</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-warning">
+                    {prepLists.filter(l => l.status === "in_progress").length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">In Progress</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-muted-foreground">
+                    {prepLists.filter(l => l.status === "pending").length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Pending</p>
+                </div>
+              </div>
+            </motion.div>
 
-                  {/* Tasks */}
-                  <div className="divide-y divide-border">
-                    {list.items.length === 0 ? (
-                      <div className="p-4 text-center text-muted-foreground">
-                        No tasks in this list
-                      </div>
-                    ) : (
-                      list.items.map((task) => {
-                        const urgency = task.urgency || "within_48h";
-                        return (
-                          <div 
-                            key={task.id}
-                            className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors"
+            {/* Prep Lists */}
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {prepLists.map((list, listIndex) => {
+                  const StatusIcon = statusIcons[list.status];
+                  const isExpanded = expandedListId === list.id;
+                  
+                  return (
+                    <motion.div
+                      key={list.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 + listIndex * 0.1 }}
+                      className="card-elevated overflow-hidden"
+                    >
+                      {/* List Header */}
+                      <div className="p-4 bg-muted/50 border-b border-border flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "px-3 py-1 rounded-full text-sm font-medium",
+                            list.status === "completed" ? "bg-success/10 text-success" :
+                            list.status === "in_progress" ? "bg-warning/10 text-warning" :
+                            "bg-muted text-muted-foreground"
+                          )}>
+                            {list.name}
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {format(new Date(list.date), "MMM d, yyyy")}
+                          </span>
+                          {list.assigned_to_name && (
+                            <span className="text-sm text-muted-foreground flex items-center gap-1">
+                              <User className="w-3 h-3" />
+                              {list.assigned_to_name}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          {/* Post to Wall button - visible to all */}
+                          <button
+                            onClick={() => postToWall(list)}
+                            className="p-2 rounded-lg hover:bg-muted transition-colors"
+                            title="Share to Kitchen Wall"
                           >
-                            <button 
-                              className="flex-shrink-0"
-                              onClick={() => hasEditPermission && toggleTaskComplete(list, task.id)}
-                              disabled={!hasEditPermission}
-                            >
-                              {task.completed ? (
-                                <CheckCircle2 className="w-5 h-5 text-success" />
-                              ) : (
-                                <Circle className="w-5 h-5 text-muted-foreground" />
-                              )}
-                            </button>
-                            
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <p className={cn(
-                                  "font-medium",
-                                  task.completed && "line-through text-muted-foreground"
-                                )}>
-                                  {task.task}
-                                </p>
-                                {!task.completed && (
-                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                    <Flag className={cn("w-3 h-3", URGENCY_CONFIG[urgency].color)} />
-                                    <span className={cn(
-                                      "text-xs font-medium",
-                                      URGENCY_CONFIG[urgency].color
+                            <Share2 className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          {/* Comments toggle */}
+                          <button
+                            onClick={() => setExpandedListId(isExpanded ? null : list.id)}
+                            className={cn(
+                              "p-2 rounded-lg transition-colors",
+                              isExpanded ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                            )}
+                            title="Comments"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </button>
+                          {hasEditPermission && (
+                            <>
+                              <button 
+                                onClick={() => openEditDialog(list)}
+                                className="p-2 rounded-lg hover:bg-muted transition-colors"
+                              >
+                                <Edit className="w-4 h-4 text-muted-foreground" />
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setDeletingList(list);
+                                  setDeleteDialogOpen(true);
+                                }}
+                                className="p-2 rounded-lg hover:bg-destructive/10 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Tasks */}
+                      <div className="divide-y divide-border">
+                        {list.items.length === 0 ? (
+                          <div className="p-4 text-center text-muted-foreground">
+                            No tasks in this list
+                          </div>
+                        ) : (
+                          list.items.map((task) => {
+                            const urgency = task.urgency || "within_48h";
+                            return (
+                              <div 
+                                key={task.id}
+                                className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors"
+                              >
+                                {/* ALL users can tick tasks */}
+                                <button 
+                                  className="flex-shrink-0"
+                                  onClick={() => toggleTaskComplete(list, task.id)}
+                                  disabled={!user}
+                                >
+                                  {task.completed ? (
+                                    <CheckCircle2 className="w-5 h-5 text-success" />
+                                  ) : (
+                                    <Circle className="w-5 h-5 text-muted-foreground" />
+                                  )}
+                                </button>
+                                
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className={cn(
+                                      "font-medium",
+                                      task.completed && "line-through text-muted-foreground"
                                     )}>
-                                      {URGENCY_CONFIG[urgency].label}
-                                    </span>
+                                      {task.task}
+                                    </p>
+                                    {!task.completed && (
+                                      <div className="flex items-center gap-1 flex-shrink-0">
+                                        <Flag className={cn("w-3 h-3", URGENCY_CONFIG[urgency].color)} />
+                                        <span className={cn(
+                                          "text-xs font-medium",
+                                          URGENCY_CONFIG[urgency].color
+                                        )}>
+                                          {URGENCY_CONFIG[urgency].label}
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
+                                </div>
+
+                                {task.quantity && (
+                                  <span className="text-sm text-muted-foreground">
+                                    {task.quantity}
+                                  </span>
                                 )}
                               </div>
-                            </div>
+                            );
+                          })
+                        )}
+                      </div>
 
-                            {task.quantity && (
-                              <span className="text-sm text-muted-foreground">
-                                {task.quantity}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })
+                      {/* Comments Section - Expanded */}
+                      {isExpanded && (
+                        <div className="p-4 bg-muted/30 border-t border-border">
+                          <PrepListComments prepListId={list.id} />
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+
+                {prepLists.length === 0 && !loading && (
+                  <div className="card-elevated p-12 text-center">
+                    <Calendar className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+                    <p className="text-muted-foreground">No prep lists found</p>
+                    {hasEditPermission && (
+                      <Button variant="outline" className="mt-4" onClick={() => setDialogOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create First Prep List
+                      </Button>
                     )}
                   </div>
-                </motion.div>
-              );
-            })}
-
-            {prepLists.length === 0 && !loading && (
-              <div className="card-elevated p-12 text-center">
-                <Calendar className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-                <p className="text-muted-foreground">No prep lists found</p>
-                {hasEditPermission && (
-                  <Button variant="outline" className="mt-4" onClick={() => setDialogOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create First Prep List
-                  </Button>
                 )}
               </div>
             )}
-          </div>
-        )}
+          </TabsContent>
+
+          {/* Week View Tab */}
+          <TabsContent value="week">
+            <WeeklyPrepView />
+          </TabsContent>
+
+          {/* Templates Tab */}
+          <TabsContent value="templates">
+            <PrepListTemplatesManager />
+          </TabsContent>
+        </Tabs>
 
         {/* Add/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={resetForm}>
