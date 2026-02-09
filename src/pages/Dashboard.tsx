@@ -20,6 +20,7 @@ import RecentActivity from "@/components/dashboard/RecentActivity";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import TaskInbox from "@/components/tasks/TaskInbox";
 import ActivityFeed from "@/components/activity/ActivityFeed";
+import ContributionStats from "@/components/activity/ContributionStats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -288,6 +289,7 @@ const Dashboard = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
+            className="space-y-4"
           >
             <Card>
               <CardHeader className="pb-3">
@@ -302,6 +304,16 @@ const Dashboard = () => {
                 </ErrorBoundary>
               </CardContent>
             </Card>
+
+            {/* Top Contributors */}
+            <ErrorBoundary fallbackMessage="Could not load contribution stats">
+              <ContributionStats 
+                showLeaderboard={true} 
+                showSectionCoverage={false} 
+                showMyStats={false}
+                compact={true}
+              />
+            </ErrorBoundary>
           </motion.div>
         </div>
 
