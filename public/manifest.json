@@ -1,0 +1,23 @@
+{
+  "name": "ChefOS - Kitchen Operating System",
+  "short_name": "ChefOS",
+  "description": "Professional kitchen operating system for recipe management, ingredient costing, inventory tracking, and supplier marketplace",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#c2703a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/chefos-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
