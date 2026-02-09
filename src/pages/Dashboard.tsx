@@ -17,6 +17,7 @@ import PrepListWidget from "@/components/dashboard/PrepListWidget";
 import QuickActions from "@/components/dashboard/QuickActions";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import TaskInbox from "@/components/tasks/TaskInbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileDeck } from "@/components/mobile/MobileDeck";
@@ -252,6 +253,17 @@ const Dashboard = () => {
           transition={{ delay: 0.2 }}
         >
           <QuickActions />
+        </motion.div>
+
+        {/* Task Inbox - Shows assigned tasks for all users */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <ErrorBoundary fallbackMessage="Could not load task inbox">
+            <TaskInbox />
+          </ErrorBoundary>
         </motion.div>
 
         {/* Main Content Grid */}
