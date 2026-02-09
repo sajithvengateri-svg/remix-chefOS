@@ -9,7 +9,8 @@ import {
   User,
   Edit,
   Trash2,
-  Loader2
+  Loader2,
+  Flag
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -24,12 +25,21 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
+type UrgencyLevel = "priority" | "end_of_day" | "within_48h";
+
 interface PrepItem {
   id: string;
   task: string;
   quantity: string;
   completed: boolean;
+  urgency?: UrgencyLevel;
 }
+
+const URGENCY_CONFIG: Record<UrgencyLevel, { color: string; bgColor: string; label: string }> = {
+  priority: { color: "text-red-600", bgColor: "bg-red-500", label: "Before Next Service" },
+  end_of_day: { color: "text-yellow-600", bgColor: "bg-yellow-500", label: "End of Day" },
+  within_48h: { color: "text-green-600", bgColor: "bg-green-500", label: "48 Hours" },
+};
 
 interface PrepList {
   id: string;
@@ -60,7 +70,7 @@ const PrepLists = () => {
     items: [] as PrepItem[],
   });
 
-  const [newTask, setNewTask] = useState({ task: "", quantity: "" });
+  const [newTask, setNewTask] = useState({ task: "", quantity: "", urgency: "within_48h" as UrgencyLevel });
 
   const hasEditPermission = canEdit("prep");
 
@@ -187,10 +197,10 @@ const PrepLists = () => {
       ...formData,
       items: [
         ...formData.items,
-        { id: crypto.randomUUID(), task: newTask.task, quantity: newTask.quantity, completed: false },
+        { id: crypto.randomUUID(), task: newTask.task, quantity: newTask.quantity, completed: false, urgency: newTask.urgency },
       ],
     });
-    setNewTask({ task: "", quantity: "" });
+    setNewTask({ task: "", quantity: "", urgency: "within_48h" });
   };
 
   const removeTaskFromForm = (taskId: string) => {
@@ -224,7 +234,7 @@ const PrepLists = () => {
       notes: "",
       items: [],
     });
-    setNewTask({ task: "", quantity: "" });
+    setNewTask({ task: "", quantity: "", urgency: "within_48h" });
   };
 
   const totalTasks = prepLists.reduce((acc, list) => acc + list.items.length, 0);
@@ -373,39 +383,55 @@ const PrepLists = () => {
                         No tasks in this list
                       </div>
                     ) : (
-                      list.items.map((task) => (
-                        <div 
-                          key={task.id}
-                          className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors"
-                        >
-                          <button 
-                            className="flex-shrink-0"
-                            onClick={() => hasEditPermission && toggleTaskComplete(list, task.id)}
-                            disabled={!hasEditPermission}
+                      list.items.map((task) => {
+                        const urgency = task.urgency || "within_48h";
+                        return (
+                          <div 
+                            key={task.id}
+                            className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors"
                           >
-                            {task.completed ? (
-                              <CheckCircle2 className="w-5 h-5 text-success" />
-                            ) : (
-                              <Circle className="w-5 h-5 text-muted-foreground" />
-                            )}
-                          </button>
-                          
-                          <div className="flex-1 min-w-0">
-                            <p className={cn(
-                              "font-medium",
-                              task.completed && "line-through text-muted-foreground"
-                            )}>
-                              {task.task}
-                            </p>
-                          </div>
+                            <button 
+                              className="flex-shrink-0"
+                              onClick={() => hasEditPermission && toggleTaskComplete(list, task.id)}
+                              disabled={!hasEditPermission}
+                            >
+                              {task.completed ? (
+                                <CheckCircle2 className="w-5 h-5 text-success" />
+                              ) : (
+                                <Circle className="w-5 h-5 text-muted-foreground" />
+                              )}
+                            </button>
+                            
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className={cn(
+                                  "font-medium",
+                                  task.completed && "line-through text-muted-foreground"
+                                )}>
+                                  {task.task}
+                                </p>
+                                {!task.completed && (
+                                  <div className="flex items-center gap-1 flex-shrink-0">
+                                    <Flag className={cn("w-3 h-3", URGENCY_CONFIG[urgency].color)} />
+                                    <span className={cn(
+                                      "text-xs font-medium",
+                                      URGENCY_CONFIG[urgency].color
+                                    )}>
+                                      {URGENCY_CONFIG[urgency].label}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
 
-                          {task.quantity && (
-                            <span className="text-sm text-muted-foreground">
-                              {task.quantity}
-                            </span>
-                          )}
-                        </div>
-                      ))
+                            {task.quantity && (
+                              <span className="text-sm text-muted-foreground">
+                                {task.quantity}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })
                     )}
                   </div>
                 </motion.div>
@@ -488,8 +514,12 @@ const PrepLists = () => {
                 <div className="space-y-2">
                   {formData.items.map((item) => (
                     <div key={item.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted">
+                      <Flag className={cn("w-4 h-4 flex-shrink-0", URGENCY_CONFIG[item.urgency || "within_48h"].color)} />
                       <span className="flex-1">{item.task}</span>
-                      <span className="text-sm text-muted-foreground">{item.quantity}</span>
+                      <span className="text-xs text-muted-foreground">{item.quantity}</span>
+                      <span className={cn("text-xs", URGENCY_CONFIG[item.urgency || "within_48h"].color)}>
+                        {URGENCY_CONFIG[item.urgency || "within_48h"].label}
+                      </span>
                       <button
                         type="button"
                         onClick={() => removeTaskFromForm(item.id)}
@@ -500,18 +530,50 @@ const PrepLists = () => {
                     </div>
                   ))}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Input
                     placeholder="Task name"
+                    className="flex-1 min-w-[150px]"
                     value={newTask.task}
                     onChange={(e) => setNewTask({ ...newTask, task: e.target.value })}
                   />
                   <Input
                     placeholder="Qty"
-                    className="w-24"
+                    className="w-20"
                     value={newTask.quantity}
                     onChange={(e) => setNewTask({ ...newTask, quantity: e.target.value })}
                   />
+                  <Select
+                    value={newTask.urgency}
+                    onValueChange={(value: UrgencyLevel) => setNewTask({ ...newTask, urgency: value })}
+                  >
+                    <SelectTrigger className="w-[160px]">
+                      <div className="flex items-center gap-2">
+                        <Flag className={cn("w-3 h-3", URGENCY_CONFIG[newTask.urgency].color)} />
+                        <SelectValue />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="priority">
+                        <div className="flex items-center gap-2">
+                          <Flag className="w-3 h-3 text-red-600" />
+                          Before Next Service
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="end_of_day">
+                        <div className="flex items-center gap-2">
+                          <Flag className="w-3 h-3 text-yellow-600" />
+                          End of Day
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="within_48h">
+                        <div className="flex items-center gap-2">
+                          <Flag className="w-3 h-3 text-green-600" />
+                          48 Hours
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Button type="button" variant="outline" onClick={addTaskToForm}>
                     <Plus className="w-4 h-4" />
                   </Button>
