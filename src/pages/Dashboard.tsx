@@ -8,7 +8,8 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  Activity
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
@@ -18,6 +19,8 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import TaskInbox from "@/components/tasks/TaskInbox";
+import ActivityFeed from "@/components/activity/ActivityFeed";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileDeck } from "@/components/mobile/MobileDeck";
@@ -280,15 +283,25 @@ const Dashboard = () => {
             </ErrorBoundary>
           </motion.div>
 
-          {/* Recent Activity */}
+          {/* Recent Activity with ActivityFeed */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <ErrorBoundary fallbackMessage="Could not load recent activity">
-              <RecentActivity />
-            </ErrorBoundary>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  Recent Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ErrorBoundary fallbackMessage="Could not load activity feed">
+                  <ActivityFeed compact limit={8} />
+                </ErrorBoundary>
+              </CardContent>
+            </Card>
           </motion.div>
         </div>
 
