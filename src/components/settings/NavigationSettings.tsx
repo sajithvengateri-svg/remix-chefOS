@@ -20,7 +20,8 @@ import {
   LayoutGrid,
   GripVertical,
   RotateCcw,
-  Check
+  Check,
+  Smartphone
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { useNavOrder } from "@/hooks/useNavOrder";
+import BottomNavSettings from "./BottomNavSettings";
 
 const mainNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", module: "dashboard" },
@@ -256,8 +258,11 @@ const NavigationSettings = () => {
         </CardContent>
       </Card>
 
+      {/* Mobile Bottom Nav Settings */}
+      <BottomNavSettings />
+
       <p className="text-sm text-muted-foreground text-center">
-        Changes are saved automatically and synced to your sidebar
+        Changes are saved automatically and synced across your devices
       </p>
     </motion.div>
   );
