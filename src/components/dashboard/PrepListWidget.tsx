@@ -38,7 +38,7 @@ const priorityStyles = {
 };
 
 const URGENCY_CONFIG: Record<UrgencyLevel, { color: string; bgColor: string; label: string }> = {
-  priority: { color: "text-red-600", bgColor: "bg-red-500", label: "Priority" },
+  priority: { color: "text-red-600", bgColor: "bg-red-500", label: "Before Next Service" },
   end_of_day: { color: "text-yellow-600", bgColor: "bg-yellow-500", label: "End of Day" },
   within_48h: { color: "text-green-600", bgColor: "bg-green-500", label: "48 Hours" },
 };
