@@ -27,9 +27,11 @@ import {
   Shield,
   Edit,
   X,
-  ClipboardList
+  ClipboardList,
+  Activity
 } from "lucide-react";
 import TasksTab from "@/components/team/TasksTab";
+import ActivityFeed from "@/components/activity/ActivityFeed";
 import { format } from "date-fns";
 
 interface TeamMember {
@@ -96,6 +98,10 @@ const Team = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [messagingMember, setMessagingMember] = useState<TeamMember | null>(null);
+  
+  // Activity filter state
+  const [activityFilter, setActivityFilter] = useState<"all" | "my" | string>("all");
+  const [kitchenSections, setKitchenSections] = useState<{ id: string; name: string; color: string | null }[]>([]);
 
   // Invite form
   const [inviteEmail, setInviteEmail] = useState("");
@@ -112,7 +118,17 @@ const Team = () => {
     if (isHeadChef) {
       fetchInvites();
     }
+    fetchKitchenSections();
   }, [isHeadChef]);
+
+  const fetchKitchenSections = async () => {
+    const { data } = await supabase
+      .from("kitchen_sections")
+      .select("id, name, color")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+    setKitchenSections(data || []);
+  };
 
   useEffect(() => {
     if (messagingMember && user) {
@@ -398,6 +414,10 @@ const Team = () => {
               <MessageSquare className="w-4 h-4" />
               Messages
             </TabsTrigger>
+            <TabsTrigger value="activity" className="flex items-center gap-2">
+              <Activity className="w-4 h-4" />
+              Activity
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="members" className="space-y-4">
@@ -674,6 +694,55 @@ const Team = () => {
                 )}
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Activity Tab */}
+          <TabsContent value="activity" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Team Activity</CardTitle>
+                <CardDescription>Track contributions across the kitchen team</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* Filter buttons */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <Button
+                    variant={activityFilter === "all" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActivityFilter("all")}
+                  >
+                    All
+                  </Button>
+                  <Button
+                    variant={activityFilter === "my" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setActivityFilter("my")}
+                  >
+                    My Activity
+                  </Button>
+                  {kitchenSections.map((section) => (
+                    <Button
+                      key={section.id}
+                      variant={activityFilter === section.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setActivityFilter(section.id)}
+                      className="flex items-center gap-1"
+                    >
+                      <div
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: section.color || "var(--muted)" }}
+                      />
+                      {section.name}
+                    </Button>
+                  ))}
+                </div>
+
+                <ActivityFeed
+                  sectionId={activityFilter !== "all" && activityFilter !== "my" ? activityFilter : undefined}
+                  userId={activityFilter === "my" ? user?.id : undefined}
+                />
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

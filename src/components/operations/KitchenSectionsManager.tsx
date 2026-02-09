@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, GripVertical, DollarSign, Users, Crown } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, DollarSign, Users, Crown, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,12 +8,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSectionAssignments } from "@/hooks/useSectionAssignments";
 import AssignTeamDialog from "./AssignTeamDialog";
+import ActivityFeed from "@/components/activity/ActivityFeed";
 
 interface KitchenSection {
   id: string;
@@ -54,6 +56,9 @@ const KitchenSectionsManager = ({ hasEditPermission }: KitchenSectionsManagerPro
   // Team assignment state
   const [assignTeamDialogOpen, setAssignTeamDialogOpen] = useState(false);
   const [assigningSection, setAssigningSection] = useState<KitchenSection | null>(null);
+  
+  // Expanded section for activity
+  const [expandedSectionId, setExpandedSectionId] = useState<string | null>(null);
   
   const {
     getSectionAssignments,
@@ -266,124 +271,148 @@ const KitchenSectionsManager = ({ hasEditPermission }: KitchenSectionsManagerPro
             const members = sectionAssignments.filter(a => a.role === "member");
             
             return (
-              <div
+              <Collapsible
                 key={section.id}
-                className={cn(
-                  "card-elevated p-4",
-                  !section.is_active && "opacity-50"
-                )}
+                open={expandedSectionId === section.id}
+                onOpenChange={(open) => setExpandedSectionId(open ? section.id : null)}
               >
-                <div className="flex items-start gap-4">
-                  {/* Color indicator */}
-                  <div
-                    className="w-3 h-full min-h-[60px] rounded-full flex-shrink-0"
-                    style={{ backgroundColor: section.color || "#6B7280" }}
-                  />
+                <div
+                  className={cn(
+                    "card-elevated p-4",
+                    !section.is_active && "opacity-50"
+                  )}
+                >
+                  <div className="flex items-start gap-4">
+                    {/* Color indicator */}
+                    <div
+                      className="w-3 h-full min-h-[60px] rounded-full flex-shrink-0"
+                      style={{ backgroundColor: section.color || "var(--muted)" }}
+                    />
 
-                  {/* Section info */}
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium truncate">{section.name}</h4>
-                      {!section.is_active && (
-                        <span className="text-xs bg-muted px-2 py-0.5 rounded">Inactive</span>
+                    {/* Section info */}
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium truncate">{section.name}</h4>
+                        {!section.is_active && (
+                          <span className="text-xs bg-muted px-2 py-0.5 rounded">Inactive</span>
+                        )}
+                      </div>
+                      
+                      {/* Leader info */}
+                      {leader?.profile ? (
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Crown className="w-3 h-3 text-warning" />
+                          Led by: <span className="font-medium text-foreground">{leader.profile.full_name}</span>
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">No leader assigned</p>
+                      )}
+                      
+                      {section.description && (
+                        <p className="text-sm text-muted-foreground truncate">{section.description}</p>
+                      )}
+
+                      {/* Team avatars */}
+                      {sectionAssignments.length > 0 && (
+                        <TooltipProvider>
+                          <div className="flex items-center gap-1 pt-1">
+                            {sectionAssignments.slice(0, 5).map((assignment) => (
+                              <Tooltip key={assignment.id}>
+                                <TooltipTrigger asChild>
+                                  <Avatar
+                                    className="h-7 w-7 border-2 -ml-1 first:ml-0"
+                                    style={{ borderColor: section.color || "var(--muted)" }}
+                                  >
+                                    <AvatarImage src={assignment.profile?.avatar_url || undefined} />
+                                    <AvatarFallback className="text-[10px]">
+                                      {assignment.profile ? getInitials(assignment.profile.full_name) : "?"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="font-medium">{assignment.profile?.full_name}</p>
+                                  <p className="text-xs text-muted-foreground capitalize">{assignment.role}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ))}
+                            {sectionAssignments.length > 5 && (
+                              <span className="text-xs text-muted-foreground ml-1">
+                                +{sectionAssignments.length - 5} more
+                              </span>
+                            )}
+                          </div>
+                        </TooltipProvider>
                       )}
                     </div>
-                    
-                    {/* Leader info */}
-                    {leader?.profile ? (
-                      <p className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Crown className="w-3 h-3 text-amber-500" />
-                        Led by: <span className="font-medium text-foreground">{leader.profile.full_name}</span>
-                      </p>
+
+                    {/* Budget info */}
+                    {section.monthly_budget && section.monthly_budget > 0 ? (
+                      <div className={cn("text-right px-3 py-2 rounded-lg flex-shrink-0", budgetStatus?.bg)}>
+                        <p className={cn("text-sm font-medium", budgetStatus?.color)}>
+                          {formatCurrency(section.current_month_cost)} / {formatCurrency(section.monthly_budget)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Monthly Budget</p>
+                      </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground italic">No leader assigned</p>
-                    )}
-                    
-                    {section.description && (
-                      <p className="text-sm text-muted-foreground truncate">{section.description}</p>
+                      <div className="text-right text-muted-foreground flex-shrink-0">
+                        <DollarSign className="w-5 h-5 opacity-30" />
+                      </div>
                     )}
 
-                    {/* Team avatars */}
-                    {sectionAssignments.length > 0 && (
-                      <TooltipProvider>
-                        <div className="flex items-center gap-1 pt-1">
-                          {sectionAssignments.slice(0, 5).map((assignment) => (
-                            <Tooltip key={assignment.id}>
-                              <TooltipTrigger asChild>
-                                <Avatar
-                                  className="h-7 w-7 border-2 -ml-1 first:ml-0"
-                                  style={{ borderColor: section.color || "#6B7280" }}
-                                >
-                                  <AvatarImage src={assignment.profile?.avatar_url || undefined} />
-                                  <AvatarFallback className="text-[10px]">
-                                    {assignment.profile ? getInitials(assignment.profile.full_name) : "?"}
-                                  </AvatarFallback>
-                                </Avatar>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="font-medium">{assignment.profile?.full_name}</p>
-                                <p className="text-xs text-muted-foreground capitalize">{assignment.role}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          ))}
-                          {sectionAssignments.length > 5 && (
-                            <span className="text-xs text-muted-foreground ml-1">
-                              +{sectionAssignments.length - 5} more
-                            </span>
+                    {/* Actions */}
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="icon" title="View Activity">
+                          {expandedSectionId === section.id ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
                           )}
-                        </div>
-                      </TooltipProvider>
-                    )}
+                        </Button>
+                      </CollapsibleTrigger>
+                      {hasEditPermission && (
+                        <>
+                          {isHeadChef && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openAssignTeamDialog(section)}
+                              title="Assign Team"
+                            >
+                              <Users className="w-4 h-4" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(section)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setDeletingSection(section);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Budget info */}
-                  {section.monthly_budget && section.monthly_budget > 0 ? (
-                    <div className={cn("text-right px-3 py-2 rounded-lg flex-shrink-0", budgetStatus?.bg)}>
-                      <p className={cn("text-sm font-medium", budgetStatus?.color)}>
-                        {formatCurrency(section.current_month_cost)} / {formatCurrency(section.monthly_budget)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Monthly Budget</p>
+                  {/* Expandable Activity Feed */}
+                  <CollapsibleContent>
+                    <div className="mt-4 pt-4 border-t">
+                      <h5 className="text-sm font-medium mb-2">Recent Activity</h5>
+                      <ActivityFeed sectionId={section.id} limit={5} compact />
                     </div>
-                  ) : (
-                    <div className="text-right text-muted-foreground flex-shrink-0">
-                      <DollarSign className="w-5 h-5 opacity-30" />
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  {hasEditPermission && (
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {isHeadChef && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openAssignTeamDialog(section)}
-                          title="Assign Team"
-                        >
-                          <Users className="w-4 h-4" />
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditDialog(section)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setDeletingSection(section);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  )}
+                  </CollapsibleContent>
                 </div>
-              </div>
+              </Collapsible>
             );
           })}
         </div>
