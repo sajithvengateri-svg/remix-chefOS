@@ -9,7 +9,9 @@ import {
   Trash2,
   X,
   Loader2,
-  Camera
+  Camera,
+  AlertTriangle,
+  Wrench
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -50,6 +52,8 @@ interface Comment {
   created_at: string;
 }
 
+type PostMode = "message" | "maintenance";
+
 const TeamFeed = () => {
   const { user, profile } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -60,6 +64,7 @@ const TeamFeed = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [postMode, setPostMode] = useState<PostMode>("message");
 
   useEffect(() => {
     fetchPosts();
@@ -169,20 +174,29 @@ const TeamFeed = () => {
         imageUrl = urlData.publicUrl;
       }
 
+      // Determine post type
+      let postType = "message";
+      if (postMode === "maintenance") {
+        postType = "maintenance_request";
+      } else if (selectedImage) {
+        postType = "dish_photo";
+      }
+
       const { error } = await supabase.from("team_posts").insert({
         user_id: user.id,
         user_name: profile?.full_name || "Team Member",
         user_avatar_url: profile?.avatar_url,
         content: newPost.trim() || null,
         image_url: imageUrl,
-        post_type: selectedImage ? "dish_photo" : "message",
+        post_type: postType,
       });
 
       if (error) throw error;
 
       setNewPost("");
       clearImage();
-      toast.success("Posted!");
+      setPostMode("message");
+      toast.success(postMode === "maintenance" ? "Maintenance request logged!" : "Posted!");
     } catch (error) {
       console.error("Error posting:", error);
       toast.error("Failed to post");
@@ -276,7 +290,38 @@ const TeamFeed = () => {
 
       {/* Compose Post */}
       {user && (
-        <div className="p-4 border-b border-border bg-muted/30">
+        <div className={cn(
+          "p-4 border-b border-border",
+          postMode === "maintenance" ? "bg-destructive/10" : "bg-muted/30"
+        )}>
+          {/* Post Mode Toggle */}
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setPostMode("message")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
+                postMode === "message" 
+                  ? "bg-primary text-primary-foreground" 
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              )}
+            >
+              <Camera className="w-4 h-4" />
+              Post
+            </button>
+            <button
+              onClick={() => setPostMode("maintenance")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
+                postMode === "maintenance" 
+                  ? "bg-destructive text-destructive-foreground" 
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              )}
+            >
+              <Wrench className="w-4 h-4" />
+              Report Issue
+            </button>
+          </div>
+
           <div className="flex gap-3">
             <Avatar className="w-10 h-10 flex-shrink-0">
               <AvatarImage src={profile?.avatar_url || undefined} />
@@ -284,10 +329,16 @@ const TeamFeed = () => {
             </Avatar>
             <div className="flex-1 space-y-3">
               <Textarea
-                placeholder="What's cooking? Share an update or dish photo..."
+                placeholder={postMode === "maintenance" 
+                  ? "Describe the issue... (e.g., Oven not heating, Walk-in fridge making noise)"
+                  : "What's cooking? Share an update or dish photo..."
+                }
                 value={newPost}
                 onChange={(e) => setNewPost(e.target.value)}
-                className="min-h-[80px] resize-none"
+                className={cn(
+                  "min-h-[80px] resize-none",
+                  postMode === "maintenance" && "border-destructive/50 focus:border-destructive"
+                )}
               />
               
               {imagePreview && (
@@ -315,9 +366,16 @@ const TeamFeed = () => {
                       className="hidden"
                       onChange={handleImageSelect}
                     />
-                    <div className="p-2 rounded-lg hover:bg-muted transition-colors inline-flex items-center gap-2 text-muted-foreground hover:text-foreground">
+                    <div className={cn(
+                      "p-2 rounded-lg hover:bg-muted transition-colors inline-flex items-center gap-2",
+                      postMode === "maintenance" 
+                        ? "text-destructive hover:text-destructive" 
+                        : "text-muted-foreground hover:text-foreground"
+                    )}>
                       <Camera className="w-5 h-5" />
-                      <span className="text-sm">Add Photo</span>
+                      <span className="text-sm">
+                        {postMode === "maintenance" ? "Add Photo of Issue" : "Add Photo"}
+                      </span>
                     </div>
                   </label>
                 </div>
@@ -325,9 +383,15 @@ const TeamFeed = () => {
                   onClick={handleSubmitPost} 
                   disabled={posting || (!newPost.trim() && !selectedImage)}
                   size="sm"
+                  variant={postMode === "maintenance" ? "destructive" : "default"}
                 >
                   {posting ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : postMode === "maintenance" ? (
+                    <>
+                      <AlertTriangle className="w-4 h-4 mr-2" />
+                      Log Issue
+                    </>
                   ) : (
                     <>
                       <Send className="w-4 h-4 mr-2" />
@@ -352,18 +416,33 @@ const TeamFeed = () => {
               const isExpanded = expandedComments.has(post.id);
               const isOwnPost = post.user_id === user?.id;
 
+              const isMaintenance = post.post_type === "maintenance_request";
+
               return (
                 <motion.div
                   key={post.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="p-4"
+                  className={cn(
+                    "p-4",
+                    isMaintenance && "bg-destructive/5 border-l-4 border-destructive"
+                  )}
                 >
+                  {/* Maintenance Badge */}
+                  {isMaintenance && (
+                    <div className="flex items-center gap-2 mb-3 text-destructive">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-xs font-semibold uppercase tracking-wide">
+                        Maintenance Request
+                      </span>
+                    </div>
+                  )}
+
                   {/* Post Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <Avatar className="w-10 h-10">
+                      <Avatar className={cn("w-10 h-10", isMaintenance && "ring-2 ring-destructive")}>
                         <AvatarImage src={post.user_avatar_url || undefined} />
                         <AvatarFallback>{getInitials(post.user_name)}</AvatarFallback>
                       </Avatar>
