@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import TasksTab from "@/components/team/TasksTab";
 import ActivityFeed from "@/components/activity/ActivityFeed";
+import ContributionStats from "@/components/activity/ContributionStats";
 import { format } from "date-fns";
 
 interface TeamMember {
@@ -698,6 +699,13 @@ const Team = () => {
 
           {/* Activity Tab */}
           <TabsContent value="activity" className="space-y-4">
+            {/* Contribution Stats at the top */}
+            <ContributionStats 
+              showLeaderboard={true}
+              showSectionCoverage={true}
+              showMyStats={true}
+            />
+
             <Card>
               <CardHeader>
                 <CardTitle>Team Activity</CardTitle>
