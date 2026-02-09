@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { ChefHat } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import chefOSWordmark from "@/assets/chefos-wordmark.png";
+import chefOSLogo from "@/assets/chefos-logo-new.png";
 
 const PortalSelect = () => {
   const navigate = useNavigate();
@@ -23,13 +23,17 @@ const PortalSelect = () => {
         >
           {/* Logo */}
           <motion.img
-            src={chefOSWordmark}
+            src={chefOSLogo}
             alt="ChefOS"
-            className="w-full max-w-md h-auto mx-auto mb-8 object-contain"
+            className="w-48 h-48 mx-auto mb-8 rounded-3xl shadow-2xl object-contain"
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
           />
+
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            Welcome to <span className="text-primary">ChefOS</span>
+          </h1>
 
           <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-12">
             The complete kitchen operating system for professional chefs.
