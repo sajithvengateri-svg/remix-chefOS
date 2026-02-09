@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
-import chefOSLogo from "@/assets/chefos-logo.png";
+import chefOSIcon from "@/assets/chefos-icon.png";
 import { 
   LayoutDashboard, 
   ChefHat, 
@@ -110,7 +110,7 @@ const Sidebar = ({ className }: SidebarProps) => {
       {/* Logo - Links to Dashboard */}
       <Link to="/dashboard" className="block p-6 border-b border-sidebar-border hover:bg-sidebar-accent/50 transition-colors">
         <div className="flex items-center gap-3">
-          <img src={chefOSLogo} alt="ChefOS" className="w-10 h-10 rounded-xl" />
+          <img src={chefOSIcon} alt="ChefOS" className="w-10 h-10 rounded-xl object-contain" />
           <div>
             <h1 className="font-display text-lg font-semibold text-sidebar-foreground">ChefOS</h1>
             <p className="text-xs text-muted-foreground">Kitchen Operating System</p>

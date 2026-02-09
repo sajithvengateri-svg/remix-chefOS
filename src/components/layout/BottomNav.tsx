@@ -6,7 +6,7 @@ import {
   MoreHorizontal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import chefOSLogo from "@/assets/chefos-logo.png";
+import chefOSIcon from "@/assets/chefos-icon.png";
 
 interface BottomNavProps {
   className?: string;
@@ -37,7 +37,7 @@ const BottomNav = ({ className }: BottomNavProps) => {
               className={cn("bottom-nav-item", isActive && "active")}
             >
               {item.isLogo ? (
-                <img src={chefOSLogo} alt="Home" className="w-6 h-6 rounded" />
+                <img src={chefOSIcon} alt="Home" className="w-6 h-6 rounded object-contain" />
               ) : (
                 item.icon && <item.icon className="w-5 h-5" />
               )}
