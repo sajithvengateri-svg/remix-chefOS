@@ -1,14 +1,98 @@
 import { motion } from "framer-motion";
-import { ChefHat } from "lucide-react";
+import { ChefHat, Store, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import chefOSLogo from "@/assets/chefos-logo-new.png";
+import { DEV_MODE } from "@/lib/devMode";
 
 const PortalSelect = () => {
   const navigate = useNavigate();
 
+  if (DEV_MODE) {
+    return (
+      <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />
+        </div>
+
+        <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="text-center"
+          >
+            <motion.img
+              src={chefOSLogo}
+              alt="ChefOS"
+              className="w-32 h-32 mx-auto mb-6 rounded-3xl shadow-2xl object-contain"
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+            />
+
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+              ChefOS <span className="text-primary">Dev Mode</span>
+            </h1>
+            <p className="text-sm text-muted-foreground mb-10">
+              Auth disabled — select a portal to enter
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 max-w-2xl mx-auto">
+              {/* Chef Portal */}
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                onClick={() => navigate("/dashboard")}
+                className="group flex flex-col items-center gap-3 p-6 rounded-2xl border border-border bg-card hover:border-primary/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+              >
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <ChefHat className="w-7 h-7 text-white" />
+                </div>
+                <span className="font-semibold text-foreground">Chef Portal</span>
+                <span className="text-xs text-muted-foreground">Kitchen operations</span>
+              </motion.button>
+
+              {/* Vendor Portal */}
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                onClick={() => navigate("/vendor/dashboard")}
+                className="group flex flex-col items-center gap-3 p-6 rounded-2xl border border-border bg-card hover:border-blue-500/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+              >
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Store className="w-7 h-7 text-white" />
+                </div>
+                <span className="font-semibold text-foreground">Vendor Portal</span>
+                <span className="text-xs text-muted-foreground">Supplier tools</span>
+              </motion.button>
+
+              {/* Admin Portal */}
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                onClick={() => navigate("/admin")}
+                className="group flex flex-col items-center gap-3 p-6 rounded-2xl border border-border bg-card hover:border-slate-500/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+              >
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Shield className="w-7 h-7 text-white" />
+                </div>
+                <span className="font-semibold text-foreground">Control Center</span>
+                <span className="text-xs text-muted-foreground">Admin & CRM</span>
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  // Production landing page
   return (
     <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center">
-      {/* Background effects */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-primary/10 rounded-full blur-3xl" />
@@ -21,7 +105,6 @@ const PortalSelect = () => {
           transition={{ duration: 0.5 }}
           className="text-center"
         >
-          {/* Logo */}
           <motion.img
             src={chefOSLogo}
             alt="ChefOS"
@@ -40,7 +123,6 @@ const PortalSelect = () => {
             Manage recipes, inventory, prep lists, and more.
           </p>
 
-          {/* Single CTA Button */}
           <motion.button
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,32 +7,18 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import {
-  Users,
-  Building2,
-  ShoppingCart,
-  TrendingUp,
-  ChefHat,
-  Activity,
-  Tag,
-  ArrowRight,
+  Users, Building2, ShoppingCart, TrendingUp, ChefHat,
+  Activity, Tag, ArrowRight, UserPlus, Gift, Bell,
 } from "lucide-react";
+import { toast } from "sonner";
+import { format } from "date-fns";
 
 const StatsCard = ({
-  title,
-  value,
-  change,
-  icon: Icon,
-  variant = "default",
-  delay = 0,
-  onClick,
+  title, value, change, icon: Icon, variant = "default", delay = 0, onClick,
 }: {
-  title: string;
-  value: string | number;
-  change?: number;
-  icon: React.ElementType;
-  variant?: "default" | "primary" | "success" | "warning";
-  delay?: number;
-  onClick?: () => void;
+  title: string; value: string | number; change?: number;
+  icon: React.ElementType; variant?: "default" | "primary" | "success" | "warning";
+  delay?: number; onClick?: () => void;
 }) => {
   const variantStyles = {
     default: "from-muted to-muted/50",
@@ -86,6 +73,7 @@ const AdminDashboard = () => {
         { count: totalRecipes },
         { count: totalOrders },
         { count: activeDeals },
+        { count: totalReferrals },
       ] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact", head: true }),
         supabase.from("vendor_profiles").select("*", { count: "exact", head: true }),
@@ -95,6 +83,7 @@ const AdminDashboard = () => {
           .eq("is_active", true)
           .lte("start_date", new Date().toISOString().split("T")[0])
           .gte("end_date", new Date().toISOString().split("T")[0]),
+        supabase.from("referrals").select("*", { count: "exact", head: true }),
       ]);
 
       return {
@@ -103,25 +92,45 @@ const AdminDashboard = () => {
         totalRecipes: totalRecipes || 0,
         totalOrders: totalOrders || 0,
         activeDeals: activeDeals || 0,
+        totalReferrals: totalReferrals || 0,
       };
     },
   });
 
-  const { data: recentActivity } = useQuery({
-    queryKey: ["admin-recent-activity"],
+  const { data: recentSignups } = useQuery({
+    queryKey: ["admin-recent-signups"],
     queryFn: async () => {
       const { data } = await supabase
-        .from("profiles")
-        .select("full_name, created_at")
+        .from("signup_events")
+        .select("*")
         .order("created_at", { ascending: false })
-        .limit(5);
+        .limit(8);
       return data || [];
     },
   });
 
+  // Realtime signup toast
+  useEffect(() => {
+    const channel = supabase
+      .channel("dashboard-signups")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "signup_events" },
+        (payload) => {
+          const event = payload.new as any;
+          toast.success("🎉 New chef signed up!", {
+            description: `${event.user_name || event.user_email} just joined ChefOS`,
+            duration: 8000,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">
           Command <span className="text-primary">Dashboard</span>
@@ -132,61 +141,23 @@ const AdminDashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-        <StatsCard
-          title="Active Users"
-          value={stats?.totalUsers || 0}
-          change={12.5}
-          icon={Users}
-          variant="primary"
-          delay={0}
-        />
-        <StatsCard
-          title="Vendors"
-          value={stats?.totalVendors || 0}
-          change={8.2}
-          icon={Building2}
-          variant="success"
-          delay={0.05}
-        />
-        <StatsCard
-          title="Total Orders"
-          value={stats?.totalOrders || 0}
-          change={-2.4}
-          icon={ShoppingCart}
-          variant="warning"
-          delay={0.1}
-        />
-        <StatsCard
-          title="Recipes"
-          value={stats?.totalRecipes || 0}
-          change={5.1}
-          icon={ChefHat}
-          variant="default"
-          delay={0.15}
-        />
-        <StatsCard
-          title="Active Deals"
-          value={stats?.activeDeals || 0}
-          icon={Tag}
-          variant="success"
-          delay={0.2}
-          onClick={() => navigate("/admin/vendor-deals")}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
+        <StatsCard title="Active Chefs" value={stats?.totalUsers || 0} change={12.5} icon={Users} variant="primary" delay={0} onClick={() => navigate("/admin/crm")} />
+        <StatsCard title="Vendors" value={stats?.totalVendors || 0} change={8.2} icon={Building2} variant="success" delay={0.05} />
+        <StatsCard title="Referrals" value={stats?.totalReferrals || 0} icon={Gift} variant="warning" delay={0.1} onClick={() => navigate("/admin/crm")} />
+        <StatsCard title="Total Orders" value={stats?.totalOrders || 0} change={-2.4} icon={ShoppingCart} variant="warning" delay={0.15} />
+        <StatsCard title="Recipes" value={stats?.totalRecipes || 0} change={5.1} icon={ChefHat} variant="default" delay={0.2} />
+        <StatsCard title="Active Deals" value={stats?.activeDeals || 0} icon={Tag} variant="success" delay={0.25} onClick={() => navigate("/admin/vendor-deals")} />
       </div>
 
-      {/* Activity and Status */}
+      {/* Recent Signups + System Status */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-        >
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5 text-primary" />
-                Recent Signups
+                <Bell className="w-5 h-5 text-primary" />
+                New Signups
               </CardTitle>
               <Button variant="ghost" size="sm" onClick={() => navigate("/admin/crm")}>
                 View All <ArrowRight className="w-4 h-4 ml-1" />
@@ -194,59 +165,50 @@ const AdminDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {recentActivity?.map((user, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between py-2 border-b last:border-0"
-                  >
+                {recentSignups?.map((event: any) => (
+                  <div key={event.id} className="flex items-center justify-between py-2 border-b last:border-0">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Users className="w-4 h-4 text-primary" />
+                        <UserPlus className="w-4 h-4 text-primary" />
                       </div>
-                      <span className="font-medium">{user.full_name}</span>
+                      <div>
+                        <span className="font-medium text-sm">{event.user_name || "New Chef"}</span>
+                        <p className="text-xs text-muted-foreground">{event.user_email}</p>
+                      </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {event.referral_code && (
+                        <Badge variant="outline" className="text-xs">
+                          <Gift className="w-3 h-3 mr-1" /> ref
+                        </Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(event.created_at), "MMM d, HH:mm")}
+                      </span>
+                    </div>
                   </div>
                 ))}
-                {(!recentActivity || recentActivity.length === 0) && (
-                  <p className="text-muted-foreground text-center py-4">
-                    No recent activity
-                  </p>
+                {(!recentSignups || recentSignups.length === 0) && (
+                  <p className="text-muted-foreground text-center py-4">No recent signups</p>
                 )}
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.25 }}
-        >
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.25 }}>
           <Card>
             <CardHeader>
               <CardTitle>System Status</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span>Database</span>
-                  <Badge className="bg-emerald-500 hover:bg-emerald-600">Operational</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Authentication</span>
-                  <Badge className="bg-emerald-500 hover:bg-emerald-600">Operational</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Edge Functions</span>
-                  <Badge className="bg-emerald-500 hover:bg-emerald-600">Operational</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Storage</span>
-                  <Badge className="bg-emerald-500 hover:bg-emerald-600">Operational</Badge>
-                </div>
+                {["Database", "Authentication", "Edge Functions", "Storage", "Realtime"].map((service) => (
+                  <div key={service} className="flex items-center justify-between">
+                    <span>{service}</span>
+                    <Badge className="bg-emerald-500 hover:bg-emerald-600">Operational</Badge>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

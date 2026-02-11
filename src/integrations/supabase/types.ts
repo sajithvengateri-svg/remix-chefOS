@@ -1337,6 +1337,93 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referral_rewards: {
+        Row: {
+          badge_color: string | null
+          badge_icon: string | null
+          created_at: string
+          id: string
+          min_referrals: number
+          reward_description: string
+          tier: string
+        }
+        Insert: {
+          badge_color?: string | null
+          badge_icon?: string | null
+          created_at?: string
+          id?: string
+          min_referrals: number
+          reward_description: string
+          tier: string
+        }
+        Update: {
+          badge_color?: string | null
+          badge_icon?: string | null
+          created_at?: string
+          id?: string
+          min_referrals?: number
+          reward_description?: string
+          tier?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          referral_code: string
+          referred_user_id: string
+          referrer_id: string
+          reward_tier: string | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code: string
+          referred_user_id: string
+          referrer_id: string
+          reward_tier?: string | null
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          referral_code?: string
+          referred_user_id?: string
+          referrer_id?: string
+          reward_tier?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       roster_shifts: {
         Row: {
           created_at: string
@@ -1419,6 +1506,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      signup_events: {
+        Row: {
+          created_at: string
+          id: string
+          onboarding_step: string | null
+          referral_code: string | null
+          user_email: string | null
+          user_id: string
+          user_name: string | null
+          welcome_email_sent: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          onboarding_step?: string | null
+          referral_code?: string | null
+          user_email?: string | null
+          user_id: string
+          user_name?: string | null
+          welcome_email_sent?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          onboarding_step?: string | null
+          referral_code?: string | null
+          user_email?: string | null
+          user_id?: string
+          user_name?: string | null
+          welcome_email_sent?: boolean | null
+        }
+        Relationships: []
       }
       stock_movements: {
         Row: {
