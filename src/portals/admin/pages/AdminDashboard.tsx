@@ -74,6 +74,7 @@ const AdminDashboard = () => {
         { count: totalOrders },
         { count: activeDeals },
         { count: totalReferrals },
+        { count: totalOrgs },
       ] = await Promise.all([
         supabase.from("profiles").select("*", { count: "exact", head: true }),
         supabase.from("vendor_profiles").select("*", { count: "exact", head: true }),
@@ -84,6 +85,7 @@ const AdminDashboard = () => {
           .lte("start_date", new Date().toISOString().split("T")[0])
           .gte("end_date", new Date().toISOString().split("T")[0]),
         supabase.from("referrals").select("*", { count: "exact", head: true }),
+        supabase.from("organizations").select("*", { count: "exact", head: true }),
       ]);
 
       return {
@@ -93,6 +95,7 @@ const AdminDashboard = () => {
         totalOrders: totalOrders || 0,
         activeDeals: activeDeals || 0,
         totalReferrals: totalReferrals || 0,
+        totalOrgs: totalOrgs || 0,
       };
     },
   });
@@ -143,9 +146,9 @@ const AdminDashboard = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
         <StatsCard title="Active Chefs" value={stats?.totalUsers || 0} change={12.5} icon={Users} variant="primary" delay={0} onClick={() => navigate("/admin/crm")} />
-        <StatsCard title="Vendors" value={stats?.totalVendors || 0} change={8.2} icon={Building2} variant="success" delay={0.05} />
+        <StatsCard title="Organizations" value={stats?.totalOrgs || 0} icon={Building2} variant="success" delay={0.05} onClick={() => navigate("/admin/organizations")} />
         <StatsCard title="Referrals" value={stats?.totalReferrals || 0} icon={Gift} variant="warning" delay={0.1} onClick={() => navigate("/admin/crm")} />
-        <StatsCard title="Total Orders" value={stats?.totalOrders || 0} change={-2.4} icon={ShoppingCart} variant="warning" delay={0.15} />
+        <StatsCard title="Vendors" value={stats?.totalVendors || 0} change={8.2} icon={Building2} variant="default" delay={0.15} />
         <StatsCard title="Recipes" value={stats?.totalRecipes || 0} change={5.1} icon={ChefHat} variant="default" delay={0.2} />
         <StatsCard title="Active Deals" value={stats?.activeDeals || 0} icon={Tag} variant="success" delay={0.25} onClick={() => navigate("/admin/vendor-deals")} />
       </div>

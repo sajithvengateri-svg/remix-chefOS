@@ -12,6 +12,8 @@ import {
   Rocket,
   Database,
   Tag,
+  Building2,
+  Mail,
 } from "lucide-react";
  import { cn } from "@/lib/utils";
  import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -20,8 +22,10 @@ import {
  
 const navItems = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { title: "Organizations", href: "/admin/organizations", icon: Building2 },
   { title: "Vendor Deals", href: "/admin/vendor-deals", icon: Tag },
   { title: "CRM", href: "/admin/crm", icon: Users },
+  { title: "Email Templates", href: "/admin/email-templates", icon: Mail },
   { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { title: "Marketing", href: "/admin/marketing", icon: Megaphone },
   { title: "Testing", href: "/admin/testing", icon: TestTube },

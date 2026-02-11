@@ -322,6 +322,87 @@ export type Database = {
         }
         Relationships: []
       }
+      email_send_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          recipient_email: string
+          recipient_user_id: string | null
+          sent_at: string | null
+          status: string
+          template_slug: string
+          variables: Json | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          recipient_user_id?: string | null
+          sent_at?: string | null
+          status?: string
+          template_slug: string
+          variables?: Json | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          recipient_user_id?: string | null
+          sent_at?: string | null
+          status?: string
+          template_slug?: string
+          variables?: Json | null
+        }
+        Relationships: []
+      }
+      email_templates: {
+        Row: {
+          attachments: Json | null
+          body_html: string
+          body_text: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          subject: string
+          updated_at: string
+          updated_by: string | null
+          variables: Json | null
+        }
+        Insert: {
+          attachments?: Json | null
+          body_html?: string
+          body_text?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          subject: string
+          updated_at?: string
+          updated_by?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          attachments?: Json | null
+          body_html?: string
+          body_text?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          subject?: string
+          updated_at?: string
+          updated_by?: string | null
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       equipment: {
         Row: {
           created_at: string
