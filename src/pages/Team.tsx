@@ -29,11 +29,14 @@ import {
   Edit,
   X,
   ClipboardList,
-  Activity
+  Activity,
+  Building2
 } from "lucide-react";
 import TasksTab from "@/components/team/TasksTab";
 import ActivityFeed from "@/components/activity/ActivityFeed";
 import ContributionStats from "@/components/activity/ContributionStats";
+import OrgChartWidget from "@/components/dashboard/OrgChartWidget";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { format } from "date-fns";
 
 interface TeamMember {
@@ -422,6 +425,10 @@ const Team = () => {
               <Activity className="w-4 h-4" />
               Activity
             </TabsTrigger>
+            <TabsTrigger value="org-chart" className="flex items-center gap-2">
+              <Building2 className="w-4 h-4" />
+              Org Chart
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="members" className="space-y-4">
@@ -754,6 +761,13 @@ const Team = () => {
                 />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Org Chart Tab */}
+          <TabsContent value="org-chart" className="space-y-4">
+            <ErrorBoundary fallbackMessage="Could not load org chart">
+              <OrgChartWidget />
+            </ErrorBoundary>
           </TabsContent>
         </Tabs>
       </div>
