@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import AdminHeatmap from "../components/AdminHeatmap";
+import DemandInsightsPanel from "@/components/marketplace/DemandInsightsPanel";
 
 const StatsCard = ({
   title, value, change, icon: Icon, variant = "default", delay = 0, onClick,
@@ -217,6 +219,12 @@ const AdminDashboard = () => {
           </Card>
         </motion.div>
       </div>
+
+      {/* Heatmap */}
+      <AdminHeatmap />
+
+      {/* Ingredient Demand (same as vendor view) */}
+      <DemandInsightsPanel maxItems={15} />
     </div>
   );
 };
