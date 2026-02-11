@@ -12,8 +12,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import AdminHeatmap from "../components/AdminHeatmap";
+import { lazy, Suspense } from "react";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import DemandInsightsPanel from "@/components/marketplace/DemandInsightsPanel";
+
+const AdminHeatmap = lazy(() => import("../components/AdminHeatmap"));
 
 const StatsCard = ({
   title, value, change, icon: Icon, variant = "default", delay = 0, onClick,
@@ -220,8 +223,11 @@ const AdminDashboard = () => {
         </motion.div>
       </div>
 
-      {/* Heatmap */}
-      <AdminHeatmap />
+      <ErrorBoundary fallbackMessage="Heatmap failed to load">
+        <Suspense fallback={<div className="h-64 flex items-center justify-center text-muted-foreground">Loading map…</div>}>
+          <AdminHeatmap />
+        </Suspense>
+      </ErrorBoundary>
 
       {/* Ingredient Demand (same as vendor view) */}
       <DemandInsightsPanel maxItems={15} />
