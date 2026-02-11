@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ChefHat, Mail, Lock, User, Gift } from "lucide-react";
+import { ChefHat, Mail, Lock, User, Gift, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,7 @@ const Auth = () => {
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupName, setSignupName] = useState("");
+  const [signupOrgName, setSignupOrgName] = useState("");
 
   // Check for referral code in URL
   useEffect(() => {
@@ -68,7 +69,7 @@ const Auth = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await signUp(signupEmail, signupPassword, signupName);
+      await signUp(signupEmail, signupPassword, signupName, signupOrgName);
       // If referred, track the referral after signup
       if (referralCode) {
         // The referral will be tracked by a database function or we store it in signup_events
@@ -159,7 +160,14 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
+                  <Label htmlFor="signup-org">Kitchen / Restaurant Name</Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input id="signup-org" type="text" placeholder="Ramsay's Kitchen" className="pl-10" value={signupOrgName} onChange={(e) => setSignupOrgName(e.target.value)} required />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="signup-name">Your Full Name</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input id="signup-name" type="text" placeholder="Gordon Ramsay" className="pl-10" value={signupName} onChange={(e) => setSignupName(e.target.value)} required />
@@ -191,7 +199,7 @@ const Auth = () => {
                   {isLoading ? "Creating account..." : "Create Account"}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
-                  First user to sign up becomes Head Chef (admin)
+                  You'll be set up as Owner & Head Chef of your organisation
                 </p>
               </form>
             </TabsContent>

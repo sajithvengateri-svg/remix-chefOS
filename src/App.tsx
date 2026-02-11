@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { OrgProvider } from "@/contexts/OrgContext";
 import { VoiceCommandProvider } from "@/contexts/VoiceCommandContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import ChefAIChat from "@/components/ai/ChefAIChat";
@@ -69,6 +70,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <OrgProvider>
           <VoiceCommandProvider>
             <Routes>
               {/* ========== PORTAL SELECTION ========== */}
@@ -135,6 +137,7 @@ const App = () => (
             <ChefAIChat />
             
           </VoiceCommandProvider>
+          </OrgProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import { supabase } from "@/integrations/supabase/client";
 import AppLayout from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -92,6 +93,7 @@ const MODULES = [
 
 const Team = () => {
   const { user, isHeadChef, profile } = useAuth();
+  const { currentOrg } = useOrg();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
@@ -248,6 +250,7 @@ const Team = () => {
       email: inviteEmail,
       invited_by: user.id,
       role: "line_chef",
+      org_id: currentOrg?.id || null,
     });
 
     if (error) {
