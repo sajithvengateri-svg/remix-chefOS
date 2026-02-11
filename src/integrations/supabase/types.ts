@@ -1125,10 +1125,14 @@ export type Database = {
           max_members: number
           max_venues: number
           name: string
+          onboarding_completed: boolean
+          onboarding_completed_at: string | null
           owner_id: string
+          role_structure: string | null
           settings: Json | null
           slug: string
           subscription_tier: string
+          team_size_estimate: number | null
           updated_at: string
         }
         Insert: {
@@ -1138,10 +1142,14 @@ export type Database = {
           max_members?: number
           max_venues?: number
           name: string
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
           owner_id: string
+          role_structure?: string | null
           settings?: Json | null
           slug: string
           subscription_tier?: string
+          team_size_estimate?: number | null
           updated_at?: string
         }
         Update: {
@@ -1151,10 +1159,14 @@ export type Database = {
           max_members?: number
           max_venues?: number
           name?: string
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
           owner_id?: string
+          role_structure?: string | null
           settings?: Json | null
           slug?: string
           subscription_tier?: string
+          team_size_estimate?: number | null
           updated_at?: string
         }
         Relationships: []
