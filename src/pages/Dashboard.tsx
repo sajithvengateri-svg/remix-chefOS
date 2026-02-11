@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DEV_MODE } from "@/lib/devMode";
 import { motion } from "framer-motion";
 import { 
   ChefHat, 
@@ -64,9 +65,9 @@ const Dashboard = () => {
   const isMobile = useIsMobile();
   console.log("[Dashboard] isMobile:", isMobile);
 
-  // Check if onboarding is needed
+  // Check if onboarding is needed (skip in DEV_MODE)
   useEffect(() => {
-    if (currentOrg && !(currentOrg as any).onboarding_completed) {
+    if (!DEV_MODE && currentOrg && !(currentOrg as any).onboarding_completed) {
       setShowOnboarding(true);
     }
   }, [currentOrg]);

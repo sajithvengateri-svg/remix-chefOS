@@ -4,6 +4,7 @@ import {
   Building2, MapPin, Users, GitBranch, ChefHat, 
   ArrowRight, ArrowLeft, Check, Plus, Trash2 
 } from "lucide-react";
+import { DEV_MODE } from "@/lib/devMode";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,14 @@ const OnboardingWizard = ({ open, onComplete }: OnboardingWizardProps) => {
     if (!currentOrg) return;
     setSaving(true);
     try {
-      // Update org name if changed
+      if (DEV_MODE) {
+        // In dev mode, just close the wizard
+        toast.success("Kitchen setup complete! 🎉");
+        onComplete();
+        return;
+      }
+
+      // Update org with onboarding data
       const { error: orgError } = await supabase
         .from("organizations")
         .update({
@@ -101,7 +109,7 @@ const OnboardingWizard = ({ open, onComplete }: OnboardingWizardProps) => {
       onComplete();
     } catch (err) {
       console.error("Onboarding error:", err);
-      toast.error("Failed to save setup");
+      toast.error("Failed to save setup. Please ensure you're logged in.");
     } finally {
       setSaving(false);
     }
