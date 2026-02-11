@@ -26,6 +26,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileDeck } from "@/components/mobile/MobileDeck";
+import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
+import OrgChartWidget from "@/components/dashboard/OrgChartWidget";
+import SetupProgressWidget from "@/components/dashboard/SetupProgressWidget";
+import VenueSelector from "@/components/dashboard/VenueSelector";
+import { useOrg } from "@/contexts/OrgContext";
 
 console.log("[Dashboard] Module loaded");
 
@@ -52,9 +57,19 @@ const Dashboard = () => {
     targetFoodCost: 30,
   });
   const [loading, setLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
+  const { currentOrg, venues } = useOrg();
  
   const isMobile = useIsMobile();
   console.log("[Dashboard] isMobile:", isMobile);
+
+  // Check if onboarding is needed
+  useEffect(() => {
+    if (currentOrg && !(currentOrg as any).onboarding_completed) {
+      setShowOnboarding(true);
+    }
+  }, [currentOrg]);
 
   const currentDate = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -177,6 +192,12 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
+      {/* Onboarding Wizard */}
+      <OnboardingWizard
+        open={showOnboarding}
+        onComplete={() => setShowOnboarding(false)}
+      />
+
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <motion.div 
@@ -188,7 +209,8 @@ const Dashboard = () => {
             <h1 className="page-title font-display">Good Morning, Chef</h1>
             <p className="page-subtitle">{currentDate}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <VenueSelector selectedVenueId={selectedVenueId} onSelect={setSelectedVenueId} />
             <span className="badge-success">
               <CheckCircle2 className="w-3 h-3 mr-1" />
               All Systems Go
@@ -290,13 +312,23 @@ const Dashboard = () => {
             </ErrorBoundary>
           </motion.div>
 
-          {/* Right Column - Activity & Stats */}
+          {/* Right Column - Activity, Org Chart & Setup */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
             className="space-y-4"
           >
+            {/* Setup Progress (hides when 100%) */}
+            <ErrorBoundary fallbackMessage="Could not load setup progress">
+              <SetupProgressWidget />
+            </ErrorBoundary>
+
+            {/* Org Chart */}
+            <ErrorBoundary fallbackMessage="Could not load org chart">
+              <OrgChartWidget />
+            </ErrorBoundary>
+
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg flex items-center gap-2">
