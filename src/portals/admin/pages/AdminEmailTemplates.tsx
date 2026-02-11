@@ -145,6 +145,22 @@ const AdminEmailTemplates = () => {
         </p>
       </div>
 
+      {/* DEV PLACEHOLDER: Resend API key not yet configured */}
+      <Card className="border-2 border-dashed border-amber-500/40 bg-amber-500/5">
+        <CardContent className="p-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+            <Mail className="w-5 h-5 text-amber-600" />
+          </div>
+          <div>
+            <p className="font-semibold text-amber-700 dark:text-amber-400">⚠️ RESEND_API_KEY not configured</p>
+            <p className="text-sm text-muted-foreground">
+              Email sending is currently <strong>disabled</strong>. Add the <code className="bg-muted px-1 rounded text-xs">RESEND_API_KEY</code> secret to enable welcome emails. 
+              Templates can still be edited and previewed below.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <Tabs defaultValue="templates">
         <TabsList>
           <TabsTrigger value="templates" className="gap-2">
