@@ -3,7 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-type AppRole = "head_chef" | "line_chef";
+type AppRole = "owner" | "head_chef" | "line_chef";
 
 interface Profile {
   id: string;
@@ -32,7 +32,7 @@ interface AuthContextType {
   permissions: ModulePermission[];
   isLoading: boolean;
   isHeadChef: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string, orgName?: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   canView: (module: string) => boolean;
@@ -75,13 +75,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
-        .in("role", ["head_chef", "line_chef"]);
+        .in("role", ["owner", "head_chef", "line_chef"]);
 
       if (roleError) throw roleError;
       
       // Prioritize head_chef over line_chef
       const roles = roleData?.map(r => r.role) || [];
-      if (roles.includes("head_chef")) {
+      if (roles.includes("owner")) {
+        setRole("owner");
+      } else if (roles.includes("head_chef")) {
         setRole("head_chef");
       } else if (roles.includes("line_chef")) {
         setRole("line_chef");
@@ -149,7 +151,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, orgName?: string) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -157,6 +159,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         emailRedirectTo: window.location.origin,
         data: {
           full_name: fullName,
+          org_name: orgName || undefined,
         },
       },
     });
@@ -192,7 +195,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     toast.success("Signed out successfully");
   };
 
-  const isHeadChef = role === "head_chef";
+  const isHeadChef = role === "head_chef" || role === "owner";
 
   const canView = (module: string): boolean => {
     // Head chefs and users without roles (default access) can view all
