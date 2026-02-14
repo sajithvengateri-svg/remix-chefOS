@@ -29,7 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, differenceInMinutes } from "date-fns";
 
 interface Post {
   id: string;
@@ -56,7 +56,7 @@ interface Comment {
 type PostMode = "message" | "maintenance";
 
 const TeamFeed = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, isHeadChef } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
@@ -416,6 +416,9 @@ const TeamFeed = () => {
               const commentCount = post.comments.length;
               const isExpanded = expandedComments.has(post.id);
               const isOwnPost = post.user_id === user?.id;
+              const minutesSincePost = differenceInMinutes(new Date(), new Date(post.created_at));
+              const canDelete = isHeadChef || (isOwnPost && minutesSincePost <= 5);
+              const isAdminDelete = !isOwnPost && isHeadChef;
 
               const isMaintenance = post.post_type === "maintenance_request";
               const isPrepListShared = post.post_type === "prep_list_shared";
@@ -466,7 +469,7 @@ const TeamFeed = () => {
                         </p>
                       </div>
                     </div>
-                    {isOwnPost && (
+                    {canDelete && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button className="p-1 rounded hover:bg-muted">
@@ -479,7 +482,7 @@ const TeamFeed = () => {
                             onClick={() => handleDeletePost(post.id)}
                           >
                             <Trash2 className="w-4 h-4 mr-2" />
-                            Delete
+                            {isAdminDelete ? "Delete (Admin)" : "Delete"}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
