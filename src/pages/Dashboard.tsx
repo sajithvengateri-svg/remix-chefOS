@@ -249,7 +249,7 @@ const Dashboard = () => {
             subValue={stats.lowStockItems > 0 ? "Need attention" : "Stock OK"}
             trend={stats.lowStockItems > 0 ? "urgent" : ""}
             color="warning"
-            href="/ingredients"
+            href="/inventory"
           />
           <StatCard
             icon={TrendingUp}
@@ -258,7 +258,7 @@ const Dashboard = () => {
             subValue={`Target: ${stats.targetFoodCost}%`}
             trend={getFoodCostTrend()}
             color={getFoodCostColor()}
-            href="/ingredients"
+            href="/menu-engineering"
           />
         </motion.div>
 
