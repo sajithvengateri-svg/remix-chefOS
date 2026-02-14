@@ -11,6 +11,7 @@ import {
   Loader2,
   Truck
 } from "lucide-react";
+import PriceHistoryChart from "@/components/ingredients/PriceHistoryChart";
 import AppLayout from "@/components/layout/AppLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -300,8 +301,16 @@ const Ingredients = () => {
                   className="card-elevated p-4"
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div className="p-2 rounded-lg bg-muted">
-                      <Package className="w-5 h-5 text-muted-foreground" />
+                    <div className="flex items-center gap-1">
+                      <div className="p-2 rounded-lg bg-muted">
+                        <Package className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                      <PriceHistoryChart 
+                        ingredientId={ingredient.id}
+                        ingredientName={ingredient.name}
+                        currentPrice={Number(ingredient.cost_per_unit)}
+                        unit={ingredient.unit}
+                      />
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground">

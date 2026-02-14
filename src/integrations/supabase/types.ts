@@ -545,6 +545,44 @@ export type Database = {
           },
         ]
       }
+      ingredient_price_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          id: string
+          ingredient_id: string
+          new_price: number
+          old_price: number | null
+          source: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          new_price: number
+          old_price?: number | null
+          source?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          new_price?: number
+          old_price?: number | null
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingredient_price_history_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "ingredients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingredients: {
         Row: {
           allergens: string[] | null
@@ -700,6 +738,45 @@ export type Database = {
           name?: string
           sort_order?: number | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      invoice_scans: {
+        Row: {
+          created_at: string
+          file_name: string | null
+          id: string
+          items_extracted: number | null
+          items_matched: number | null
+          org_id: string | null
+          prices_updated: number | null
+          scan_data: Json | null
+          scanned_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          items_extracted?: number | null
+          items_matched?: number | null
+          org_id?: string | null
+          prices_updated?: number | null
+          scan_data?: Json | null
+          scanned_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string | null
+          id?: string
+          items_extracted?: number | null
+          items_matched?: number | null
+          org_id?: string | null
+          prices_updated?: number | null
+          scan_data?: Json | null
+          scanned_by?: string | null
+          status?: string
         }
         Relationships: []
       }

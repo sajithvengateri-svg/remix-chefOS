@@ -2,9 +2,9 @@ import { ChefHat, Package, ClipboardList, Receipt } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 const linkActions = [
-  { icon: Package, label: "Log Inventory", path: "/inventory/log", color: "bg-accent" },
-  { icon: ClipboardList, label: "Create Prep List", path: "/prep/new", color: "bg-sage" },
-  { icon: Receipt, label: "Scan Invoice", path: "/invoices/scan", color: "bg-copper" },
+  { icon: Package, label: "View Costing", path: "/ingredients", color: "bg-accent" },
+  { icon: ClipboardList, label: "Create Prep List", path: "/prep", color: "bg-sage" },
+  { icon: Receipt, label: "Scan Invoice", path: "/invoices", color: "bg-copper" },
 ];
 
 const QuickActions = () => {
