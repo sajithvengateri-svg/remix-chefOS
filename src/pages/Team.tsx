@@ -12,6 +12,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -30,7 +32,13 @@ import {
   X,
   ClipboardList,
   Activity,
-  Building2
+  Building2,
+  MoreVertical,
+  Archive,
+  Trash2,
+  UserCheck,
+  UserX,
+  LogIn
 } from "lucide-react";
 import TasksTab from "@/components/team/TasksTab";
 import ActivityFeed from "@/components/activity/ActivityFeed";
@@ -47,7 +55,9 @@ interface TeamMember {
   phone: string | null;
   birthday: string | null;
   position: string;
-  role: "head_chef" | "line_chef";
+  role: "head_chef" | "line_chef" | "owner";
+  member_status: "onboarding" | "active" | "departed";
+  membership_id: string;
 }
 
 interface Invite {
@@ -118,6 +128,7 @@ const Team = () => {
   const [editPhone, setEditPhone] = useState("");
   const [editBirthday, setEditBirthday] = useState("");
   const [editPosition, setEditPosition] = useState("");
+  const [deleteConfirmMember, setDeleteConfirmMember] = useState<TeamMember | null>(null);
 
   useEffect(() => {
     if (currentOrg?.id) {
@@ -176,12 +187,11 @@ const Team = () => {
   const fetchTeamMembers = async () => {
     if (!currentOrg?.id) return;
 
-    // First get org members
+    // Fetch ALL org members (including departed) so we can show them
     const { data: memberships, error: memError } = await supabase
       .from("org_memberships")
-      .select("user_id, role")
-      .eq("org_id", currentOrg.id)
-      .eq("is_active", true);
+      .select("id, user_id, role, is_active, member_status")
+      .eq("org_id", currentOrg.id);
 
     if (memError || !memberships?.length) {
       console.error("Error fetching memberships:", memError);
@@ -191,7 +201,6 @@ const Team = () => {
 
     const userIds = memberships.map((m) => m.user_id);
 
-    // Then fetch only those profiles
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
       .select("*")
@@ -202,10 +211,19 @@ const Team = () => {
       return;
     }
 
-    const members: TeamMember[] = (profiles || []).map((p) => ({
-      ...p,
-      role: (memberships.find((m) => m.user_id === p.user_id)?.role as "head_chef" | "line_chef") || "line_chef",
-    }));
+    const members: TeamMember[] = (profiles || []).map((p) => {
+      const mem = memberships.find((m) => m.user_id === p.user_id);
+      return {
+        ...p,
+        role: (mem?.role as TeamMember["role"]) || "line_chef",
+        member_status: (mem?.member_status as TeamMember["member_status"]) || "active",
+        membership_id: mem?.id || "",
+      };
+    });
+
+    // Sort: active first, onboarding, then departed
+    const statusOrder = { active: 0, onboarding: 1, departed: 2 };
+    members.sort((a, b) => (statusOrder[a.member_status] || 0) - (statusOrder[b.member_status] || 0));
 
     setTeamMembers(members);
   };
@@ -372,6 +390,80 @@ const Team = () => {
     fetchTeamMembers();
   };
 
+
+
+  const handleArchiveMember = async (member: TeamMember) => {
+    if (!currentOrg?.id) return;
+    const { error } = await supabase
+      .from("org_memberships")
+      .update({ member_status: "departed", is_active: false })
+      .eq("id", member.membership_id);
+
+    if (error) {
+      toast.error("Failed to archive member");
+      return;
+    }
+    toast.success(`${member.full_name} marked as departed`);
+    fetchTeamMembers();
+  };
+
+  const handleReactivateMember = async (member: TeamMember) => {
+    if (!currentOrg?.id) return;
+    const { error } = await supabase
+      .from("org_memberships")
+      .update({ member_status: "active", is_active: true })
+      .eq("id", member.membership_id);
+
+    if (error) {
+      toast.error("Failed to reactivate member");
+      return;
+    }
+    toast.success(`${member.full_name} reactivated`);
+    fetchTeamMembers();
+  };
+
+  const handleSetOnboarding = async (member: TeamMember) => {
+    if (!currentOrg?.id) return;
+    const { error } = await supabase
+      .from("org_memberships")
+      .update({ member_status: "onboarding" })
+      .eq("id", member.membership_id);
+
+    if (error) {
+      toast.error("Failed to update status");
+      return;
+    }
+    toast.success(`${member.full_name} set to onboarding`);
+    fetchTeamMembers();
+  };
+
+  const handleDeleteMember = async (member: TeamMember) => {
+    if (!currentOrg?.id) return;
+    const { error } = await supabase
+      .from("org_memberships")
+      .delete()
+      .eq("id", member.membership_id);
+
+    if (error) {
+      toast.error("Failed to remove member");
+      return;
+    }
+    toast.success(`${member.full_name} removed from team`);
+    setDeleteConfirmMember(null);
+    fetchTeamMembers();
+  };
+
+  const getStatusBadge = (status: TeamMember["member_status"]) => {
+    switch (status) {
+      case "onboarding":
+        return <Badge variant="outline" className="border-amber-500/50 text-amber-600 bg-amber-500/10"><LogIn className="w-3 h-3 mr-1" />Onboarding</Badge>;
+      case "departed":
+        return <Badge variant="outline" className="border-destructive/50 text-destructive bg-destructive/10"><UserX className="w-3 h-3 mr-1" />Departed</Badge>;
+      default:
+        return <Badge variant="outline" className="border-green-500/50 text-green-600 bg-green-500/10"><UserCheck className="w-3 h-3 mr-1" />Active</Badge>;
+    }
+  };
+
   const openWhatsApp = (phone: string) => {
     const cleanPhone = phone.replace(/\D/g, "");
     window.open(`https://wa.me/${cleanPhone}`, "_blank");
@@ -457,12 +549,17 @@ const Team = () => {
 
           <TabsContent value="members" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {teamMembers.map((member) => (
-                <Card key={member.id} className="relative">
+              {teamMembers.map((member) => {
+                const isDeparted = member.member_status === "departed";
+                const isCurrentUser = member.user_id === user?.id;
+                const canManage = isHeadChef && !isCurrentUser;
+
+                return (
+                <Card key={member.id} className={`relative ${isDeparted ? "opacity-60" : ""}`}>
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-12 w-12">
+                        <Avatar className={`h-12 w-12 ${isDeparted ? "grayscale" : ""}`}>
                           <AvatarFallback className="bg-primary/10 text-primary">
                             {member.full_name.split(" ").map((n) => n[0]).join("").toUpperCase()}
                           </AvatarFallback>
@@ -472,19 +569,82 @@ const Team = () => {
                           <CardDescription>{member.position}</CardDescription>
                         </div>
                       </div>
-                      <Badge variant={member.role === "head_chef" ? "default" : "secondary"}>
-                        {member.role === "head_chef" ? (
-                          <>
-                            <ChefHat className="w-3 h-3 mr-1" />
-                            Head Chef
-                          </>
+                      <div className="flex items-center gap-2">
+                        {canManage && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => {
+                                setEditMember(member);
+                                setEditPhone(member.phone || "");
+                                setEditBirthday(member.birthday || "");
+                                setEditPosition(member.position);
+                              }}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit Details
+                              </DropdownMenuItem>
+                              {member.role === "line_chef" && (
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedMember(member);
+                                  fetchMemberPermissions(member.user_id);
+                                }}>
+                                  <Settings className="w-4 h-4 mr-2" />
+                                  Permissions
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              {member.member_status === "active" && (
+                                <DropdownMenuItem onClick={() => handleSetOnboarding(member)}>
+                                  <LogIn className="w-4 h-4 mr-2" />
+                                  Set as Onboarding
+                                </DropdownMenuItem>
+                              )}
+                              {member.member_status === "onboarding" && (
+                                <DropdownMenuItem onClick={() => handleReactivateMember(member)}>
+                                  <UserCheck className="w-4 h-4 mr-2" />
+                                  Mark Active
+                                </DropdownMenuItem>
+                              )}
+                              {member.member_status !== "departed" ? (
+                                <DropdownMenuItem onClick={() => handleArchiveMember(member)} className="text-amber-600">
+                                  <Archive className="w-4 h-4 mr-2" />
+                                  Archive (Departed)
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem onClick={() => handleReactivateMember(member)}>
+                                  <UserCheck className="w-4 h-4 mr-2" />
+                                  Reactivate
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => setDeleteConfirmMember(member)} 
+                                className="text-destructive"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Remove Permanently
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
+                    </div>
+                    {/* Status & Role Badges */}
+                    <div className="flex items-center gap-2 mt-2">
+                      <Badge variant={member.role === "head_chef" || member.role === "owner" ? "default" : "secondary"} className="text-xs">
+                        {member.role === "owner" ? (
+                          <><ChefHat className="w-3 h-3 mr-1" />Owner</>
+                        ) : member.role === "head_chef" ? (
+                          <><ChefHat className="w-3 h-3 mr-1" />Head Chef</>
                         ) : (
-                          <>
-                            <Shield className="w-3 h-3 mr-1" />
-                            Line Chef
-                          </>
+                          <><Shield className="w-3 h-3 mr-1" />Line Chef</>
                         )}
                       </Badge>
+                      {getStatusBadge(member.member_status)}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -509,64 +669,36 @@ const Team = () => {
                       )}
                     </div>
 
-                    <div className="flex gap-2 pt-2">
-                      {member.phone && (
+                    {!isDeparted && (
+                      <div className="flex gap-2 pt-2">
+                        {member.phone && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openWhatsApp(member.phone!)}
+                            className="flex-1"
+                          >
+                            <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                            </svg>
+                            WhatsApp
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => openWhatsApp(member.phone!)}
+                          onClick={() => setMessagingMember(member)}
                           className="flex-1"
                         >
-                          <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                          </svg>
-                          WhatsApp
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setMessagingMember(member)}
-                        className="flex-1"
-                      >
-                        <MessageSquare className="w-4 h-4 mr-1" />
-                        Message
-                      </Button>
-                    </div>
-
-                    {isHeadChef && member.role === "line_chef" && (
-                      <div className="flex gap-2 border-t pt-3">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setEditMember(member);
-                            setEditPhone(member.phone || "");
-                            setEditBirthday(member.birthday || "");
-                            setEditPosition(member.position);
-                          }}
-                          className="flex-1"
-                        >
-                          <Edit className="w-4 h-4 mr-1" />
-                          Edit Info
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setSelectedMember(member);
-                            fetchMemberPermissions(member.user_id);
-                          }}
-                          className="flex-1"
-                        >
-                          <Settings className="w-4 h-4 mr-1" />
-                          Permissions
+                          <MessageSquare className="w-4 h-4 mr-1" />
+                          Message
                         </Button>
                       </div>
                     )}
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           </TabsContent>
 
@@ -885,6 +1017,27 @@ const Team = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmMember} onOpenChange={(open) => !open && setDeleteConfirmMember(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove team member permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove <strong>{deleteConfirmMember?.full_name}</strong> from your organisation. This action cannot be undone. Consider archiving instead if they may return.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteConfirmMember && handleDeleteMember(deleteConfirmMember)}
+            >
+              Remove Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 };
