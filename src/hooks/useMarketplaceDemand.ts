@@ -1,125 +1,34 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export interface IngredientDemand {
+export interface DemandInsight {
   id: string;
-  ingredient_name: string;
-  category: string;
+  ingredient_category: string;
+  postcode: string;
+  week_ending: string;
   total_quantity: number;
-  recipe_count: number;
+  order_count: number;
   unit: string;
-  avg_cost: number | null;
-  inventory_quantity: number;
+  avg_price_paid: number | null;
 }
 
 /**
- * Aggregates ingredient demand from:
- * - recipe_ingredients (what recipes need)
- * - ingredients (master list with costs)
- * - inventory (current stock levels)
- * 
- * NO account/user information is exposed - only items, quantities, and categories
+ * Reads anonymized demand data from the demand_insights table.
+ * NO org/user/recipe information is exposed — only categories, postcodes, quantities.
  */
 export const useMarketplaceDemand = () => {
   return useQuery({
     queryKey: ["marketplace-demand"],
     queryFn: async () => {
-      // Fetch recipe ingredients with ingredient details
-      const { data: recipeIngredients, error: riError } = await supabase
-        .from("recipe_ingredients")
-        .select(`
-          quantity,
-          unit,
-          ingredient_id,
-          ingredients!inner (
-            id,
-            name,
-            category,
-            unit,
-            cost_per_unit
-          )
-        `);
+      const { data, error } = await supabase
+        .from("demand_insights")
+        .select("*")
+        .order("total_quantity", { ascending: false });
 
-      if (riError) throw riError;
-
-      // Fetch inventory for stock levels
-      const { data: inventory, error: invError } = await supabase
-        .from("inventory")
-        .select("ingredient_id, quantity, unit");
-
-      if (invError) throw invError;
-
-      // Create inventory lookup by ingredient_id
-      const inventoryMap = new Map<string, number>();
-      inventory?.forEach((item) => {
-        if (item.ingredient_id) {
-          const current = inventoryMap.get(item.ingredient_id) || 0;
-          inventoryMap.set(item.ingredient_id, current + Number(item.quantity || 0));
-        }
-      });
-
-      // Aggregate demand by ingredient
-      const demandMap = new Map<string, {
-        ingredient_name: string;
-        category: string;
-        total_quantity: number;
-        recipe_count: number;
-        unit: string;
-        costs: number[];
-        inventory_quantity: number;
-      }>();
-
-      recipeIngredients?.forEach((ri) => {
-        const ingredient = ri.ingredients as unknown as {
-          id: string;
-          name: string;
-          category: string;
-          unit: string;
-          cost_per_unit: number | null;
-        };
-
-        if (!ingredient) return;
-
-        const key = ingredient.id;
-        const existing = demandMap.get(key);
-
-        if (existing) {
-          existing.total_quantity += Number(ri.quantity) || 0;
-          existing.recipe_count += 1;
-          if (ingredient.cost_per_unit) {
-            existing.costs.push(Number(ingredient.cost_per_unit));
-          }
-        } else {
-          demandMap.set(key, {
-            ingredient_name: ingredient.name,
-            category: ingredient.category || "Other",
-            total_quantity: Number(ri.quantity) || 0,
-            recipe_count: 1,
-            unit: ri.unit || ingredient.unit || "kg",
-            costs: ingredient.cost_per_unit ? [Number(ingredient.cost_per_unit)] : [],
-            inventory_quantity: inventoryMap.get(ingredient.id) || 0,
-          });
-        }
-      });
-
-      // Convert to array and calculate averages
-      const result: IngredientDemand[] = Array.from(demandMap.entries()).map(([id, data]) => ({
-        id,
-        ingredient_name: data.ingredient_name,
-        category: data.category,
-        total_quantity: data.total_quantity,
-        recipe_count: data.recipe_count,
-        unit: data.unit,
-        avg_cost: data.costs.length > 0 
-          ? data.costs.reduce((a, b) => a + b, 0) / data.costs.length 
-          : null,
-        inventory_quantity: data.inventory_quantity,
-      }));
-
-      // Sort by total quantity descending
-      return result.sort((a, b) => b.total_quantity - a.total_quantity);
+      if (error) throw error;
+      return (data || []) as DemandInsight[];
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
   });
 };
 
@@ -127,25 +36,25 @@ export const useMarketplaceDemand = () => {
  * Aggregates demand by category for high-level insights
  */
 export const useCategoryDemand = () => {
-  const { data: ingredients, isLoading, error } = useMarketplaceDemand();
+  const { data: insights, isLoading, error } = useMarketplaceDemand();
 
-  const categoryData = ingredients?.reduce((acc, item) => {
-    const existing = acc.find((c) => c.category === item.category);
+  const categoryData = insights?.reduce((acc, item) => {
+    const existing = acc.find((c) => c.category === item.ingredient_category);
     if (existing) {
       existing.total_quantity += item.total_quantity;
-      existing.recipe_count += item.recipe_count;
-      existing.ingredient_count += 1;
+      existing.order_count += item.order_count;
+      existing.postcode_count += 1;
     } else {
       acc.push({
-        category: item.category,
+        category: item.ingredient_category,
         total_quantity: item.total_quantity,
-        recipe_count: item.recipe_count,
-        ingredient_count: 1,
+        order_count: item.order_count,
+        postcode_count: 1,
         unit: item.unit,
       });
     }
     return acc;
-  }, [] as { category: string; total_quantity: number; recipe_count: number; ingredient_count: number; unit: string }[]);
+  }, [] as { category: string; total_quantity: number; order_count: number; postcode_count: number; unit: string }[]);
 
   return {
     data: categoryData?.sort((a, b) => b.total_quantity - a.total_quantity),

@@ -2912,6 +2912,7 @@ export type Database = {
         Returns: boolean
       }
       is_vendor: { Args: { _user_id: string }; Returns: boolean }
+      refresh_demand_insights: { Args: never; Returns: number }
       sync_inventory_from_ingredients: { Args: never; Returns: number }
     }
     Enums: {
