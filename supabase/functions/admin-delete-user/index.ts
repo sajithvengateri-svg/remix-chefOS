@@ -97,6 +97,31 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (action === "create_admin") {
+      const { password, full_name } = await req.json().catch(() => ({}));
+      const adminEmail = email;
+      const adminPassword = password || "Admin123!";
+      const adminName = full_name || "Master Admin";
+
+      // Create auth user with auto-confirm
+      const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
+        email: adminEmail,
+        password: adminPassword,
+        email_confirm: true,
+        user_metadata: { full_name: adminName },
+      });
+      if (createErr) throw new Error(`Create user failed: ${createErr.message}`);
+
+      // The handle_new_user trigger will create profile, org, etc.
+      // Just add the admin role
+      await supabase.from("user_roles").insert({ user_id: newUser.user.id, role: "admin" });
+
+      return new Response(
+        JSON.stringify({ success: true, message: `Admin ${adminEmail} created`, userId: newUser.user.id }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     throw new Error("Unknown action");
   } catch (error) {
     return new Response(

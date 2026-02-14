@@ -32,6 +32,7 @@ import More from "./pages/More";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import PortalSelect from "./pages/PortalSelect";
+import ResetPassword from "./pages/ResetPassword";
 import Team from "./pages/Team";
 import Marketplace from "./pages/Marketplace";
 import KitchenSections from "./pages/KitchenSections";
@@ -81,6 +82,7 @@ const App = () => (
 
               {/* ========== CHEF PORTAL ========== */}
               <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<ProtectedRoute module="dashboard"><Dashboard /></ProtectedRoute>} />
               <Route path="/recipes" element={<ProtectedRoute module="recipes"><Recipes /></ProtectedRoute>} />
               <Route path="/recipes/new" element={<ProtectedRoute module="recipes"><RecipeEdit /></ProtectedRoute>} />

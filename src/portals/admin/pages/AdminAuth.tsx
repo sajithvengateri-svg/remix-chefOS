@@ -91,12 +91,19 @@
                    />
                  </div>
                </div>
-               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                 {isSubmitting ? "Authenticating..." : "Access Control Center"}
-               </Button>
-               <p className="text-xs text-muted-foreground text-center">
-                 Restricted access. Admin credentials required.
-               </p>
+                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  {isSubmitting ? "Authenticating..." : "Access Control Center"}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/reset-password?portal=admin")}
+                  className="text-xs text-primary hover:underline w-full text-center mt-2"
+                >
+                  Forgot password?
+                </button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Restricted access. Admin credentials required.
+                </p>
              </form>
            </CardContent>
          </Card>
