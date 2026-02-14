@@ -27,65 +27,52 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useNavOrder } from "@/hooks/useNavOrder";
+
 
 interface SidebarProps {
   className?: string;
 }
 
-const mainNavItems = [
+// Launch-ready core modules (no badges)
+const coreNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", module: "dashboard" },
-  { path: "/recipes", icon: ChefHat, label: "Recipe Bank", module: "recipes" },
-  { path: "/menu-engineering", icon: Menu, label: "Menu Engineering", module: "menu-engineering" },
-  { path: "/ingredients", icon: Utensils, label: "Ingredients", module: "ingredients" },
-  { path: "/invoices", icon: Receipt, label: "Invoices", module: "invoices" },
-  { path: "/inventory", icon: Package, label: "Inventory", module: "inventory" },
   { path: "/prep", icon: ClipboardList, label: "Prep Lists", module: "prep" },
-  { path: "/production", icon: Factory, label: "Production", module: "production" },
-  { path: "/marketplace", icon: Store, label: "Marketplace", module: "marketplace" },
-  { path: "/allergens", icon: AlertTriangle, label: "Allergens", module: "allergens" },
-];
-
-const secondaryNavItems = [
-  { path: "/roster", icon: Users, label: "Roster", module: "roster" },
-  { path: "/calendar", icon: Calendar, label: "Calendar", module: "calendar" },
-  { path: "/kitchen-sections", icon: LayoutGrid, label: "Kitchen Sections", module: "calendar" },
+  { path: "/recipes", icon: ChefHat, label: "Recipe Bank", module: "recipes" },
+  { path: "/ingredients", icon: Utensils, label: "Costing", module: "ingredients" },
+  { path: "/invoices", icon: Receipt, label: "Invoices", module: "invoices" },
+  { path: "/menu-engineering", icon: Menu, label: "Menu Engineering", module: "menu-engineering" },
   { path: "/equipment", icon: Wrench, label: "Equipment", module: "equipment" },
-  { path: "/cheatsheets", icon: BookOpen, label: "Cheatsheets", module: "cheatsheets" },
-  { path: "/food-safety", icon: Shield, label: "Food Safety", module: "food-safety" },
-  { path: "/training", icon: GraduationCap, label: "Training", module: "training" },
   { path: "/team", icon: Users, label: "Team", module: "team" },
 ];
 
-const defaultMainPaths = mainNavItems.map(item => item.path);
-const defaultSecondaryPaths = secondaryNavItems.map(item => item.path);
+// Coming Soon modules (muted with badge)
+const comingSoonNavItems = [
+  { path: "/inventory", icon: Package, label: "Inventory", module: "inventory" },
+  { path: "/production", icon: Factory, label: "Production", module: "production" },
+  { path: "/marketplace", icon: Store, label: "Marketplace", module: "marketplace" },
+  { path: "/allergens", icon: AlertTriangle, label: "Allergens", module: "allergens" },
+  { path: "/roster", icon: Users, label: "Roster", module: "roster" },
+  { path: "/calendar", icon: Calendar, label: "Calendar", module: "calendar" },
+  { path: "/kitchen-sections", icon: LayoutGrid, label: "Kitchen Sections", module: "calendar" },
+  { path: "/cheatsheets", icon: BookOpen, label: "Cheatsheets", module: "cheatsheets" },
+  { path: "/food-safety", icon: Shield, label: "Food Safety", module: "food-safety" },
+  { path: "/training", icon: GraduationCap, label: "Training", module: "training" },
+];
+
 
 const Sidebar = ({ className }: SidebarProps) => {
   const location = useLocation();
   const { profile, role, canView, signOut, isHeadChef } = useAuth();
 
-  const { mainNavOrder, secondaryNavOrder } = useNavOrder(defaultMainPaths, defaultSecondaryPaths);
+  // Core items filtered by permissions
+  const filteredCoreItems = useMemo(() => {
+    return coreNavItems.filter(item => canView(item.module));
+  }, [canView]);
 
-  // Sort items based on saved order
-  const sortedMainItems = useMemo(() => {
-    return [...mainNavItems]
-      .filter(item => canView(item.module))
-      .sort((a, b) => {
-        const indexA = mainNavOrder.indexOf(a.path);
-        const indexB = mainNavOrder.indexOf(b.path);
-        return indexA - indexB;
-      });
-  }, [mainNavOrder, canView]);
-
-  const sortedSecondaryItems = useMemo(() => {
-    return [...secondaryNavItems]
-      .filter(item => canView(item.module))
-      .sort((a, b) => {
-        const indexA = secondaryNavOrder.indexOf(a.path);
-        const indexB = secondaryNavOrder.indexOf(b.path);
-        return indexA - indexB;
-      });
-  }, [secondaryNavOrder, canView]);
+  // Coming soon items
+  const filteredComingSoonItems = useMemo(() => {
+    return comingSoonNavItems;
+  }, []);
 
   const NavLink = ({ path, icon: Icon, label }: { path: string; icon: typeof LayoutDashboard; label: string }) => {
     const isActive = location.pathname === path || 
@@ -143,19 +130,29 @@ const Sidebar = ({ className }: SidebarProps) => {
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         <div className="mb-6">
           <p className="px-4 mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Main
+            Core
           </p>
-          {sortedMainItems.map((item) => (
+          {filteredCoreItems.map((item) => (
             <NavLink key={item.path} path={item.path} icon={item.icon} label={item.label} />
           ))}
         </div>
 
         <div>
           <p className="px-4 mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Operations
+            Coming Soon
           </p>
-          {sortedSecondaryItems.map((item) => (
-            <NavLink key={item.path} path={item.path} icon={item.icon} label={item.label} />
+          {filteredComingSoonItems.map((item) => (
+            <Link
+              key={item.path}
+              to={item.path}
+              className="nav-item opacity-50 pointer-events-none flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <item.icon className="w-5 h-5" />
+                <span>{item.label}</span>
+              </div>
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Soon</Badge>
+            </Link>
           ))}
         </div>
       </nav>

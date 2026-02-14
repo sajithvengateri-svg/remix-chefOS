@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Upload, Camera } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import InvoiceScannerDialog from "@/components/inventory/InvoiceScannerDialog";
+import RecentScans from "@/components/invoices/RecentScans";
 
 const Invoices = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -78,6 +79,15 @@ const Invoices = () => {
               <p>Ingredient costs update across all recipes</p>
             </div>
           </div>
+        </motion.div>
+
+        {/* Recent Scans History */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <RecentScans />
         </motion.div>
       </div>
 
