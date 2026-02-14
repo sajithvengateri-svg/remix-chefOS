@@ -1,46 +1,111 @@
 
 
-# Kitchen Wall: Time-Based Delete Permissions
+# Master Plan: Bottom Nav Carousel + Admin Updates Tab
 
-## What Changes
+## Summary
 
-Currently, only the post author sees the delete button (three-dot menu). We need to update this so:
+Three changes bundled together:
 
-- **Anyone** can delete their own post **within 5 minutes** of posting
-- **After 5 minutes**, only **Head Chefs / Owners / Admins** can delete any post
-- The delete button shows contextual text: "Delete" within the window, "Delete (Admin)" for head chefs on older posts
+1. **Bottom Nav** -- Replace the popup "More" menu with a flat horizontal scrollable carousel showing 7 active items
+2. **Admin Updates Tab** -- New page in the Control Centre to track feature releases and improvements to existing modules
+3. **Database** -- New `feature_releases` table to persist release planning data
 
-## Implementation
+---
 
-### 1. Update TeamFeed.tsx -- Delete Visibility Logic
+## Part 1: Bottom Nav Carousel
 
-Replace the simple `isOwnPost` check with a function that determines delete eligibility:
+Replace the current popup-style secondary strip with a single scrollable row of 7 items. No "More" button, no popup.
 
+**The 7 items:**
+Home | Prep | Recipes | Costing | Menu | Equipment | Teams
+
+### Changes to `src/hooks/useBottomNavPrefs.ts`
+- Update `allNavItems` to only include the 7 active carousel items (remove all "Coming Soon" modules)
+- Change `defaultPrimaryPaths` to all 7 paths
+- Remove the "exactly 5" constraint -- allow 7 items
+- Remove `secondaryItems` logic (no longer needed)
+
+### Changes to `src/components/layout/BottomNav.tsx`
+- Remove `showSecondary` state and the "More" toggle button entirely
+- Remove the secondary popup strip
+- Replace the fixed `flex` layout with `flex overflow-x-auto` so items scroll horizontally
+- Render all 7 `primaryItems` in a single scrollable row
+- Each item keeps the existing active indicator (dot + scale) and branded Home icon
+
+---
+
+## Part 2: Database -- `feature_releases` Table
+
+New table to track both unreleased modules and improvements to live features.
+
+```text
+feature_releases
+  id              uuid, PK, default gen_random_uuid()
+  module_slug     text, NOT NULL
+  module_name     text, NOT NULL
+  description     text, nullable
+  status          text, DEFAULT 'development' (development | beta | released)
+  release_type    text, DEFAULT 'new' (new | improvement)
+  target_release  text, nullable (e.g. 'March 2026')
+  release_notes   text, nullable
+  sort_order      integer, DEFAULT 0
+  released_at     timestamptz, nullable
+  created_at      timestamptz, DEFAULT now()
+  updated_at      timestamptz, DEFAULT now()
 ```
-canDeletePost(post):
-  - If user is head chef/owner -> always true
-  - If post is user's own AND posted less than 5 minutes ago -> true
-  - Otherwise -> false
-```
 
-Import `isHeadChef` from `useAuth()` and use it alongside a time check using `differenceInMinutes` from date-fns (already imported).
+**RLS Policies:**
+- Admins: full access (ALL)
+- Authenticated users: read-only (SELECT)
 
-The three-dot menu with the Delete option will appear for anyone who passes this check, not just the post owner.
+**Seed data** -- 10 "Coming Soon" modules pre-populated as `release_type = 'new'`, `status = 'development'`:
+Inventory, Production, Marketplace, Allergens, Roster, Calendar, Kitchen Sections, Cheatsheets, Food Safety, Training
 
-### 2. Database: Add RLS Policy for Time-Based Delete
+Plus 3 example improvement tickets for live modules (`release_type = 'improvement'`):
+- Recipes: Batch duplicate recipes
+- Prep Lists: Drag-to-reorder items
+- Costing: Supplier comparison view
 
-Add a new RLS policy that allows any authenticated user to delete posts within 5 minutes. This complements the existing "Users can delete their own posts" policy:
+---
 
-- Keep existing policy: own posts can always be deleted (we'll restrict via UI)
-- The existing "Head chefs can manage all posts" FOR ALL policy already covers admin deletion
+## Part 3: Admin Updates Page
 
-No new RLS migration needed -- the existing policies already allow:
-- Users deleting their own posts (any time via RLS, but UI restricts to 5 min)
-- Head chefs deleting any post
+New page at `/admin/updates` with two tabs for managing the release roadmap.
 
-### Files Modified
-- `src/components/feed/TeamFeed.tsx` -- Update delete button visibility logic to use time-based + role-based check
+### Tab 1: New Modules
+- Card grid showing each "Coming Soon" module
+- Each card displays: module name, description, current status badge, target release date
+- Status toggle buttons: Development -> Beta -> Released
+- Target release text input (e.g. "March 2026")
+- Release notes textarea
+- When toggled to "Released", `released_at` is set automatically
 
-### No Database Changes Required
-The existing RLS policies already support the needed access patterns. The 5-minute restriction is enforced at the UI level as a UX guardrail (the user technically "owns" the post, so RLS allows deletion).
+### Tab 2: Feature Improvements
+- List of improvement tickets grouped by module
+- "Add Improvement" button opens inline form: module selector, description, target release, status
+- Each entry shows status badge + target date
+- Safe by design -- only reads/writes to `feature_releases`, never touches customer data tables
+
+### Admin Sidebar Update
+Add "Updates" nav item with `RefreshCw` icon between "Email Templates" and "Analytics" in the admin sidebar.
+
+### App Router Update
+Add route `/admin/updates` pointing to `AdminUpdates` component, import added to `App.tsx`.
+
+---
+
+## Files Summary
+
+### New Files
+1. `supabase/migrations/[timestamp]_feature_releases.sql` -- table, RLS policies, seed data
+2. `src/portals/admin/pages/AdminUpdates.tsx` -- the Updates management page with two tabs
+
+### Modified Files
+1. `src/components/layout/BottomNav.tsx` -- flat 7-item scrollable carousel, remove popup
+2. `src/hooks/useBottomNavPrefs.ts` -- 7 active items, remove secondary logic
+3. `src/portals/admin/components/AdminSidebar.tsx` -- add "Updates" nav item
+4. `src/App.tsx` -- add AdminUpdates import and route
+
+### Data Safety
+The `feature_releases` table is a standalone planning tool. It never reads from or writes to customer data tables (recipes, ingredients, prep_lists, etc.). All mutations are admin-only via RLS. This gives you a safe system to plan, track, and push feature updates on your own schedule.
 
