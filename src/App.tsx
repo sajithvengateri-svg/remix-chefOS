@@ -62,6 +62,7 @@ import AdminSeedData from "./portals/admin/pages/AdminSeedData";
 import AdminLauncher from "./portals/admin/pages/AdminLauncher";
 import AdminOrganizations from "./portals/admin/pages/AdminOrganizations";
 import AdminEmailTemplates from "./portals/admin/pages/AdminEmailTemplates";
+import AdminUpdates from "./portals/admin/pages/AdminUpdates";
 
 const queryClient = new QueryClient();
 
@@ -132,6 +133,7 @@ const App = () => (
                 <Route path="launcher" element={<AdminLauncher />} />
                 <Route path="organizations" element={<AdminOrganizations />} />
                 <Route path="email-templates" element={<AdminEmailTemplates />} />
+                <Route path="updates" element={<AdminUpdates />} />
                 <Route path="settings" element={<AdminSettings />} />
               </Route>
 

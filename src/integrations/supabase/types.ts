@@ -474,6 +474,51 @@ export type Database = {
           },
         ]
       }
+      feature_releases: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          module_name: string
+          module_slug: string
+          release_notes: string | null
+          release_type: string
+          released_at: string | null
+          sort_order: number
+          status: string
+          target_release: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          module_name: string
+          module_slug: string
+          release_notes?: string | null
+          release_type?: string
+          released_at?: string | null
+          sort_order?: number
+          status?: string
+          target_release?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          module_name?: string
+          module_slug?: string
+          release_notes?: string | null
+          release_type?: string
+          released_at?: string | null
+          sort_order?: number
+          status?: string
+          target_release?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       food_safety_logs: {
         Row: {
           ai_verification_notes: string | null

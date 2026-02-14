@@ -14,6 +14,7 @@ import {
   Tag,
   Building2,
   Mail,
+  RefreshCw,
 } from "lucide-react";
  import { cn } from "@/lib/utils";
  import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -26,6 +27,7 @@ const navItems = [
   { title: "Vendor Deals", href: "/admin/vendor-deals", icon: Tag },
   { title: "CRM", href: "/admin/crm", icon: Users },
   { title: "Email Templates", href: "/admin/email-templates", icon: Mail },
+  { title: "Updates", href: "/admin/updates", icon: RefreshCw },
   { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { title: "Marketing", href: "/admin/marketing", icon: Megaphone },
   { title: "Testing", href: "/admin/testing", icon: TestTube },
