@@ -5,7 +5,7 @@ import {
   BarChart3,
   Loader2,
   AlertCircle,
-  Warehouse
+  MapPin
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -31,7 +31,7 @@ interface LiveDemandPanelProps {
 }
 
 const LiveDemandPanel = ({ className, maxItems = 15 }: LiveDemandPanelProps) => {
-  const { data: ingredients, isLoading, error } = useMarketplaceDemand();
+  const { data: insights, isLoading, error } = useMarketplaceDemand();
   const { data: categories } = useCategoryDemand();
 
   if (isLoading) {
@@ -55,7 +55,7 @@ const LiveDemandPanel = ({ className, maxItems = 15 }: LiveDemandPanelProps) => 
     );
   }
 
-  if (!ingredients || ingredients.length === 0) {
+  if (!insights || insights.length === 0) {
     return (
       <div className={cn("card-elevated p-6", className)}>
         <div className="text-center py-8">
@@ -69,8 +69,8 @@ const LiveDemandPanel = ({ className, maxItems = 15 }: LiveDemandPanelProps) => 
     );
   }
 
-  const displayedIngredients = ingredients.slice(0, maxItems);
-  const maxQuantity = Math.max(...displayedIngredients.map(i => i.total_quantity), 1);
+  const displayedInsights = insights.slice(0, maxItems);
+  const maxQuantity = Math.max(...displayedInsights.map(i => i.total_quantity), 1);
 
   return (
     <div className={cn("card-elevated p-6", className)}>
@@ -78,28 +78,28 @@ const LiveDemandPanel = ({ className, maxItems = 15 }: LiveDemandPanelProps) => 
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold">Live Ingredient Demand</h3>
+          <h3 className="font-semibold">Live Demand Insights</h3>
         </div>
         <Badge variant="secondary" className="text-xs">
-          {ingredients.length} ingredients tracked
+          {insights.length} data points
         </Badge>
       </div>
 
-      <Tabs defaultValue="ingredients" className="space-y-4">
+      <Tabs defaultValue="category" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="ingredients" className="gap-2">
-            <Package className="w-4 h-4" />
-            By Ingredient
-          </TabsTrigger>
           <TabsTrigger value="category" className="gap-2">
             <BarChart3 className="w-4 h-4" />
             By Category
           </TabsTrigger>
+          <TabsTrigger value="postcode" className="gap-2">
+            <MapPin className="w-4 h-4" />
+            By Postcode
+          </TabsTrigger>
         </TabsList>
 
-        {/* Ingredients View */}
-        <TabsContent value="ingredients" className="space-y-3">
-          {displayedIngredients.map((item, index) => (
+        {/* Postcode View */}
+        <TabsContent value="postcode" className="space-y-3">
+          {displayedInsights.map((item, index) => (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, x: -10 }}
@@ -112,19 +112,19 @@ const LiveDemandPanel = ({ className, maxItems = 15 }: LiveDemandPanelProps) => 
                   <div 
                     className={cn(
                       "w-3 h-3 rounded-full",
-                      categoryColors[item.category] || "bg-gray-500"
+                      categoryColors[item.ingredient_category] || "bg-gray-500"
                     )} 
                   />
                   <span className="text-sm font-medium truncate max-w-[200px]">
-                    {item.ingredient_name}
+                    {item.ingredient_category}
                   </span>
                   <Badge variant="outline" className="text-xs">
-                    {item.category}
+                    {item.postcode}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <span className="text-muted-foreground">
-                    {item.recipe_count} {item.recipe_count === 1 ? 'recipe' : 'recipes'}
+                    {item.order_count} {item.order_count === 1 ? 'order' : 'orders'}
                   </span>
                   <span className="font-mono font-medium">
                     {item.total_quantity.toLocaleString(undefined, { maximumFractionDigits: 2 })} {item.unit}
@@ -140,20 +140,16 @@ const LiveDemandPanel = ({ className, maxItems = 15 }: LiveDemandPanelProps) => 
                   transition={{ delay: index * 0.03 + 0.1, duration: 0.4 }}
                   className={cn(
                     "h-full rounded-full",
-                    categoryColors[item.category] || "bg-gray-500"
+                    categoryColors[item.ingredient_category] || "bg-gray-500"
                   )}
                 />
               </div>
 
               {/* Hover details */}
               <div className="hidden group-hover:flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                {item.avg_cost && (
-                  <span>Avg cost: ${item.avg_cost.toFixed(2)}/{item.unit}</span>
+                {item.avg_price_paid && (
+                  <span>Avg price: ${Number(item.avg_price_paid).toFixed(2)}/{item.unit}</span>
                 )}
-                <span className="flex items-center gap-1">
-                  <Warehouse className="w-3 h-3" />
-                  Stock: {item.inventory_quantity.toLocaleString(undefined, { maximumFractionDigits: 2 })} {item.unit}
-                </span>
               </div>
             </motion.div>
           ))}
@@ -183,7 +179,7 @@ const LiveDemandPanel = ({ className, maxItems = 15 }: LiveDemandPanelProps) => 
                   </div>
                   <div className="flex items-center gap-3 text-sm">
                     <span className="text-muted-foreground">
-                      {cat.ingredient_count} items
+                      {cat.postcode_count} areas
                     </span>
                     <span className="font-mono font-medium">
                       {cat.total_quantity.toLocaleString(undefined, { maximumFractionDigits: 2 })} {cat.unit}
@@ -211,7 +207,7 @@ const LiveDemandPanel = ({ className, maxItems = 15 }: LiveDemandPanelProps) => 
       {/* Privacy Notice */}
       <div className="mt-6 pt-4 border-t border-border">
         <p className="text-xs text-muted-foreground">
-          Data shows aggregated ingredient quantities from recipes. No account or business information is shared.
+          Data shows aggregated demand by category and postcode. No account or business information is shared.
         </p>
       </div>
     </div>
