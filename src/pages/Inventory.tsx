@@ -26,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format, differenceInDays } from "date-fns";
@@ -58,6 +59,7 @@ const units = ["kg", "g", "L", "ml", "lb", "oz", "each", "bunch", "case"];
 
 const Inventory = () => {
   const { canEdit } = useAuth();
+  const { currentOrg } = useOrg();
   const { locations, loading: locationsLoading, refetch: refetchLocations } = useInventoryLocations();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -165,6 +167,7 @@ const Inventory = () => {
         batch_number: formData.batch_number || null,
         min_stock: formData.min_stock,
         received_date: new Date().toISOString().split("T")[0],
+        org_id: currentOrg?.id,
       });
 
       if (error) {

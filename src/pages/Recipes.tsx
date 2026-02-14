@@ -29,6 +29,7 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import { useRecipeSections } from "@/hooks/useRecipeSections";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,7 @@ const ingredientUnits = ["g", "kg", "ml", "L", "each", "bunch", "tbsp", "tsp", "
 const Recipes = () => {
   const navigate = useNavigate();
   const { user, canEdit } = useAuth();
+  const { currentOrg } = useOrg();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [showCalculator, setShowCalculator] = useState(false);
@@ -186,6 +188,7 @@ const Recipes = () => {
         created_by: user?.id,
         ingredients: ingredientsJson,
         is_public: true,
+        org_id: currentOrg?.id,
       });
 
       if (error) {

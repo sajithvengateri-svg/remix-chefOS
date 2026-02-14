@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import { toast } from "sonner";
 
 interface Cheatsheet {
@@ -72,6 +73,7 @@ const categoryOptions = ["Sous Vide", "Oven", "Steam", "Sauces", "Prep", "Genera
 
 const CookingCheatsheets = () => {
   const { canEdit } = useAuth();
+  const { currentOrg } = useOrg();
   const [searchQuery, setSearchQuery] = useState("");
   const [cheatsheets, setCheatsheets] = useState<Cheatsheet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,6 +149,7 @@ const CookingCheatsheets = () => {
       title: d.item,
       category: d.category,
       content: JSON.stringify({ temp: d.temp, time: d.time, notes: d.notes }),
+      org_id: currentOrg?.id,
     }));
 
     await supabase.from("cheatsheets").insert(toInsert);
@@ -207,6 +210,7 @@ const CookingCheatsheets = () => {
         title: formData.title,
         category: formData.category,
         content: formData.content,
+        org_id: currentOrg?.id,
       });
 
       if (error) {
@@ -252,6 +256,7 @@ const CookingCheatsheets = () => {
         title: chartFormData.item,
         category: chartFormData.category,
         content: content,
+        org_id: currentOrg?.id,
       });
 
       if (error) {
