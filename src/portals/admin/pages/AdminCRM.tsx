@@ -11,15 +11,41 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Users, Building2, Search, ChefHat, UserPlus, Gift,
-  Award, Trophy, Crown, Copy, Check, TrendingUp,
+  Award, Trophy, Crown, Copy, Check, TrendingUp, Trash2, Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 const AdminCRM = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+
+  const handleDeleteUser = async (email: string) => {
+    setDeletingUserId(email);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke("admin-delete-user", {
+        body: { action: "delete_user", email },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Failed");
+      toast.success(data.message);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-signup-events"] });
+    } catch (err: any) {
+      toast.error(`Delete failed: ${err.message}`);
+    }
+    setDeletingUserId(null);
+  };
 
   // ---- Users ----
   const { data: users, isLoading: usersLoading } = useQuery({
@@ -257,6 +283,7 @@ const AdminCRM = () => {
                         <TableHead>Role</TableHead>
                         <TableHead>Referral Code</TableHead>
                         <TableHead>Joined</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -302,6 +329,41 @@ const AdminCRM = () => {
                             </TableCell>
                             <TableCell>
                               {format(new Date(user.created_at), "MMM d, yyyy")}
+                            </TableCell>
+                            <TableCell>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                                    disabled={deletingUserId === user.email}
+                                  >
+                                    {deletingUserId === user.email ? (
+                                      <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-4 h-4" />
+                                    )}
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete user completely?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will permanently delete <strong>{user.full_name}</strong> ({user.email}) — auth account, profile, roles, memberships, and all related data. This cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={() => handleDeleteUser(user.email)}
+                                    >
+                                      Delete Forever
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </TableCell>
                           </TableRow>
                         );
