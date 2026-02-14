@@ -6,7 +6,8 @@ import {
   Menu,
   Wrench,
   Users2,
-  Home
+  Home,
+  Utensils
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import chefOSIcon from "@/assets/chefos-icon.png";
@@ -24,6 +25,7 @@ const iconMap: Record<string, React.ElementType> = {
   Menu,
   Wrench,
   Users2,
+  Utensils,
 };
 
 const BottomNav = ({ className }: BottomNavProps) => {
