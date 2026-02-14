@@ -2393,6 +2393,7 @@ export type Database = {
           id: string
           image_url: string | null
           linked_prep_list_id: string | null
+          org_id: string | null
           post_type: string
           updated_at: string
           user_avatar_url: string | null
@@ -2405,6 +2406,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           linked_prep_list_id?: string | null
+          org_id?: string | null
           post_type?: string
           updated_at?: string
           user_avatar_url?: string | null
@@ -2417,6 +2419,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           linked_prep_list_id?: string | null
+          org_id?: string | null
           post_type?: string
           updated_at?: string
           user_avatar_url?: string | null
@@ -2429,6 +2432,13 @@ export type Database = {
             columns: ["linked_prep_list_id"]
             isOneToOne: false
             referencedRelation: "prep_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_posts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
