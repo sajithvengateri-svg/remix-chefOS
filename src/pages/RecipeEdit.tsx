@@ -25,6 +25,7 @@ import { useRecipeCCPs } from "@/hooks/useRecipeCCPs";
 import { useRecipeSections } from "@/hooks/useRecipeSections";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import { toast } from "sonner";
 
 interface Recipe {
@@ -112,6 +113,7 @@ const RecipeEdit = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, canEdit } = useAuth();
+  const { currentOrg } = useOrg();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -161,6 +163,7 @@ const RecipeEdit = () => {
         food_cost_low_alert: 20,
         food_cost_high_alert: 35,
         created_by: user?.id,
+        org_id: currentOrg?.id,
         is_public: true,
       })
       .select()
