@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { 
   Plus,
@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format, isBefore, addDays, getMonth, getYear, isSameMonth } from "date-fns";
@@ -48,7 +49,8 @@ const eventTypes = [
 ];
 
 const OperationsCalendar = () => {
-  const { user, canEdit } = useAuth();
+  const { user, profile, canEdit } = useAuth();
+  const { currentOrg } = useOrg();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -73,6 +75,47 @@ const OperationsCalendar = () => {
   });
 
   const hasEditPermission = canEdit("calendar");
+  const alertsPostedRef = useRef(false);
+
+  // Post calendar alerts to the Kitchen Wall
+  const postAlertsToWall = async (alertEvents: CalendarEvent[]) => {
+    if (!user?.id || !currentOrg?.id || alertEvents.length === 0) return;
+
+    // Check which events have already been posted today to avoid duplicates
+    const today = new Date().toISOString().split("T")[0];
+    const { data: existingPosts } = await supabase
+      .from("team_posts")
+      .select("content")
+      .eq("org_id", currentOrg.id)
+      .eq("post_type", "maintenance_request")
+      .gte("created_at", `${today}T00:00:00Z`);
+
+    const postedTitles = new Set(
+      (existingPosts || []).map(p => p.content).filter(Boolean)
+    );
+
+    const typeLabels: Record<string, string> = {
+      maintenance: "🔧 Maintenance",
+      license: "📄 License Renewal",
+      inspection: "🛡️ Inspection",
+      training: "📅 Training",
+      other: "📌 Calendar",
+    };
+
+    for (const event of alertEvents) {
+      const alertContent = `${typeLabels[event.event_type] || "📌 Calendar"} Alert: ${event.title} — ${event.status === "overdue" ? "⚠️ OVERDUE" : "⏰ Due Soon"} (${format(new Date(event.date), "dd MMM yyyy")})${event.location ? ` • ${event.location}` : ""}`;
+      
+      if (postedTitles.has(alertContent)) continue;
+
+      await supabase.from("team_posts").insert({
+        user_id: user.id,
+        user_name: profile?.full_name || "System",
+        content: alertContent,
+        post_type: "maintenance_request",
+        org_id: currentOrg.id,
+      });
+    }
+  };
 
   useEffect(() => {
     fetchEvents();
@@ -105,6 +148,17 @@ const OperationsCalendar = () => {
         return { ...event, status } as CalendarEvent;
       });
       setEvents(updatedEvents);
+
+      // Auto-post overdue/due-soon alerts to the Kitchen Wall (once per session)
+      if (!alertsPostedRef.current) {
+        alertsPostedRef.current = true;
+        const alertEvents = updatedEvents.filter(
+          e => e.status === "overdue" || e.status === "due"
+        );
+        if (alertEvents.length > 0) {
+          postAlertsToWall(alertEvents);
+        }
+      }
     }
     setLoading(false);
   };
@@ -145,6 +199,7 @@ const OperationsCalendar = () => {
         location: formData.location || null,
         status: formData.status,
         created_by: user?.id,
+        org_id: currentOrg?.id,
       });
 
       if (error) {
@@ -153,6 +208,27 @@ const OperationsCalendar = () => {
         return;
       }
       toast.success("Event created");
+
+      // Post new event to Kitchen Wall
+      if (user?.id && currentOrg?.id) {
+        const typeLabels: Record<string, string> = {
+          maintenance: "🔧 Maintenance",
+          license: "📄 License Renewal",
+          inspection: "🛡️ Inspection",
+          training: "📅 Training",
+          other: "📌 Calendar",
+        };
+        const label = typeLabels[formData.event_type] || "📌 Calendar";
+        const wallContent = `${label}: ${formData.title} scheduled for ${format(new Date(formData.date), "dd MMM yyyy")}${formData.location ? ` • ${formData.location}` : ""}`;
+        
+        await supabase.from("team_posts").insert({
+          user_id: user.id,
+          user_name: profile?.full_name || "System",
+          content: wallContent,
+          post_type: "maintenance_request",
+          org_id: currentOrg.id,
+        });
+      }
     }
 
     resetForm();
