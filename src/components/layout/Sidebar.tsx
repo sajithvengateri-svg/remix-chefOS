@@ -27,14 +27,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { useFeatureReleases } from "@/hooks/useFeatureReleases";
 
 
 interface SidebarProps {
   className?: string;
 }
 
-// Launch-ready core modules (no badges)
-const coreNavItems = [
+// All possible nav items with their module slugs
+const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", module: "dashboard" },
   { path: "/prep", icon: ClipboardList, label: "Prep Lists", module: "prep" },
   { path: "/recipes", icon: ChefHat, label: "Recipe Bank", module: "recipes" },
@@ -43,17 +44,13 @@ const coreNavItems = [
   { path: "/menu-engineering", icon: Menu, label: "Menu Engineering", module: "menu-engineering" },
   { path: "/equipment", icon: Wrench, label: "Equipment", module: "equipment" },
   { path: "/team", icon: Users, label: "Team", module: "team" },
-];
-
-// Coming Soon modules (muted with badge)
-const comingSoonNavItems = [
   { path: "/inventory", icon: Package, label: "Inventory", module: "inventory" },
   { path: "/production", icon: Factory, label: "Production", module: "production" },
   { path: "/marketplace", icon: Store, label: "Marketplace", module: "marketplace" },
   { path: "/allergens", icon: AlertTriangle, label: "Allergens", module: "allergens" },
   { path: "/roster", icon: Users, label: "Roster", module: "roster" },
   { path: "/calendar", icon: Calendar, label: "Calendar", module: "calendar" },
-  { path: "/kitchen-sections", icon: LayoutGrid, label: "Kitchen Sections", module: "calendar" },
+  { path: "/kitchen-sections", icon: LayoutGrid, label: "Kitchen Sections", module: "kitchen-sections" },
   { path: "/cheatsheets", icon: BookOpen, label: "Cheatsheets", module: "cheatsheets" },
   { path: "/food-safety", icon: Shield, label: "Food Safety", module: "food-safety" },
   { path: "/training", icon: GraduationCap, label: "Training", module: "training" },
@@ -63,16 +60,29 @@ const comingSoonNavItems = [
 const Sidebar = ({ className }: SidebarProps) => {
   const location = useLocation();
   const { profile, role, canView, signOut, isHeadChef } = useAuth();
+  const { data: releases } = useFeatureReleases();
 
-  // Core items filtered by permissions
-  const filteredCoreItems = useMemo(() => {
-    return coreNavItems.filter(item => canView(item.module));
-  }, [canView]);
+  // Build a set of released module slugs
+  const releasedModules = useMemo(() => {
+    const set = new Set<string>();
+    releases?.forEach((r) => {
+      if (r.status === "released") set.add(r.module_slug);
+    });
+    return set;
+  }, [releases]);
 
-  // Coming soon items
-  const filteredComingSoonItems = useMemo(() => {
-    return comingSoonNavItems;
-  }, []);
+  // Split into released (active) vs coming soon based on feature_releases DB
+  const activeItems = useMemo(() => {
+    return allNavItems.filter(
+      (item) => releasedModules.has(item.module) && canView(item.module)
+    );
+  }, [releasedModules, canView]);
+
+  const comingSoonItems = useMemo(() => {
+    return allNavItems.filter(
+      (item) => !releasedModules.has(item.module)
+    );
+  }, [releasedModules]);
 
   const NavLink = ({ path, icon: Icon, label }: { path: string; icon: typeof LayoutDashboard; label: string }) => {
     const isActive = location.pathname === path || 
@@ -132,29 +142,31 @@ const Sidebar = ({ className }: SidebarProps) => {
           <p className="px-4 mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
             Core
           </p>
-          {filteredCoreItems.map((item) => (
+          {activeItems.map((item) => (
             <NavLink key={item.path} path={item.path} icon={item.icon} label={item.label} />
           ))}
         </div>
 
-        <div>
-          <p className="px-4 mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Coming Soon
-          </p>
-          {filteredComingSoonItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className="nav-item opacity-50 pointer-events-none flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3">
-                <item.icon className="w-5 h-5" />
-                <span>{item.label}</span>
-              </div>
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Soon</Badge>
-            </Link>
-          ))}
-        </div>
+        {comingSoonItems.length > 0 && (
+          <div>
+            <p className="px-4 mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              Coming Soon
+            </p>
+            {comingSoonItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className="nav-item opacity-50 pointer-events-none flex items-center justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <item.icon className="w-5 h-5" />
+                  <span>{item.label}</span>
+                </div>
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Soon</Badge>
+              </Link>
+            ))}
+          </div>
+        )}
       </nav>
 
       {/* Settings & Logout */}
