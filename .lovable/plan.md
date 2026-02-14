@@ -1,111 +1,95 @@
 
 
-# Master Plan: Bottom Nav Carousel + Admin Updates Tab
+# Demand Pipeline Fix + Brisbane Suburb Map
 
-## Summary
+## Problem Summary
+The VendorOS demand insights and Admin heatmap are showing zero data because:
+1. The `demand_insights` table is completely empty -- the database trigger only fires for recipes marked as "public", but recipes are now private by default (correct security behavior)
+2. The `useMarketplaceDemand` hook tries to query `recipe_ingredients` and `ingredients` directly, but RLS correctly blocks cross-org access for vendor users
+3. The Brisbane postcode map only has ~20 entries and needs full suburb coverage
 
-Three changes bundled together:
+## Solution
 
-1. **Bottom Nav** -- Replace the popup "More" menu with a flat horizontal scrollable carousel showing 7 active items
-2. **Admin Updates Tab** -- New page in the Control Centre to track feature releases and improvements to existing modules
-3. **Database** -- New `feature_releases` table to persist release planning data
+### 1. New Demand Aggregation Pipeline (Database)
+Instead of relying on the broken trigger, create a **database function** that aggregates anonymized ingredient demand into the `demand_insights` table. This function will:
+- Query `ingredients` table across ALL orgs (using `SECURITY DEFINER`)
+- Join with `org_venues` to get postcodes (hiding org identity)
+- Aggregate by category + postcode + week
+- Write results to `demand_insights`
+- Expose ZERO org/user identifiers
+
+A scheduled call or manual trigger from the admin panel will refresh this data.
+
+Additionally, update the existing `aggregate_demand_insights` trigger to also fire when ingredients are inserted/updated (not just recipe_ingredients), so the pipeline stays fresh automatically.
+
+### 2. Update VendorOS to Read from `demand_insights` (Not Raw Tables)
+Rewrite `useMarketplaceDemand.ts` so the vendor-facing hook reads from the `demand_insights` table (which vendors already have RLS SELECT access to) instead of trying to join `recipe_ingredients` + `ingredients` (which RLS correctly blocks).
+
+This means:
+- VendorOS sees aggregated category-level demand by postcode
+- No ingredient-level detail that could identify recipes
+- No org/user data exposed
+
+### 3. Add Brisbane Suburb Postcodes to Heatmap
+Expand the `postcodeCoords` map in `AdminHeatmap.tsx` with comprehensive Brisbane/SEQ suburb postcodes (4000-4179 range) to properly render the heatmap for Queensland-based orgs like FOCC.IT (4006) and Biri (4007).
+
+### 4. Seed Initial Demand Data
+Run the new aggregation function to populate `demand_insights` from the 3 existing ingredients across the 2 orgs, so vendors and admins see data immediately.
+
+### 5. Admin Dashboard Sync
+The Admin heatmap already reads from `demand_insights` -- once the table is populated, it will automatically display on the admin dashboard with no code changes needed.
 
 ---
 
-## Part 1: Bottom Nav Carousel
+## Technical Details
 
-Replace the current popup-style secondary strip with a single scrollable row of 7 items. No "More" button, no popup.
-
-**The 7 items:**
-Home | Prep | Recipes | Costing | Menu | Equipment | Teams
-
-### Changes to `src/hooks/useBottomNavPrefs.ts`
-- Update `allNavItems` to only include the 7 active carousel items (remove all "Coming Soon" modules)
-- Change `defaultPrimaryPaths` to all 7 paths
-- Remove the "exactly 5" constraint -- allow 7 items
-- Remove `secondaryItems` logic (no longer needed)
-
-### Changes to `src/components/layout/BottomNav.tsx`
-- Remove `showSecondary` state and the "More" toggle button entirely
-- Remove the secondary popup strip
-- Replace the fixed `flex` layout with `flex overflow-x-auto` so items scroll horizontally
-- Render all 7 `primaryItems` in a single scrollable row
-- Each item keeps the existing active indicator (dot + scale) and branded Home icon
-
----
-
-## Part 2: Database -- `feature_releases` Table
-
-New table to track both unreleased modules and improvements to live features.
-
-```text
-feature_releases
-  id              uuid, PK, default gen_random_uuid()
-  module_slug     text, NOT NULL
-  module_name     text, NOT NULL
-  description     text, nullable
-  status          text, DEFAULT 'development' (development | beta | released)
-  release_type    text, DEFAULT 'new' (new | improvement)
-  target_release  text, nullable (e.g. 'March 2026')
-  release_notes   text, nullable
-  sort_order      integer, DEFAULT 0
-  released_at     timestamptz, nullable
-  created_at      timestamptz, DEFAULT now()
-  updated_at      timestamptz, DEFAULT now()
+### Database Migration
+```sql
+-- Function to refresh demand insights from ingredients across all orgs
+CREATE OR REPLACE FUNCTION public.refresh_demand_insights()
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  refreshed integer := 0;
+  current_week_end date;
+BEGIN
+  current_week_end := date_trunc('week', CURRENT_DATE) + interval '6 days';
+  
+  -- Clear current week data and re-aggregate
+  DELETE FROM demand_insights WHERE week_ending = current_week_end;
+  
+  INSERT INTO demand_insights (ingredient_category, postcode, week_ending, total_quantity, order_count, unit, avg_price_paid)
+  SELECT 
+    i.category,
+    COALESCE(v.postcode, '0000'),
+    current_week_end,
+    SUM(COALESCE(ri.quantity, 0)),
+    COUNT(ri.id),
+    MODE() WITHIN GROUP (ORDER BY COALESCE(ri.unit, i.unit)),
+    AVG(i.cost_per_unit)
+  FROM ingredients i
+  LEFT JOIN recipe_ingredients ri ON ri.ingredient_id = i.id
+  LEFT JOIN org_venues v ON v.org_id = i.org_id
+  WHERE i.org_id IS NOT NULL
+  GROUP BY i.category, COALESCE(v.postcode, '0000'), current_week_end;
+  
+  GET DIAGNOSTICS refreshed = ROW_COUNT;
+  RETURN refreshed;
+END;
+$$;
 ```
 
-**RLS Policies:**
-- Admins: full access (ALL)
-- Authenticated users: read-only (SELECT)
+### Files to Modify
+- `supabase/migrations/` -- New migration with `refresh_demand_insights` function
+- `src/hooks/useMarketplaceDemand.ts` -- Rewrite to read from `demand_insights` table
+- `src/portals/admin/components/AdminHeatmap.tsx` -- Add Brisbane suburb postcodes
+- `src/portals/vendor/pages/VendorInsights.ts` -- Update to work with new demand data shape
 
-**Seed data** -- 10 "Coming Soon" modules pre-populated as `release_type = 'new'`, `status = 'development'`:
-Inventory, Production, Marketplace, Allergens, Roster, Calendar, Kitchen Sections, Cheatsheets, Food Safety, Training
-
-Plus 3 example improvement tickets for live modules (`release_type = 'improvement'`):
-- Recipes: Batch duplicate recipes
-- Prep Lists: Drag-to-reorder items
-- Costing: Supplier comparison view
-
----
-
-## Part 3: Admin Updates Page
-
-New page at `/admin/updates` with two tabs for managing the release roadmap.
-
-### Tab 1: New Modules
-- Card grid showing each "Coming Soon" module
-- Each card displays: module name, description, current status badge, target release date
-- Status toggle buttons: Development -> Beta -> Released
-- Target release text input (e.g. "March 2026")
-- Release notes textarea
-- When toggled to "Released", `released_at` is set automatically
-
-### Tab 2: Feature Improvements
-- List of improvement tickets grouped by module
-- "Add Improvement" button opens inline form: module selector, description, target release, status
-- Each entry shows status badge + target date
-- Safe by design -- only reads/writes to `feature_releases`, never touches customer data tables
-
-### Admin Sidebar Update
-Add "Updates" nav item with `RefreshCw` icon between "Email Templates" and "Analytics" in the admin sidebar.
-
-### App Router Update
-Add route `/admin/updates` pointing to `AdminUpdates` component, import added to `App.tsx`.
-
----
-
-## Files Summary
-
-### New Files
-1. `supabase/migrations/[timestamp]_feature_releases.sql` -- table, RLS policies, seed data
-2. `src/portals/admin/pages/AdminUpdates.tsx` -- the Updates management page with two tabs
-
-### Modified Files
-1. `src/components/layout/BottomNav.tsx` -- flat 7-item scrollable carousel, remove popup
-2. `src/hooks/useBottomNavPrefs.ts` -- 7 active items, remove secondary logic
-3. `src/portals/admin/components/AdminSidebar.tsx` -- add "Updates" nav item
-4. `src/App.tsx` -- add AdminUpdates import and route
-
-### Data Safety
-The `feature_releases` table is a standalone planning tool. It never reads from or writes to customer data tables (recipes, ingredients, prep_lists, etc.). All mutations are admin-only via RLS. This gives you a safe system to plan, track, and push feature updates on your own schedule.
+### Privacy Guarantee
+- Only category, postcode, quantity, and unit flow to vendors/admin
+- No org names, user IDs, recipe names, or business details are exposed
+- Postcode maps to suburb area (not specific address)
 
