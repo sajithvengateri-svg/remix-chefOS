@@ -45,17 +45,33 @@ Deno.serve(async (req) => {
       }
       if (!targetId) throw new Error("Provide email or userId");
 
-      // Delete related data first (profiles, memberships, roles, etc.)
+      // Delete related data first (order matters for FK constraints)
+      // Delete org-owned data
+      const { data: ownedOrgs } = await supabase
+        .from("organizations")
+        .select("id")
+        .eq("owner_id", targetId);
+
+      if (ownedOrgs && ownedOrgs.length > 0) {
+        const orgIds = ownedOrgs.map((o) => o.id);
+        // Delete org children first
+        await supabase.from("org_venues").delete().in("org_id", orgIds);
+        await supabase.from("org_memberships").delete().in("org_id", orgIds);
+        await supabase.from("organizations").delete().in("id", orgIds);
+      }
+
+      // Delete user-level data
       await supabase.from("module_permissions").delete().eq("user_id", targetId);
       await supabase.from("user_roles").delete().eq("user_id", targetId);
       await supabase.from("org_memberships").delete().eq("user_id", targetId);
+      await supabase.from("section_assignments").delete().eq("user_id", targetId);
       await supabase.from("profiles").delete().eq("user_id", targetId);
       await supabase.from("signup_events").delete().eq("user_id", targetId);
       await supabase.from("referral_codes").delete().eq("user_id", targetId);
 
-      // Delete auth user
+      // Finally delete auth user
       const { error: delErr } = await supabase.auth.admin.deleteUser(targetId);
-      if (delErr) throw delErr;
+      if (delErr) throw new Error(`Auth delete failed: ${delErr.message}`);
 
       return new Response(
         JSON.stringify({ success: true, message: `Deleted user ${email || targetId}` }),
