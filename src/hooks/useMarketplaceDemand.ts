@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface DemandInsight {
   id: string;
+  ingredient_name: string | null;
   ingredient_category: string;
   postcode: string;
   week_ending: string;
@@ -14,7 +15,7 @@ export interface DemandInsight {
 
 /**
  * Reads anonymized demand data from the demand_insights table.
- * NO org/user/recipe information is exposed — only categories, postcodes, quantities.
+ * Shows ingredient names, categories, postcodes, quantities — NO org/user/recipe info.
  */
 export const useMarketplaceDemand = () => {
   return useQuery({
@@ -43,18 +44,18 @@ export const useCategoryDemand = () => {
     if (existing) {
       existing.total_quantity += item.total_quantity;
       existing.order_count += item.order_count;
-      existing.postcode_count += 1;
+      existing.ingredient_count += 1;
     } else {
       acc.push({
         category: item.ingredient_category,
         total_quantity: item.total_quantity,
         order_count: item.order_count,
-        postcode_count: 1,
+        ingredient_count: 1,
         unit: item.unit,
       });
     }
     return acc;
-  }, [] as { category: string; total_quantity: number; order_count: number; postcode_count: number; unit: string }[]);
+  }, [] as { category: string; total_quantity: number; order_count: number; ingredient_count: number; unit: string }[]);
 
   return {
     data: categoryData?.sort((a, b) => b.total_quantity - a.total_quantity),
