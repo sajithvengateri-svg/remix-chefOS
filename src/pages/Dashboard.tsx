@@ -26,6 +26,7 @@ import TeamFeed from "@/components/feed/TeamFeed";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
 import { MobileDeck } from "@/components/mobile/MobileDeck";
 import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
 import OrgChartWidget from "@/components/dashboard/OrgChartWidget";
@@ -61,6 +62,8 @@ const Dashboard = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [selectedVenueId, setSelectedVenueId] = useState<string | null>(null);
   const { currentOrg, venues } = useOrg();
+  const { profile } = useAuth();
+  const chefFirstName = profile?.full_name?.split(" ")[0] || "Chef";
  
   const isMobile = useIsMobile();
   console.log("[Dashboard] isMobile:", isMobile);
@@ -207,7 +210,8 @@ const Dashboard = () => {
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
         >
           <div>
-            <h1 className="page-title font-display">Good Morning, Chef</h1>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{currentOrg?.name || "My Kitchen"}</p>
+            <h1 className="page-title font-display">Hey Chef {chefFirstName} 👋</h1>
             <p className="page-subtitle">{currentDate}</p>
           </div>
           <div className="flex items-center gap-3">
