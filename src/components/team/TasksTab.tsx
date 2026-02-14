@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { format, isPast, isToday, parseISO } from "date-fns";
 import { useKitchenTasks, TaskPriority, TaskStatus, KitchenTask, TaskComment } from "@/hooks/useKitchenTasks";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 
 interface TeamMember {
   user_id: string;
@@ -70,6 +71,7 @@ const STATUS_CONFIG: Record<TaskStatus, { label: string; className: string }> = 
 
 const TasksTab = () => {
   const { profile } = useAuth();
+  const { currentOrg } = useOrg();
   const { tasks, loading, createTask, updateTaskStatus, fetchTaskComments, addTaskComment, getTaskCounts } = useKitchenTasks();
   
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -103,19 +105,40 @@ const TasksTab = () => {
   }, []);
 
   const fetchTeamMembers = async () => {
+    if (!currentOrg?.id) return;
+
+    // Get org members first
+    const { data: memberships } = await supabase
+      .from("org_memberships")
+      .select("user_id")
+      .eq("org_id", currentOrg.id)
+      .eq("is_active", true);
+
+    if (!memberships?.length) {
+      setTeamMembers([]);
+      return;
+    }
+
     const { data } = await supabase
       .from("profiles")
       .select("user_id, full_name, position, avatar_url")
+      .in("user_id", memberships.map((m) => m.user_id))
       .order("full_name");
     setTeamMembers(data || []);
   };
 
   const fetchSections = async () => {
-    const { data } = await supabase
+    const query = supabase
       .from("kitchen_sections")
       .select("id, name, color")
       .eq("is_active", true)
       .order("name");
+
+    if (currentOrg?.id) {
+      query.eq("org_id", currentOrg.id);
+    }
+
+    const { data } = await query;
     setSections(data || []);
   };
 
