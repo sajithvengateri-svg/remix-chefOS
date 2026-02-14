@@ -38,19 +38,38 @@ const URGENCY_CONFIG: Record<UrgencyLevel, { color: string; label: string }> = {
 const PrepListWidget = () => {
   const [prepItems, setPrepItems] = useState<PrepItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isShowingRecent, setIsShowingRecent] = useState(false);
   const { currentOrg } = useOrg();
 
-  const fetchTodaysPrepLists = useCallback(async () => {
+  const fetchPrepLists = useCallback(async () => {
     if (!currentOrg?.id) return;
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      const { data, error } = await supabase
+      // Try today first, fallback to most recent
+      let { data, error } = await supabase
         .from('prep_lists')
         .select('*')
         .eq('date', today)
         .eq('org_id', currentOrg.id)
         .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Fallback: if no lists today, show most recent
+      if (!data || data.length === 0) {
+        setIsShowingRecent(true);
+        const fallback = await supabase
+          .from('prep_lists')
+          .select('*')
+          .eq('org_id', currentOrg.id)
+          .order('date', { ascending: false })
+          .limit(5);
+        if (fallback.error) throw fallback.error;
+        data = fallback.data;
+      } else {
+        setIsShowingRecent(false);
+      }
 
       if (error) throw error;
 
@@ -94,7 +113,7 @@ const PrepListWidget = () => {
   }, [currentOrg?.id]);
 
   useEffect(() => {
-    fetchTodaysPrepLists();
+    fetchPrepLists();
 
     if (!currentOrg?.id) return;
 
@@ -103,12 +122,12 @@ const PrepListWidget = () => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'prep_lists', filter: `org_id=eq.${currentOrg.id}` },
-        () => fetchTodaysPrepLists()
+        () => fetchPrepLists()
       )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [currentOrg?.id, fetchTodaysPrepLists]);
+  }, [currentOrg?.id, fetchPrepLists]);
 
   const completedCount = prepItems.filter(item => item.status === "completed").length;
   const progress = prepItems.length > 0 ? (completedCount / prepItems.length) * 100 : 0;
@@ -133,11 +152,11 @@ const PrepListWidget = () => {
     <div className="card-elevated p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="section-header mb-0">Today's Prep List</h2>
+          <h2 className="section-header mb-0">{isShowingRecent ? "Recent Prep Lists" : "Today's Prep List"}</h2>
           <p className="text-sm text-muted-foreground">
             {prepItems.length > 0 
               ? `${completedCount} of ${prepItems.length} tasks completed`
-              : "No prep tasks today"
+              : "No prep tasks"
             }
           </p>
         </div>
