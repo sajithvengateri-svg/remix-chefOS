@@ -265,6 +265,7 @@ export type Database = {
           created_at: string
           id: string
           ingredient_category: string
+          ingredient_name: string | null
           order_count: number
           postcode: string
           total_quantity: number
@@ -276,6 +277,7 @@ export type Database = {
           created_at?: string
           id?: string
           ingredient_category: string
+          ingredient_name?: string | null
           order_count?: number
           postcode: string
           total_quantity?: number
@@ -287,6 +289,7 @@ export type Database = {
           created_at?: string
           id?: string
           ingredient_category?: string
+          ingredient_name?: string | null
           order_count?: number
           postcode?: string
           total_quantity?: number

@@ -74,31 +74,30 @@ const LiveDemandPanel = ({ className, maxItems = 15 }: LiveDemandPanelProps) => 
 
   return (
     <div className={cn("card-elevated p-6", className)}>
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <TrendingUp className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold">Live Demand Insights</h3>
+          <h3 className="font-semibold">Live Ingredient Demand</h3>
         </div>
         <Badge variant="secondary" className="text-xs">
-          {insights.length} data points
+          {insights.length} ingredients tracked
         </Badge>
       </div>
 
-      <Tabs defaultValue="category" className="space-y-4">
+      <Tabs defaultValue="ingredients" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="ingredients" className="gap-2">
+            <Package className="w-4 h-4" />
+            By Ingredient
+          </TabsTrigger>
           <TabsTrigger value="category" className="gap-2">
             <BarChart3 className="w-4 h-4" />
             By Category
           </TabsTrigger>
-          <TabsTrigger value="postcode" className="gap-2">
-            <MapPin className="w-4 h-4" />
-            By Postcode
-          </TabsTrigger>
         </TabsList>
 
-        {/* Postcode View */}
-        <TabsContent value="postcode" className="space-y-3">
+        {/* Ingredients View */}
+        <TabsContent value="ingredients" className="space-y-3">
           {displayedInsights.map((item, index) => (
             <motion.div
               key={item.id}
@@ -109,18 +108,11 @@ const LiveDemandPanel = ({ className, maxItems = 15 }: LiveDemandPanelProps) => 
             >
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
-                  <div 
-                    className={cn(
-                      "w-3 h-3 rounded-full",
-                      categoryColors[item.ingredient_category] || "bg-gray-500"
-                    )} 
-                  />
+                  <div className={cn("w-3 h-3 rounded-full", categoryColors[item.ingredient_category] || "bg-gray-500")} />
                   <span className="text-sm font-medium truncate max-w-[200px]">
-                    {item.ingredient_category}
+                    {item.ingredient_name || item.ingredient_category}
                   </span>
-                  <Badge variant="outline" className="text-xs">
-                    {item.postcode}
-                  </Badge>
+                  <Badge variant="outline" className="text-xs">{item.ingredient_category}</Badge>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
                   <span className="text-muted-foreground">
@@ -132,24 +124,23 @@ const LiveDemandPanel = ({ className, maxItems = 15 }: LiveDemandPanelProps) => 
                 </div>
               </div>
               
-              {/* Progress Bar */}
               <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${(item.total_quantity / maxQuantity) * 100}%` }}
                   transition={{ delay: index * 0.03 + 0.1, duration: 0.4 }}
-                  className={cn(
-                    "h-full rounded-full",
-                    categoryColors[item.ingredient_category] || "bg-gray-500"
-                  )}
+                  className={cn("h-full rounded-full", categoryColors[item.ingredient_category] || "bg-gray-500")}
                 />
               </div>
 
-              {/* Hover details */}
               <div className="hidden group-hover:flex items-center gap-4 mt-1 text-xs text-muted-foreground">
                 {item.avg_price_paid && (
                   <span>Avg price: ${Number(item.avg_price_paid).toFixed(2)}/{item.unit}</span>
                 )}
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3" />
+                  {item.postcode}
+                </span>
               </div>
             </motion.div>
           ))}
@@ -165,37 +156,25 @@ const LiveDemandPanel = ({ className, maxItems = 15 }: LiveDemandPanelProps) => 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="group"
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
-                    <div 
-                      className={cn(
-                        "w-3 h-3 rounded-full",
-                        categoryColors[cat.category] || "bg-gray-500"
-                      )} 
-                    />
+                    <div className={cn("w-3 h-3 rounded-full", categoryColors[cat.category] || "bg-gray-500")} />
                     <span className="text-sm font-medium">{cat.category}</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
-                    <span className="text-muted-foreground">
-                      {cat.postcode_count} areas
-                    </span>
+                    <span className="text-muted-foreground">{cat.ingredient_count} items</span>
                     <span className="font-mono font-medium">
                       {cat.total_quantity.toLocaleString(undefined, { maximumFractionDigits: 2 })} {cat.unit}
                     </span>
                   </div>
                 </div>
-                
                 <div className="h-3 bg-muted rounded-full overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${(cat.total_quantity / maxCatQuantity) * 100}%` }}
                     transition={{ delay: index * 0.05 + 0.1, duration: 0.4 }}
-                    className={cn(
-                      "h-full rounded-full",
-                      categoryColors[cat.category] || "bg-gray-500"
-                    )}
+                    className={cn("h-full rounded-full", categoryColors[cat.category] || "bg-gray-500")}
                   />
                 </div>
               </motion.div>
@@ -204,10 +183,9 @@ const LiveDemandPanel = ({ className, maxItems = 15 }: LiveDemandPanelProps) => 
         </TabsContent>
       </Tabs>
 
-      {/* Privacy Notice */}
       <div className="mt-6 pt-4 border-t border-border">
         <p className="text-xs text-muted-foreground">
-          Data shows aggregated demand by category and postcode. No account or business information is shared.
+          Aggregated ingredient demand. No account or business information is shared.
         </p>
       </div>
     </div>
