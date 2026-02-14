@@ -89,11 +89,12 @@ const Dashboard = () => {
 
       // Fetch all stats in parallel
       const [prepListsRes, recipesRes, newRecipesRes, ingredientsRes] = await Promise.all([
-        // Today's prep lists
+        // All prep lists (not just today) to show meaningful counts
         supabase
           .from('prep_lists')
-          .select('items, status')
-          .eq('date', today),
+          .select('items, status, date')
+          .order('date', { ascending: false })
+          .limit(50),
         // All recipes
         supabase
           .from('recipes')
@@ -109,19 +110,13 @@ const Dashboard = () => {
           .select('id, current_stock, par_level'),
       ]);
 
-      // Calculate prep tasks
-      let prepTasksTotal = 0;
-      let prepTasksCompleted = 0;
+      // Count prep lists (today first, fallback to all recent)
+      const allLists = prepListsRes.data || [];
+      const todayLists = allLists.filter(l => l.date === today);
+      const listsToCount = todayLists.length > 0 ? todayLists : allLists.slice(0, 10);
       
-      interface PrepItem {
-        status?: string;
-      }
-      
-      (prepListsRes.data || []).forEach((list) => {
-        const items = (Array.isArray(list.items) ? list.items : []) as PrepItem[];
-        prepTasksTotal += items.length;
-        prepTasksCompleted += items.filter((item) => item.status === 'completed').length;
-      });
+      const prepTasksTotal = listsToCount.length;
+      const prepTasksCompleted = listsToCount.filter(l => l.status === 'completed').length;
 
       // Calculate low stock items
       const lowStockItems = (ingredientsRes.data || []).filter(
@@ -232,7 +227,7 @@ const Dashboard = () => {
         >
           <StatCard
             icon={ClipboardCheck}
-            label="Prep Tasks"
+            label="Prep Lists"
             value={loading ? "..." : String(stats.prepTasksTotal)}
             subValue={`${stats.prepTasksCompleted} completed`}
             trend={stats.prepTasksTotal > 0 ? `${stats.prepTasksTotal - stats.prepTasksCompleted} pending` : ""}
