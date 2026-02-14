@@ -7,7 +7,7 @@ export const allNavItems = [
   { path: "/dashboard", label: "Home", icon: "Home" },
   { path: "/prep", label: "Prep", icon: "ClipboardList" },
   { path: "/recipes", label: "Recipes", icon: "ChefHat" },
-  { path: "/ingredients", label: "Costing", icon: "DollarSign" },
+  { path: "/ingredients", label: "Ingredients", icon: "Utensils" },
   { path: "/menu-engineering", label: "Menu", icon: "Menu" },
   { path: "/equipment", label: "Equipment", icon: "Wrench" },
   { path: "/team", label: "Team", icon: "Users2" },
