@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +49,7 @@ const units = ["kg", "g", "L", "ml", "lb", "oz", "each", "bunch", "case"];
 
 const Ingredients = () => {
   const { canEdit } = useAuth();
+  const { currentOrg } = useOrg();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -142,6 +144,7 @@ const Ingredients = () => {
         par_level: formData.par_level,
         current_stock: formData.current_stock,
         notes: formData.notes || null,
+        org_id: currentOrg?.id,
       });
 
       if (error) {

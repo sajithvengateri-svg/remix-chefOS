@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useOrg } from "@/contexts/OrgContext";
 import { cn } from "@/lib/utils";
 import IngredientCombobox from "./IngredientCombobox";
 import NewIngredientDialog from "./NewIngredientDialog";
@@ -71,6 +72,7 @@ const RecipeBuilder = ({
   onCostUpdate,
   hasEditPermission,
 }: RecipeBuilderProps) => {
+  const { currentOrg } = useOrg();
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [recipeIngredients, setRecipeIngredients] = useState<RecipeIngredient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -235,6 +237,7 @@ const RecipeBuilder = ({
         unit: newIng.unit,
         category: newIng.category,
         cost_per_unit: newIng.cost_per_unit,
+        org_id: currentOrg?.id,
       })
       .select()
       .single();

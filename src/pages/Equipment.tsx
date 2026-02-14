@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -61,6 +62,7 @@ const statusOptions = [
 
 const Equipment = () => {
   const { canEdit } = useAuth();
+  const { currentOrg } = useOrg();
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -147,7 +149,7 @@ const Equipment = () => {
       }
       toast.success("Equipment updated");
     } else {
-      const { error } = await supabase.from("equipment").insert(payload);
+      const { error } = await supabase.from("equipment").insert({ ...payload, org_id: currentOrg?.id });
 
       if (error) {
         toast.error("Failed to add equipment");

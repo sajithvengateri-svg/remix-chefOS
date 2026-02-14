@@ -149,6 +149,7 @@ const PrepLists = () => {
         notes: formData.notes || null,
         items: JSON.parse(JSON.stringify(formData.items)),
         created_by: user?.id,
+        org_id: currentOrg?.id,
       });
 
       if (error) {
