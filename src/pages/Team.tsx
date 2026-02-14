@@ -120,19 +120,27 @@ const Team = () => {
   const [editPosition, setEditPosition] = useState("");
 
   useEffect(() => {
-    fetchTeamMembers();
+    if (currentOrg?.id) {
+      fetchTeamMembers();
+      fetchKitchenSections();
+    }
     if (isHeadChef) {
       fetchInvites();
     }
-    fetchKitchenSections();
-  }, [isHeadChef]);
+  }, [isHeadChef, currentOrg?.id]);
 
   const fetchKitchenSections = async () => {
-    const { data } = await supabase
+    const query = supabase
       .from("kitchen_sections")
       .select("id, name, color")
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
+
+    if (currentOrg?.id) {
+      query.eq("org_id", currentOrg.id);
+    }
+
+    const { data } = await query;
     setKitchenSections(data || []);
   };
 
@@ -166,38 +174,54 @@ const Team = () => {
   }, [messagingMember, user]);
 
   const fetchTeamMembers = async () => {
+    if (!currentOrg?.id) return;
+
+    // First get org members
+    const { data: memberships, error: memError } = await supabase
+      .from("org_memberships")
+      .select("user_id, role")
+      .eq("org_id", currentOrg.id)
+      .eq("is_active", true);
+
+    if (memError || !memberships?.length) {
+      console.error("Error fetching memberships:", memError);
+      setTeamMembers([]);
+      return;
+    }
+
+    const userIds = memberships.map((m) => m.user_id);
+
+    // Then fetch only those profiles
     const { data: profiles, error: profilesError } = await supabase
       .from("profiles")
-      .select("*");
+      .select("*")
+      .in("user_id", userIds);
 
     if (profilesError) {
       console.error("Error fetching profiles:", profilesError);
       return;
     }
 
-    const { data: roles, error: rolesError } = await supabase
-      .from("user_roles")
-      .select("user_id, role");
-
-    if (rolesError) {
-      console.error("Error fetching roles:", rolesError);
-      return;
-    }
-
-    const members: TeamMember[] = profiles.map((p) => ({
+    const members: TeamMember[] = (profiles || []).map((p) => ({
       ...p,
-      role: (roles.find((r) => r.user_id === p.user_id)?.role as "head_chef" | "line_chef") || "line_chef",
+      role: (memberships.find((m) => m.user_id === p.user_id)?.role as "head_chef" | "line_chef") || "line_chef",
     }));
 
     setTeamMembers(members);
   };
 
   const fetchInvites = async () => {
-    const { data, error } = await supabase
+    const query = supabase
       .from("team_invites")
       .select("*")
       .is("accepted_at", null)
       .order("created_at", { ascending: false });
+
+    if (currentOrg?.id) {
+      query.eq("org_id", currentOrg.id);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching invites:", error);
