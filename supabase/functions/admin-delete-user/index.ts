@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
       // anon key token won't resolve to a user — allow through since function uses service_role
     }
 
-    const { action, email, userId } = await req.json();
+    const { action, email, userId, password, full_name } = await req.json();
 
     if (action === "delete_user") {
       // Find user by email if no userId
@@ -97,13 +97,31 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (action === "update_password") {
+      if (!email && !userId) throw new Error("Provide email or userId");
+      let targetId = userId;
+      if (!targetId && email) {
+        const { data: { users }, error: listErr } = await supabase.auth.admin.listUsers();
+        if (listErr) throw listErr;
+        const found = users.find((u) => u.email === email);
+        if (!found) throw new Error(`No user found with email: ${email}`);
+        targetId = found.id;
+      }
+      const { error: updateErr } = await supabase.auth.admin.updateUserById(targetId, {
+        password: password || "Admin123!",
+      });
+      if (updateErr) throw new Error(`Update password failed: ${updateErr.message}`);
+      return new Response(
+        JSON.stringify({ success: true, message: `Password updated for ${email || targetId}` }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     if (action === "create_admin") {
-      const { password, full_name } = await req.json().catch(() => ({}));
       const adminEmail = email;
       const adminPassword = password || "Admin123!";
       const adminName = full_name || "Master Admin";
 
-      // Create auth user with auto-confirm
       const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
         email: adminEmail,
         password: adminPassword,
@@ -112,8 +130,6 @@ Deno.serve(async (req) => {
       });
       if (createErr) throw new Error(`Create user failed: ${createErr.message}`);
 
-      // The handle_new_user trigger will create profile, org, etc.
-      // Just add the admin role
       await supabase.from("user_roles").insert({ user_id: newUser.user.id, role: "admin" });
 
       return new Response(
