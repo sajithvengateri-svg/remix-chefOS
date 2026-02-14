@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Heart, 
@@ -69,24 +69,10 @@ const TeamFeed = () => {
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [postMode, setPostMode] = useState<PostMode>("message");
 
-  useEffect(() => {
-    if (!currentOrg?.id) return;
-    fetchPosts();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isInitialLoad = useRef(true);
 
-    // Subscribe to realtime updates
-    const channel = supabase
-      .channel("team-feed")
-      .on("postgres_changes", { event: "*", schema: "public", table: "team_posts" }, fetchPosts)
-      .on("postgres_changes", { event: "*", schema: "public", table: "post_reactions" }, fetchPosts)
-      .on("postgres_changes", { event: "*", schema: "public", table: "post_comments" }, fetchPosts)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentOrg?.id]);
-
-  const fetchPosts = async () => {
+  const fetchPosts = useCallback(async () => {
     try {
       const query = supabase
         .from("team_posts")
@@ -99,10 +85,8 @@ const TeamFeed = () => {
       }
 
       const { data: postsData, error: postsError } = await query;
-
       if (postsError) throw postsError;
 
-      // Fetch reactions and comments for each post
       const postsWithDetails = await Promise.all(
         (postsData || []).map(async (post) => {
           const [reactionsRes, commentsRes] = await Promise.all([
@@ -116,7 +100,6 @@ const TeamFeed = () => {
               .eq("post_id", post.id)
               .order("created_at", { ascending: true }),
           ]);
-
           return {
             ...post,
             reactions: reactionsRes.data || [],
@@ -126,12 +109,43 @@ const TeamFeed = () => {
       );
 
       setPosts(postsWithDetails);
+      if (isInitialLoad.current) {
+        isInitialLoad.current = false;
+      }
     } catch (error) {
       console.error("Error fetching posts:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentOrg?.id]);
+
+  useEffect(() => {
+    if (!currentOrg?.id) return;
+    fetchPosts();
+
+    const channel = supabase
+      .channel("team-feed")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "team_posts", filter: `org_id=eq.${currentOrg.id}` }, (payload) => {
+        // New post arrived — refetch to get full details
+        fetchPosts();
+      })
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "team_posts" }, (payload) => {
+        // Optimistically remove deleted post
+        setPosts(prev => prev.filter(p => p.id !== payload.old.id));
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "post_reactions" }, () => {
+        fetchPosts();
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "post_comments" }, () => {
+        fetchPosts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentOrg?.id, fetchPosts]);
+
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -222,6 +236,17 @@ const TeamFeed = () => {
     const post = posts.find((p) => p.id === postId);
     const hasReacted = post?.reactions.some((r) => r.user_id === user.id);
 
+    // Optimistic update
+    setPosts(prev => prev.map(p => {
+      if (p.id !== postId) return p;
+      return {
+        ...p,
+        reactions: hasReacted
+          ? p.reactions.filter(r => r.user_id !== user.id)
+          : [...p.reactions, { user_id: user.id, reaction_type: "like" }],
+      };
+    }));
+
     if (hasReacted) {
       await supabase
         .from("post_reactions")
@@ -258,11 +283,19 @@ const TeamFeed = () => {
   };
 
   const handleDeletePost = async (postId: string) => {
+    // Optimistic removal
+    setPosts(prev => prev.filter(p => p.id !== postId));
     try {
-      await supabase.from("team_posts").delete().eq("id", postId);
-      toast.success("Post deleted");
+      const { error } = await supabase.from("team_posts").delete().eq("id", postId);
+      if (error) {
+        fetchPosts(); // Revert on error
+        toast.error("Failed to delete post");
+      } else {
+        toast.success("Post deleted");
+      }
     } catch (error) {
       console.error("Error deleting post:", error);
+      fetchPosts();
       toast.error("Failed to delete post");
     }
   };
