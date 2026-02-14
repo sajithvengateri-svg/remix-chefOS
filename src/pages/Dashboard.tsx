@@ -232,6 +232,7 @@ const Dashboard = () => {
             subValue={`${stats.prepTasksCompleted} completed`}
             trend={stats.prepTasksTotal > 0 ? `${stats.prepTasksTotal - stats.prepTasksCompleted} pending` : ""}
             color="primary"
+            href="/prep"
           />
           <StatCard
             icon={ChefHat}
@@ -239,6 +240,7 @@ const Dashboard = () => {
             value={loading ? "..." : String(stats.activeRecipes)}
             subValue={stats.newRecipesThisWeek > 0 ? `${stats.newRecipesThisWeek} new this week` : "No new recipes"}
             color="accent"
+            href="/recipes"
           />
           <StatCard
             icon={Package}
@@ -247,6 +249,7 @@ const Dashboard = () => {
             subValue={stats.lowStockItems > 0 ? "Need attention" : "Stock OK"}
             trend={stats.lowStockItems > 0 ? "urgent" : ""}
             color="warning"
+            href="/ingredients"
           />
           <StatCard
             icon={TrendingUp}
@@ -255,6 +258,7 @@ const Dashboard = () => {
             subValue={`Target: ${stats.targetFoodCost}%`}
             trend={getFoodCostTrend()}
             color={getFoodCostColor()}
+            href="/ingredients"
           />
         </motion.div>
 

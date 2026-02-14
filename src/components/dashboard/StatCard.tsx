@@ -1,5 +1,6 @@
 import { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 interface StatCardProps {
   icon: LucideIcon;
@@ -8,6 +9,7 @@ interface StatCardProps {
   subValue?: string;
   trend?: string;
   color?: "primary" | "accent" | "warning" | "success";
+  href?: string;
 }
 
 const colorStyles = {
@@ -17,9 +19,9 @@ const colorStyles = {
   success: "bg-success/10 text-success",
 };
 
-const StatCard = ({ icon: Icon, label, value, subValue, trend, color = "primary" }: StatCardProps) => {
-  return (
-    <div className="stat-card">
+const StatCard = ({ icon: Icon, label, value, subValue, trend, color = "primary", href }: StatCardProps) => {
+  const content = (
+    <div className={cn("stat-card", href && "cursor-pointer hover:shadow-md transition-shadow")}>
       <div className="flex items-center justify-between">
         <div className={cn("p-2 rounded-lg", colorStyles[color])}>
           <Icon className="w-5 h-5" />
@@ -42,6 +44,12 @@ const StatCard = ({ icon: Icon, label, value, subValue, trend, color = "primary"
       </div>
     </div>
   );
+
+  if (href) {
+    return <Link to={href}>{content}</Link>;
+  }
+
+  return content;
 };
 
 export default StatCard;
