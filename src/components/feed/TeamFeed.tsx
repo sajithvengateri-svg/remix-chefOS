@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow, differenceInMinutes } from "date-fns";
@@ -57,6 +58,7 @@ type PostMode = "message" | "maintenance";
 
 const TeamFeed = () => {
   const { user, profile, isHeadChef } = useAuth();
+  const { currentOrg } = useOrg();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [posting, setPosting] = useState(false);
@@ -68,6 +70,7 @@ const TeamFeed = () => {
   const [postMode, setPostMode] = useState<PostMode>("message");
 
   useEffect(() => {
+    if (!currentOrg?.id) return;
     fetchPosts();
 
     // Subscribe to realtime updates
@@ -81,15 +84,21 @@ const TeamFeed = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentOrg?.id]);
 
   const fetchPosts = async () => {
     try {
-      const { data: postsData, error: postsError } = await supabase
+      const query = supabase
         .from("team_posts")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(50);
+
+      if (currentOrg?.id) {
+        query.eq("org_id", currentOrg.id);
+      }
+
+      const { data: postsData, error: postsError } = await query;
 
       if (postsError) throw postsError;
 
@@ -190,6 +199,7 @@ const TeamFeed = () => {
         content: newPost.trim() || null,
         image_url: imageUrl,
         post_type: postType,
+        org_id: currentOrg?.id || null,
       });
 
       if (error) throw error;

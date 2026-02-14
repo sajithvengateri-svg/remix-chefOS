@@ -27,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -64,6 +65,7 @@ interface PrepList {
 
 const PrepLists = () => {
   const { user, canEdit, profile } = useAuth();
+  const { currentOrg } = useOrg();
   const { canManageTemplates } = useSectionLeaderStatus();
   const [selectedDate, setSelectedDate] = useState("today");
   const [prepLists, setPrepLists] = useState<PrepList[]>([]);
@@ -221,6 +223,7 @@ const PrepLists = () => {
       content,
       post_type: "prep_list_shared",
       linked_prep_list_id: list.id,
+      org_id: currentOrg?.id || null,
     });
 
     if (error) {
