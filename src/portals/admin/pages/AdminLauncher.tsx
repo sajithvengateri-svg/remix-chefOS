@@ -1,100 +1,122 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   Rocket,
-  CheckCircle2,
-  Circle,
-  ArrowRight,
   ChefHat,
   Building2,
-  Shield,
-  Package,
-  Users,
-  FileText,
   Zap,
+  Package,
   ExternalLink,
+  LayoutDashboard,
+  ClipboardList,
+  Utensils,
+  Receipt,
+  Menu,
+  Wrench,
+  Users,
+  Factory,
+  Store,
+  AlertTriangle,
+  Calendar,
+  LayoutGrid,
+  BookOpen,
+  Shield,
+  GraduationCap,
 } from "lucide-react";
 
-interface LaunchItem {
+// Map module slugs to icons and routes
+const moduleConfig: Record<string, { icon: React.ElementType; path: string }> = {
+  dashboard: { icon: LayoutDashboard, path: "/dashboard" },
+  prep: { icon: ClipboardList, path: "/prep" },
+  recipes: { icon: ChefHat, path: "/recipes" },
+  ingredients: { icon: Utensils, path: "/ingredients" },
+  invoices: { icon: Receipt, path: "/invoices" },
+  "menu-engineering": { icon: Menu, path: "/menu-engineering" },
+  equipment: { icon: Wrench, path: "/equipment" },
+  team: { icon: Users, path: "/team" },
+  inventory: { icon: Package, path: "/inventory" },
+  production: { icon: Factory, path: "/production" },
+  marketplace: { icon: Store, path: "/marketplace" },
+  allergens: { icon: AlertTriangle, path: "/allergens" },
+  roster: { icon: Users, path: "/roster" },
+  calendar: { icon: Calendar, path: "/calendar" },
+  "kitchen-sections": { icon: LayoutGrid, path: "/kitchen-sections" },
+  cheatsheets: { icon: BookOpen, path: "/cheatsheets" },
+  "food-safety": { icon: Shield, path: "/food-safety" },
+  training: { icon: GraduationCap, path: "/training" },
+};
+
+interface FeatureRelease {
   id: string;
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  status: "complete" | "in-progress" | "pending";
-  link?: string;
+  module_slug: string;
+  module_name: string;
+  description: string | null;
+  status: string;
+  release_type: string;
+  sort_order: number;
+  released_at: string | null;
 }
+
+const statusColors: Record<string, string> = {
+  development: "bg-muted text-muted-foreground",
+  beta: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400",
+  released: "bg-green-500/20 text-green-700 dark:text-green-400",
+};
 
 const AdminLauncher = () => {
   const navigate = useNavigate();
+  const [modules, setModules] = useState<FeatureRelease[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const launchChecklist: LaunchItem[] = [
-    {
-      id: "database",
-      title: "Database Setup",
-      description: "Tables, RLS policies, and functions configured",
-      icon: Package,
-      status: "complete",
-    },
-    {
-      id: "auth",
-      title: "Authentication",
-      description: "User signup, login, and role management",
-      icon: Shield,
-      status: "complete",
-    },
-    {
-      id: "chef-portal",
-      title: "Chef Portal",
-      description: "Recipe management, inventory, and prep lists",
-      icon: ChefHat,
-      status: "complete",
-      link: "/dashboard",
-    },
-    {
-      id: "vendor-portal",
-      title: "Vendor Portal",
-      description: "Vendor onboarding, pricing, and orders",
-      icon: Building2,
-      status: "complete",
-      link: "/vendor/dashboard",
-    },
-    {
-      id: "admin-portal",
-      title: "Admin Portal",
-      description: "CRM, analytics, and system management",
-      icon: Users,
-      status: "complete",
-      link: "/admin",
-    },
-    {
-      id: "edge-functions",
-      title: "Edge Functions",
-      description: "AI features and external integrations",
-      icon: Zap,
-      status: "complete",
-    },
-    {
-      id: "documentation",
-      title: "Documentation",
-      description: "User guides and API documentation",
-      icon: FileText,
-      status: "pending",
-    },
-    {
-      id: "production",
-      title: "Production Deployment",
-      description: "Final review and go-live",
-      icon: Rocket,
-      status: "pending",
-    },
-  ];
+  const fetchModules = async () => {
+    const { data, error } = await supabase
+      .from("feature_releases")
+      .select("*")
+      .eq("release_type", "new")
+      .order("sort_order", { ascending: true });
 
-  const completedCount = launchChecklist.filter((item) => item.status === "complete").length;
-  const progress = (completedCount / launchChecklist.length) * 100;
+    if (error) {
+      toast.error("Failed to load modules");
+    } else {
+      setModules(data || []);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchModules(); }, []);
+
+  const toggleStatus = async (mod: FeatureRelease) => {
+    const newStatus = mod.status === "released" ? "development" : "released";
+    const updates: Partial<FeatureRelease> = { status: newStatus };
+    if (newStatus === "released") {
+      updates.released_at = new Date().toISOString();
+    } else {
+      updates.released_at = null;
+    }
+
+    const { error } = await supabase
+      .from("feature_releases")
+      .update(updates)
+      .eq("id", mod.id);
+
+    if (error) {
+      toast.error("Failed to update");
+    } else {
+      toast.success(`${mod.module_name} ${newStatus === "released" ? "enabled" : "disabled"}`);
+      fetchModules();
+    }
+  };
+
+  const releasedCount = modules.filter(m => m.status === "released").length;
+  const progress = modules.length ? (releasedCount / modules.length) * 100 : 0;
 
   const quickLinks = [
     { label: "Chef Portal", path: "/dashboard", icon: ChefHat },
@@ -102,6 +124,8 @@ const AdminLauncher = () => {
     { label: "Run Tests", path: "/admin/testing", icon: Zap },
     { label: "Seed Data", path: "/admin/seed", icon: Package },
   ];
+
+  if (loading) return <div className="p-6 text-muted-foreground">Loading modules...</div>;
 
   return (
     <div className="space-y-6">
@@ -111,7 +135,7 @@ const AdminLauncher = () => {
           Launch Control
         </h1>
         <p className="text-muted-foreground mt-1">
-          Track progress and prepare for production deployment
+          Enable and manage all ChefOS modules
         </p>
       </div>
 
@@ -120,15 +144,12 @@ const AdminLauncher = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Launch Progress</CardTitle>
+              <CardTitle>Module Readiness</CardTitle>
               <CardDescription>
-                {completedCount} of {launchChecklist.length} items complete
+                {releasedCount} of {modules.length} modules enabled
               </CardDescription>
             </div>
-            <Badge
-              variant={progress === 100 ? "default" : "secondary"}
-              className={progress === 100 ? "bg-green-500" : ""}
-            >
+            <Badge variant={progress === 100 ? "default" : "secondary"}>
               {progress.toFixed(0)}%
             </Badge>
           </div>
@@ -165,102 +186,69 @@ const AdminLauncher = () => {
         ))}
       </div>
 
-      {/* Launch Checklist */}
+      {/* All Modules Grid */}
       <Card>
         <CardHeader>
-          <CardTitle>Launch Checklist</CardTitle>
-          <CardDescription>
-            Complete all items before going to production
-          </CardDescription>
+          <CardTitle>All ChefOS Modules</CardTitle>
+          <CardDescription>Toggle modules on/off to control what's available in the Chef portal</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {launchChecklist.map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  {item.status === "complete" ? (
-                    <CheckCircle2 className="w-6 h-6 text-green-500" />
-                  ) : item.status === "in-progress" ? (
-                    <div className="w-6 h-6 rounded-full border-2 border-yellow-500 border-t-transparent animate-spin" />
-                  ) : (
-                    <Circle className="w-6 h-6 text-muted-foreground" />
-                  )}
-                  <div className="w-10 h-10 rounded-lg bg-background flex items-center justify-center">
-                    <item.icon className="w-5 h-5 text-muted-foreground" />
+          <div className="grid gap-3 md:grid-cols-2">
+            {modules.map((mod, index) => {
+              const config = moduleConfig[mod.module_slug];
+              const Icon = config?.icon || Package;
+              const isEnabled = mod.status === "released";
+
+              return (
+                <motion.div
+                  key={mod.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      isEnabled ? "bg-primary/10" : "bg-muted"
+                    }`}>
+                      <Icon className={`w-5 h-5 ${isEnabled ? "text-primary" : "text-muted-foreground"}`} />
+                    </div>
+                    <div>
+                      <p className={`font-medium ${!isEnabled ? "text-muted-foreground" : ""}`}>
+                        {mod.module_name}
+                      </p>
+                      {mod.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                          {mod.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">{item.title}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {item.description}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <Badge className={statusColors[mod.status]}>
+                      {mod.status === "released" ? "Live" : mod.status === "beta" ? "Beta" : "Dev"}
+                    </Badge>
+                    <Switch
+                      checked={isEnabled}
+                      onCheckedChange={() => toggleStatus(mod)}
+                    />
+                    {config?.path && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => navigate(config.path)}
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    )}
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant={
-                      item.status === "complete"
-                        ? "default"
-                        : item.status === "in-progress"
-                        ? "secondary"
-                        : "outline"
-                    }
-                    className={item.status === "complete" ? "bg-green-500" : ""}
-                  >
-                    {item.status === "complete"
-                      ? "Complete"
-                      : item.status === "in-progress"
-                      ? "In Progress"
-                      : "Pending"}
-                  </Badge>
-                  {item.link && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(item.link!)}
-                    >
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
-
-      {/* Ready to Launch */}
-      {progress >= 75 && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-        >
-          <Card className="border-primary/50 bg-primary/5">
-            <CardContent className="p-6 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Rocket className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-bold text-lg">Ready for Launch?</p>
-                  <p className="text-muted-foreground">
-                    Complete the remaining items and deploy to production
-                  </p>
-                </div>
-              </div>
-              <Button disabled={progress < 100}>
-                <Rocket className="w-4 h-4 mr-2" />
-                Deploy to Production
-              </Button>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
     </div>
   );
 };
