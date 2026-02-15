@@ -704,6 +704,7 @@ export type Database = {
           recorded_by: string | null
           recorded_by_name: string | null
           reference_image_url: string | null
+          shift: string | null
           status: string | null
           temp_image_url: string | null
           time: string
@@ -726,6 +727,7 @@ export type Database = {
           recorded_by?: string | null
           recorded_by_name?: string | null
           reference_image_url?: string | null
+          shift?: string | null
           status?: string | null
           temp_image_url?: string | null
           time?: string
@@ -748,6 +750,7 @@ export type Database = {
           recorded_by?: string | null
           recorded_by_name?: string | null
           reference_image_url?: string | null
+          shift?: string | null
           status?: string | null
           temp_image_url?: string | null
           time?: string
@@ -2804,6 +2807,100 @@ export type Database = {
           },
           {
             foreignKeyName: "team_posts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      temp_check_archives: {
+        Row: {
+          archived_at: string
+          archived_by: string | null
+          created_at: string
+          fail_count: number | null
+          id: string
+          month: string
+          org_id: string | null
+          pass_count: number | null
+          sheet_data: Json
+          total_checks: number | null
+          warning_count: number | null
+        }
+        Insert: {
+          archived_at?: string
+          archived_by?: string | null
+          created_at?: string
+          fail_count?: number | null
+          id?: string
+          month: string
+          org_id?: string | null
+          pass_count?: number | null
+          sheet_data?: Json
+          total_checks?: number | null
+          warning_count?: number | null
+        }
+        Update: {
+          archived_at?: string
+          archived_by?: string | null
+          created_at?: string
+          fail_count?: number | null
+          id?: string
+          month?: string
+          org_id?: string | null
+          pass_count?: number | null
+          sheet_data?: Json
+          total_checks?: number | null
+          warning_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temp_check_archives_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      temp_check_config: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          location_name: string
+          location_type: string
+          org_id: string | null
+          shift: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          location_name: string
+          location_type?: string
+          org_id?: string | null
+          shift?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          location_name?: string
+          location_type?: string
+          org_id?: string | null
+          shift?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temp_check_config_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"

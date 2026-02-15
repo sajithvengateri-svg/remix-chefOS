@@ -57,6 +57,7 @@ import { useOrg } from "@/contexts/OrgContext";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import DailyTempChecks from "@/components/food-safety/DailyTempChecks";
 
 // ---------- Types ----------
 
@@ -173,7 +174,7 @@ const TODAY_TARGET = 8; // target temp checks per day
 const FoodSafety = () => {
   const { user, canEdit } = useAuth();
   const { currentOrg } = useOrg();
-  const [activeTab, setActiveTab] = useState("logs");
+  const [activeTab, setActiveTab] = useState("daily");
   const [logTypeFilter, setLogTypeFilter] = useState("all");
   const [supplierCategory, setSupplierCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -760,7 +761,11 @@ const FoodSafety = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="daily" className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              <span className="hidden sm:inline">Daily</span>
+            </TabsTrigger>
             <TabsTrigger value="logs" className="flex items-center gap-2">
               <Thermometer className="w-4 h-4" />
               <span className="hidden sm:inline">Logs</span>
@@ -778,6 +783,11 @@ const FoodSafety = () => {
               <span className="hidden sm:inline">Suppliers</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* ===================== DAILY CHECKS TAB ===================== */}
+          <TabsContent value="daily" className="space-y-4">
+            <DailyTempChecks />
+          </TabsContent>
 
           {/* ===================== LOGS TAB ===================== */}
           <TabsContent value="logs" className="space-y-4">
