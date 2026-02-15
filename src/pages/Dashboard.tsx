@@ -30,7 +30,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { MobileDeck } from "@/components/mobile/MobileDeck";
 import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
 import OrgChartWidget from "@/components/dashboard/OrgChartWidget";
-import SetupProgressWidget from "@/components/dashboard/SetupProgressWidget";
+import InductionTracker from "@/components/onboarding/InductionTracker";
+import DailyWorkflowCard from "@/components/onboarding/DailyWorkflowCard";
 import VenueSelector from "@/components/dashboard/VenueSelector";
 import { useOrg } from "@/contexts/OrgContext";
 
@@ -323,9 +324,14 @@ const Dashboard = () => {
             transition={{ delay: 0.4 }}
             className="space-y-4"
           >
-            {/* Setup Progress (hides when 100%) */}
-            <ErrorBoundary fallbackMessage="Could not load setup progress">
-              <SetupProgressWidget />
+            {/* Induction Tracker (replaces SetupProgressWidget) */}
+            <ErrorBoundary fallbackMessage="Could not load induction tracker">
+              <InductionTracker />
+            </ErrorBoundary>
+
+            {/* Daily Workflow Guide */}
+            <ErrorBoundary fallbackMessage="Could not load daily workflow">
+              <DailyWorkflowCard />
             </ErrorBoundary>
 
             {/* Org Chart */}

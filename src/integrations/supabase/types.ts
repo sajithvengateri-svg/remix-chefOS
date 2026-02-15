@@ -701,6 +701,36 @@ export type Database = {
           },
         ]
       }
+      induction_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          org_id: string
+          skipped: boolean
+          step_key: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          org_id: string
+          skipped?: boolean
+          step_key: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          org_id?: string
+          skipped?: boolean
+          step_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ingredient_price_history: {
         Row: {
           changed_by: string | null
