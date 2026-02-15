@@ -643,10 +643,12 @@ export type Database = {
           notes: string | null
           org_id: string | null
           readings: Json | null
+          receiving_data: Json | null
           recorded_by: string | null
           recorded_by_name: string | null
           reference_image_url: string | null
           status: string | null
+          temp_image_url: string | null
           time: string
           updated_at: string
           verification_image_url: string | null
@@ -663,10 +665,12 @@ export type Database = {
           notes?: string | null
           org_id?: string | null
           readings?: Json | null
+          receiving_data?: Json | null
           recorded_by?: string | null
           recorded_by_name?: string | null
           reference_image_url?: string | null
           status?: string | null
+          temp_image_url?: string | null
           time?: string
           updated_at?: string
           verification_image_url?: string | null
@@ -683,10 +687,12 @@ export type Database = {
           notes?: string | null
           org_id?: string | null
           readings?: Json | null
+          receiving_data?: Json | null
           recorded_by?: string | null
           recorded_by_name?: string | null
           reference_image_url?: string | null
           status?: string | null
+          temp_image_url?: string | null
           time?: string
           updated_at?: string
           verification_image_url?: string | null
