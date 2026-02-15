@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { 
   Plus, Calendar, CheckCircle2, Circle, Clock, User, Edit, Trash2, 
-  Loader2, Flag, MessageSquare, Share2, FileText, CalendarDays, Moon
+  Loader2, Flag, MessageSquare, Share2, ClipboardList, Moon
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -20,8 +20,6 @@ import { useOrg } from "@/contexts/OrgContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { PrepListTemplatesManager } from "@/components/prep/PrepListTemplatesManager";
-import { WeeklyPrepView } from "@/components/prep/WeeklyPrepView";
 import { PrepListComments } from "@/components/prep/PrepListComments";
 import NightlyStockCount from "@/components/prep/NightlyStockCount";
 import { useSectionLeaderStatus } from "@/hooks/useSectionLeaderStatus";
@@ -66,7 +64,7 @@ const PrepLists = () => {
   const [editingList, setEditingList] = useState<PrepList | null>(null);
   const [deletingList, setDeletingList] = useState<PrepList | null>(null);
   const [expandedListId, setExpandedListId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("today");
+  const [activeTab, setActiveTab] = useState("section-prep");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -297,32 +295,28 @@ const PrepLists = () => {
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="page-title font-display">Prep Lists</h1>
-            <p className="page-subtitle">Organize your kitchen prep work</p>
+            <p className="page-subtitle">Section prep counts & ad-hoc tasks</p>
           </div>
-          {hasEditPermission && (
+          {hasEditPermission && activeTab === "prep-tasks" && (
             <Button onClick={() => setDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" /> New Prep List
+              <Plus className="w-4 h-4 mr-2" /> New Prep Task
             </Button>
           )}
         </motion.div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
-            <TabsTrigger value="today" className="gap-2">
-              <Calendar className="w-4 h-4" /><span className="hidden sm:inline">Today</span>
+          <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="section-prep" className="gap-2">
+              <Moon className="w-4 h-4" /><span className="hidden sm:inline">Section Prep</span>
             </TabsTrigger>
-            <TabsTrigger value="nightly" className="gap-2">
-              <Moon className="w-4 h-4" /><span className="hidden sm:inline">Nightly Count</span>
-            </TabsTrigger>
-            <TabsTrigger value="week" className="gap-2">
-              <CalendarDays className="w-4 h-4" /><span className="hidden sm:inline">Week View</span>
-            </TabsTrigger>
-            <TabsTrigger value="templates" className="gap-2">
-              <FileText className="w-4 h-4" /><span className="hidden sm:inline">Templates</span>
+            <TabsTrigger value="prep-tasks" className="gap-2">
+              <ClipboardList className="w-4 h-4" /><span className="hidden sm:inline">Prep Tasks</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="today" className="space-y-6">
+          <TabsContent value="section-prep"><NightlyStockCount /></TabsContent>
+
+          <TabsContent value="prep-tasks" className="space-y-6">
             {/* Progress Overview */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
               className="card-elevated p-5">
@@ -512,16 +506,13 @@ const PrepLists = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="nightly"><NightlyStockCount /></TabsContent>
-          <TabsContent value="week"><WeeklyPrepView /></TabsContent>
-          <TabsContent value="templates"><PrepListTemplatesManager /></TabsContent>
         </Tabs>
 
         {/* Add/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={resetForm}>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingList ? "Edit Prep List" : "New Prep List"}</DialogTitle>
+              <DialogTitle>{editingList ? "Edit Prep Task" : "New Prep Task"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
