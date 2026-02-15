@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import { toast } from "sonner";
 
 type UrgencyLevel = "priority" | "end_of_day" | "within_48h";
@@ -28,6 +29,7 @@ export interface PrepListTemplate {
 
 export function usePrepTemplates(sectionId?: string) {
   const { user } = useAuth();
+  const { currentOrg } = useOrg();
   const [templates, setTemplates] = useState<PrepListTemplate[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -73,6 +75,7 @@ export function usePrepTemplates(sectionId?: string) {
         ...template,
         items: JSON.parse(JSON.stringify(template.items)),
         created_by: user?.id,
+        org_id: currentOrg?.id,
       })
       .select()
       .single();

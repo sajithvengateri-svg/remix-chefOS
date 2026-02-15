@@ -23,6 +23,7 @@ export type Database = {
           entity_name: string | null
           entity_type: string
           id: string
+          org_id: string | null
           section_id: string | null
           user_id: string
           user_name: string | null
@@ -35,6 +36,7 @@ export type Database = {
           entity_name?: string | null
           entity_type: string
           id?: string
+          org_id?: string | null
           section_id?: string | null
           user_id: string
           user_name?: string | null
@@ -47,6 +49,7 @@ export type Database = {
           entity_name?: string | null
           entity_type?: string
           id?: string
+          org_id?: string | null
           section_id?: string | null
           user_id?: string
           user_name?: string | null
@@ -1771,6 +1774,7 @@ export type Database = {
           is_active: boolean | null
           items: Json
           name: string
+          org_id: string
           schedule_days: string[] | null
           schedule_type: string
           section_id: string | null
@@ -1784,6 +1788,7 @@ export type Database = {
           is_active?: boolean | null
           items?: Json
           name: string
+          org_id: string
           schedule_days?: string[] | null
           schedule_type?: string
           section_id?: string | null
@@ -1797,6 +1802,7 @@ export type Database = {
           is_active?: boolean | null
           items?: Json
           name?: string
+          org_id?: string
           schedule_days?: string[] | null
           schedule_type?: string
           section_id?: string | null
