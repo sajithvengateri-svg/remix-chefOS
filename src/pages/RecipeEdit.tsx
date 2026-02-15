@@ -128,8 +128,8 @@ const RecipeEdit = () => {
 
   useEffect(() => {
     if (isNewRecipe) {
-      // Create a new recipe immediately
-      createNewRecipe();
+      // Redirect to recipes page - new recipe creation now goes through the launcher
+      navigate("/recipes", { replace: true });
     } else if (id) {
       fetchRecipe();
     }

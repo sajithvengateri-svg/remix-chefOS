@@ -26,44 +26,8 @@ interface ExtractedRecipe {
   allergens: string[];
 }
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
-
-    const formData = await req.formData();
-    const file = formData.get("file") as File;
-    const existingIngredients = formData.get("ingredients") as string;
-
-    if (!file) {
-      return new Response(
-        JSON.stringify({ error: "No file provided" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Convert file to base64 for vision models
-    const arrayBuffer = await file.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-    const mimeType = file.type || "image/jpeg";
-
-    // Parse existing ingredients for matching
-    let ingredientsList: { id: string; name: string; unit: string; cost_per_unit: number }[] = [];
-    try {
-      ingredientsList = JSON.parse(existingIngredients || "[]");
-    } catch {
-      ingredientsList = [];
-    }
-
-    const ingredientNames = ingredientsList.map(i => `${i.name} (${i.unit})`).join(", ");
-
-    const systemPrompt = `You are a professional chef and recipe data extractor. Extract recipe information from images or documents of handwritten or printed recipes.
+function buildSystemPrompt(ingredientNames: string) {
+  return `You are a professional chef and recipe data extractor. Extract recipe information from images, documents, or text of handwritten or printed recipes.
 
 Your task is to:
 1. Extract the recipe name, description, category, servings, prep time, and cook time
@@ -97,25 +61,127 @@ Return ONLY valid JSON matching this structure:
   "instructions": ["Step 1...", "Step 2..."],
   "allergens": ["Gluten", "Dairy"]
 }`;
+}
 
-    const messages = [
-      { role: "system", content: systemPrompt },
-      {
-        role: "user",
-        content: [
-          {
-            type: "image_url",
-            image_url: {
-              url: `data:${mimeType};base64,${base64}`
-            }
-          },
-          {
-            type: "text",
-            text: "Please extract all recipe information from this image. If there are multiple recipes, extract the first/main one. Be thorough with ingredients - include all of them with quantities and units."
-          }
-        ]
+function parseIngredientsList(raw: unknown): { id: string; name: string; unit: string; cost_per_unit: number }[] {
+  try {
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === "string") return JSON.parse(raw || "[]");
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+function enrichIngredients(
+  extracted: ExtractedIngredient[],
+  dbIngredients: { id: string; name: string; unit: string; cost_per_unit: number }[]
+): ExtractedIngredient[] {
+  return extracted.map((ing) => {
+    const matchedIng = dbIngredients.find(
+      (dbIng) =>
+        dbIng.name.toLowerCase() === ing.name.toLowerCase() ||
+        dbIng.name.toLowerCase() === ing.matched_ingredient_name?.toLowerCase() ||
+        dbIng.name.toLowerCase().includes(ing.name.toLowerCase()) ||
+        ing.name.toLowerCase().includes(dbIng.name.toLowerCase())
+    );
+
+    if (matchedIng) {
+      return {
+        ...ing,
+        matched_ingredient_id: matchedIng.id,
+        matched_ingredient_name: matchedIng.name,
+        estimated_cost: matchedIng.cost_per_unit * ing.quantity,
+      };
+    }
+    return ing;
+  });
+}
+
+function parseAIResponse(content: string): ExtractedRecipe {
+  const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) ||
+                    content.match(/```\s*([\s\S]*?)\s*```/) ||
+                    [null, content];
+  const jsonStr = jsonMatch[1] || content;
+  return JSON.parse(jsonStr.trim());
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    const contentType = req.headers.get("content-type") || "";
+    let messages: unknown[];
+    let ingredientsList: { id: string; name: string; unit: string; cost_per_unit: number }[] = [];
+
+    if (contentType.includes("application/json")) {
+      // === TEXT / URL mode ===
+      const body = await req.json();
+      const text = body.text || "";
+      ingredientsList = parseIngredientsList(body.ingredients);
+
+      if (!text.trim()) {
+        return new Response(
+          JSON.stringify({ error: "No text provided" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-    ];
+
+      const ingredientNames = ingredientsList.map(i => `${i.name} (${i.unit})`).join(", ");
+      const systemPrompt = buildSystemPrompt(ingredientNames);
+
+      messages = [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: `Please extract all recipe information from this text. If there are multiple recipes, extract the first/main one. Be thorough with ingredients.\n\n${text}`,
+        },
+      ];
+    } else {
+      // === IMAGE / FILE mode (existing) ===
+      const formData = await req.formData();
+      const file = formData.get("file") as File;
+      const existingIngredients = formData.get("ingredients") as string;
+
+      if (!file) {
+        return new Response(
+          JSON.stringify({ error: "No file provided" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const mimeType = file.type || "image/jpeg";
+
+      ingredientsList = parseIngredientsList(existingIngredients);
+      const ingredientNames = ingredientsList.map(i => `${i.name} (${i.unit})`).join(", ");
+      const systemPrompt = buildSystemPrompt(ingredientNames);
+
+      messages = [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${base64}` },
+            },
+            {
+              type: "text",
+              text: "Please extract all recipe information from this image. If there are multiple recipes, extract the first/main one. Be thorough with ingredients - include all of them with quantities and units.",
+            },
+          ],
+        },
+      ];
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -151,44 +217,17 @@ Return ONLY valid JSON matching this structure:
     const aiResult = await response.json();
     const content = aiResult.choices?.[0]?.message?.content || "";
 
-    // Parse the JSON from the response
     let extractedRecipe: ExtractedRecipe;
     try {
-      // Try to extract JSON from markdown code blocks or raw JSON
-      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || 
-                        content.match(/```\s*([\s\S]*?)\s*```/) ||
-                        [null, content];
-      const jsonStr = jsonMatch[1] || content;
-      extractedRecipe = JSON.parse(jsonStr.trim());
+      extractedRecipe = parseAIResponse(content);
     } catch (parseError) {
       console.error("Failed to parse AI response:", content);
-      throw new Error("Failed to parse recipe data from image");
+      throw new Error("Failed to parse recipe data");
     }
-
-    // Match ingredients to database and calculate costs
-    const enrichedIngredients = extractedRecipe.ingredients.map((ing) => {
-      const matchedIng = ingredientsList.find(
-        (dbIng) => 
-          dbIng.name.toLowerCase() === ing.name.toLowerCase() ||
-          dbIng.name.toLowerCase() === ing.matched_ingredient_name?.toLowerCase() ||
-          dbIng.name.toLowerCase().includes(ing.name.toLowerCase()) ||
-          ing.name.toLowerCase().includes(dbIng.name.toLowerCase())
-      );
-
-      if (matchedIng) {
-        return {
-          ...ing,
-          matched_ingredient_id: matchedIng.id,
-          matched_ingredient_name: matchedIng.name,
-          estimated_cost: matchedIng.cost_per_unit * ing.quantity,
-        };
-      }
-      return ing;
-    });
 
     const enrichedRecipe = {
       ...extractedRecipe,
-      ingredients: enrichedIngredients,
+      ingredients: enrichIngredients(extractedRecipe.ingredients, ingredientsList),
     };
 
     return new Response(
