@@ -18,6 +18,8 @@ import {
   Sparkles,
   FileImage,
 } from "lucide-react";
+import RecipeTypeSelector from "./RecipeTypeSelector";
+import type { RecipeType } from "./RecipeTypeSelector";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +63,7 @@ interface RecipeCreationLauncherProps {
 
 const units = ["g", "kg", "ml", "L", "each", "lb", "oz", "bunch", "tbsp", "tsp", "cup"];
 
-type LauncherStep = "choose" | "camera" | "paste" | "processing" | "review" | "saving";
+type LauncherStep = "choose" | "choose_type" | "camera" | "paste" | "processing" | "review" | "saving";
 
 const processingMessages = [
   "Reading your recipe...",
@@ -86,6 +88,8 @@ const RecipeCreationLauncher = ({ isOpen, onClose }: RecipeCreationLauncherProps
   const [extractedRecipe, setExtractedRecipe] = useState<ExtractedRecipe | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [processingMsgIndex, setProcessingMsgIndex] = useState(0);
+  const [selectedRecipeType, setSelectedRecipeType] = useState<RecipeType>("dish");
+  const [pendingAction, setPendingAction] = useState<"blank" | "camera" | "file" | null>(null);
 
   // Cycle processing messages
   const startProcessingMessages = () => {
@@ -109,7 +113,25 @@ const RecipeCreationLauncher = ({ isOpen, onClose }: RecipeCreationLauncherProps
     setPasteText("");
     setExtractedRecipe(null);
     setError(null);
+    setSelectedRecipeType("dish");
+    setPendingAction(null);
     onClose();
+  };
+
+  // Navigate to type selection before actual action
+  const goToTypeStep = (action: "blank" | "camera" | "file") => {
+    setPendingAction(action);
+    setStep("choose_type");
+  };
+
+  const handleTypeConfirm = () => {
+    if (pendingAction === "blank") {
+      handleStartBlank();
+    } else if (pendingAction === "camera") {
+      cameraInputRef.current?.click();
+    } else if (pendingAction === "file") {
+      fileInputRef.current?.click();
+    }
   };
 
   // === PATH 1: Start Blank ===
@@ -133,6 +155,7 @@ const RecipeCreationLauncher = ({ isOpen, onClose }: RecipeCreationLauncherProps
         created_by: user?.id,
         org_id: currentOrg?.id,
         is_public: true,
+        recipe_type: selectedRecipeType,
       })
       .select()
       .single();
@@ -271,6 +294,7 @@ const RecipeCreationLauncher = ({ isOpen, onClose }: RecipeCreationLauncherProps
           created_by: user?.id,
           org_id: currentOrg?.id,
           is_public: true,
+          recipe_type: selectedRecipeType,
           cost_per_serving: 0,
           sell_price: 0,
           target_food_cost_percent: 30,
@@ -418,7 +442,7 @@ const RecipeCreationLauncher = ({ isOpen, onClose }: RecipeCreationLauncherProps
                 <div className="grid grid-cols-3 gap-3">
                   {/* Snap a Photo - PRIMARY */}
                   <button
-                    onClick={handleCameraCapture}
+                    onClick={() => goToTypeStep("camera")}
                     className="group relative flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-primary/20 bg-primary/5 hover:bg-primary/10 hover:border-primary/40 transition-all"
                   >
                     <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -438,7 +462,7 @@ const RecipeCreationLauncher = ({ isOpen, onClose }: RecipeCreationLauncherProps
 
                   {/* Start Blank */}
                   <button
-                    onClick={handleStartBlank}
+                    onClick={() => goToTypeStep("blank")}
                     className="group flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-border hover:border-foreground/20 hover:bg-muted/50 transition-all"
                   >
                     <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -454,7 +478,7 @@ const RecipeCreationLauncher = ({ isOpen, onClose }: RecipeCreationLauncherProps
 
                   {/* Import File */}
                   <button
-                    onClick={handleFileUpload}
+                    onClick={() => goToTypeStep("file")}
                     className="group flex flex-col items-center gap-3 p-5 rounded-2xl border-2 border-border hover:border-foreground/20 hover:bg-muted/50 transition-all"
                   >
                     <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -512,6 +536,39 @@ const RecipeCreationLauncher = ({ isOpen, onClose }: RecipeCreationLauncherProps
                     <span>{error}</span>
                   </div>
                 )}
+              </motion.div>
+            )}
+
+            {/* ========== CHOOSE TYPE STEP ========== */}
+            {step === "choose_type" && (
+              <motion.div
+                key="choose_type"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="p-6 space-y-6"
+              >
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => { setStep("choose"); setPendingAction(null); }}
+                    className="p-2 rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <div>
+                    <h2 className="text-lg font-bold">What type of recipe?</h2>
+                    <p className="text-sm text-muted-foreground">This affects costing and how it links to other recipes</p>
+                  </div>
+                </div>
+
+                <RecipeTypeSelector
+                  value={selectedRecipeType}
+                  onChange={setSelectedRecipeType}
+                />
+
+                <Button onClick={handleTypeConfirm} className="w-full" size="lg">
+                  Continue
+                </Button>
               </motion.div>
             )}
 

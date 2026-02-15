@@ -11,9 +11,10 @@ import {
   DollarSign,
   Users,
   Loader2,
-  Beaker,
   Shield
 } from "lucide-react";
+import RecipeTypeBadge from "./RecipeTypeBadge";
+import type { RecipeType } from "./RecipeTypeSelector";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +38,7 @@ interface RecipeBase {
   tasting_notes?: string | null;
   is_batch_recipe?: boolean | null;
   target_food_cost_percent?: number | null;
+  recipe_type?: string | null;
 }
 
 interface RecipeCardProps {
@@ -161,13 +163,10 @@ const RecipeCard = ({ recipe, hasEditPermission, onEdit, onDelete, onImageUpdate
           </div>
         )}
 
-        {/* Batch recipe badge */}
-        {recipe.is_batch_recipe && (
-          <div className="absolute top-2 left-2 bg-accent text-accent-foreground text-xs px-2 py-1 rounded-full flex items-center gap-1">
-            <Beaker className="w-3 h-3" />
-            Batch
-          </div>
-        )}
+        {/* Recipe type badge */}
+        <div className="absolute top-2 left-2">
+          <RecipeTypeBadge type={(recipe.recipe_type as RecipeType) || (recipe.is_batch_recipe ? "batch_prep" : "dish")} />
+        </div>
       </div>
 
       {/* Recipe Info */}

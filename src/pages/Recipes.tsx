@@ -58,6 +58,7 @@ interface Recipe {
   tasting_notes: string | null;
   is_batch_recipe: boolean;
   target_food_cost_percent: number | null;
+  recipe_type: string | null;
   created_at: string;
 }
 
@@ -69,6 +70,7 @@ const Recipes = () => {
   const { currentOrg } = useOrg();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedType, setSelectedType] = useState<string>("all");
   const [showCalculator, setShowCalculator] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -295,7 +297,9 @@ const Recipes = () => {
     const matchesCategory = selectedCategory === "All" || 
       recipe.category === selectedCategory ||
       (selectedCategory === "Batch Recipes" && recipe.is_batch_recipe);
-    return matchesSearch && matchesCategory;
+    const matchesType = selectedType === "all" || 
+      (recipe.recipe_type || "dish") === selectedType;
+    return matchesSearch && matchesCategory && matchesType;
   });
 
   return (
@@ -401,6 +405,35 @@ const Recipes = () => {
               <Settings className="w-4 h-4" />
             </button>
           )}
+        </motion.div>
+
+        {/* Type Filter Chips */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
+        >
+          {[
+            { value: "all", label: "All Types" },
+            { value: "dish", label: "🍽️ Dishes" },
+            { value: "component", label: "🧩 Components" },
+            { value: "batch_prep", label: "🧪 Batch Prep" },
+            { value: "portion_prep", label: "⚖️ Portion Prep" },
+          ].map((type) => (
+            <button
+              key={type.value}
+              onClick={() => setSelectedType(type.value)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all",
+                selectedType === type.value
+                  ? "bg-foreground text-background"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {type.label}
+            </button>
+          ))}
         </motion.div>
 
         {/* Recipe Grid */}
