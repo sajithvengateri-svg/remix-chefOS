@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { motion } from "framer-motion";
+import FoodCostCalculator from "@/components/costing/FoodCostCalculator";
 import { 
   Menu as MenuIcon,
   TrendingUp,
@@ -23,6 +24,7 @@ import {
   Copy,
   Trash2,
   Table as TableIcon,
+  Calculator,
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { useMenus } from "@/hooks/useMenus";
@@ -90,6 +92,7 @@ const MenuEngineering = () => {
   const [isParsingMenu, setIsParsingMenu] = useState(false);
   const [extractedItems, setExtractedItems] = useState<ExtractedMenuItem[]>([]);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [isCostCalcOpen, setIsCostCalcOpen] = useState(false);
   
   // Use database-backed hook
   const { 
@@ -361,6 +364,13 @@ const MenuEngineering = () => {
             <p className="page-subtitle">Track costs, analyze profitability, optimize your menu</p>
           </div>
           <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => setIsCostCalcOpen(true)}
+            >
+              <Calculator className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Cost Calc</span>
+            </Button>
             <Button 
               variant="outline"
               onClick={() => setIsMenuManagerOpen(true)}
@@ -895,6 +905,12 @@ const MenuEngineering = () => {
           </div>
         </div>
       )}
+
+      {/* Food Cost Calculator */}
+      <FoodCostCalculator
+        isOpen={isCostCalcOpen}
+        onClose={() => setIsCostCalcOpen(false)}
+      />
     </AppLayout>
   );
 };

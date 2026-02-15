@@ -8,6 +8,7 @@ export const allNavItems = [
   { path: "/prep", label: "Prep", icon: "ClipboardList" },
   { path: "/recipes", label: "Recipes", icon: "ChefHat" },
   { path: "/ingredients", label: "Ingredients", icon: "Utensils" },
+  { path: "/costing", label: "Costing", icon: "DollarSign" },
   { path: "/menu-engineering", label: "Menu", icon: "Menu" },
   { path: "/equipment", label: "Equipment", icon: "Wrench" },
   { path: "/team", label: "Team", icon: "Users2" },

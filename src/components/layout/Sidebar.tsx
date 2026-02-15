@@ -39,7 +39,7 @@ const allNavItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard", module: "dashboard" },
   { path: "/prep", icon: ClipboardList, label: "Prep Lists", module: "prep" },
   { path: "/recipes", icon: ChefHat, label: "Recipe Bank", module: "recipes" },
-  { path: "/ingredients", icon: Utensils, label: "Costing", module: "ingredients" },
+  { path: "/ingredients", icon: Utensils, label: "Ingredients", module: "ingredients" },
   { path: "/invoices", icon: Receipt, label: "Invoices", module: "invoices" },
   { path: "/menu-engineering", icon: Menu, label: "Menu Engineering", module: "menu-engineering" },
   { path: "/equipment", icon: Wrench, label: "Equipment", module: "equipment" },
