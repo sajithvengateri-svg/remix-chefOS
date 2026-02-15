@@ -630,6 +630,63 @@ export type Database = {
         }
         Relationships: []
       }
+      food_safety_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          created_at: string
+          id: string
+          location: string | null
+          log_id: string
+          log_type: string
+          org_id: string | null
+          recorded_by_name: string | null
+          status: string
+          temperature: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          log_id: string
+          log_type: string
+          org_id?: string | null
+          recorded_by_name?: string | null
+          status?: string
+          temperature?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          log_id?: string
+          log_type?: string
+          org_id?: string | null
+          recorded_by_name?: string | null
+          status?: string
+          temperature?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_safety_alerts_log_id_fkey"
+            columns: ["log_id"]
+            isOneToOne: false
+            referencedRelation: "food_safety_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_safety_alerts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       food_safety_logs: {
         Row: {
           ai_verification_notes: string | null
