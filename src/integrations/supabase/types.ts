@@ -1659,30 +1659,33 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          ingredient_id: string
+          ingredient_id: string | null
           notes: string | null
           quantity: number
           recipe_id: string
+          sub_recipe_id: string | null
           unit: string
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
-          ingredient_id: string
+          ingredient_id?: string | null
           notes?: string | null
           quantity?: number
           recipe_id: string
+          sub_recipe_id?: string | null
           unit?: string
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
-          ingredient_id?: string
+          ingredient_id?: string | null
           notes?: string | null
           quantity?: number
           recipe_id?: string
+          sub_recipe_id?: string | null
           unit?: string
           updated_at?: string
         }
@@ -1697,6 +1700,13 @@ export type Database = {
           {
             foreignKeyName: "recipe_ingredients_recipe_id_fkey"
             columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_ingredients_sub_recipe_id_fkey"
+            columns: ["sub_recipe_id"]
             isOneToOne: false
             referencedRelation: "recipes"
             referencedColumns: ["id"]
@@ -1759,12 +1769,14 @@ export type Database = {
           name: string
           org_id: string | null
           prep_time: number | null
+          recipe_type: string
           sell_price: number | null
           servings: number | null
           target_food_cost_percent: number | null
           tasting_notes: string | null
           total_yield: number | null
           updated_at: string
+          yield_percent: number | null
           yield_unit: string | null
         }
         Insert: {
@@ -1789,12 +1801,14 @@ export type Database = {
           name: string
           org_id?: string | null
           prep_time?: number | null
+          recipe_type?: string
           sell_price?: number | null
           servings?: number | null
           target_food_cost_percent?: number | null
           tasting_notes?: string | null
           total_yield?: number | null
           updated_at?: string
+          yield_percent?: number | null
           yield_unit?: string | null
         }
         Update: {
@@ -1819,12 +1833,14 @@ export type Database = {
           name?: string
           org_id?: string | null
           prep_time?: number | null
+          recipe_type?: string
           sell_price?: number | null
           servings?: number | null
           target_food_cost_percent?: number | null
           tasting_notes?: string | null
           total_yield?: number | null
           updated_at?: string
+          yield_percent?: number | null
           yield_unit?: string | null
         }
         Relationships: [

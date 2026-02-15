@@ -18,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import RecipeBuilder from "@/components/recipes/RecipeBuilder";
+import RecipeTypeSelector from "@/components/recipes/RecipeTypeSelector";
+import type { RecipeType } from "@/components/recipes/RecipeTypeSelector";
 import RecipeCostSettings from "@/components/recipes/RecipeCostSettings";
 import RecipeSectionsManager from "@/components/recipes/RecipeSectionsManager";
 import { CCPTimelineEditor } from "@/components/ccp/CCPTimelineEditor";
@@ -44,6 +46,8 @@ interface Recipe {
   yield_unit: string;
   food_cost_low_alert: number;
   food_cost_high_alert: number;
+  recipe_type: RecipeType;
+  yield_percent: number;
 }
 
 // CCP Section Component with its own data management
@@ -202,6 +206,8 @@ const RecipeEdit = () => {
         yield_unit: data.yield_unit || "portions",
         food_cost_low_alert: Number(data.food_cost_low_alert) || 20,
         food_cost_high_alert: Number(data.food_cost_high_alert) || 35,
+        recipe_type: (data.recipe_type as RecipeType) || "dish",
+        yield_percent: Number(data.yield_percent) || 100,
       } as Recipe);
     }
     setLoading(false);
@@ -228,6 +234,8 @@ const RecipeEdit = () => {
         yield_unit: recipe.yield_unit,
         food_cost_low_alert: recipe.food_cost_low_alert,
         food_cost_high_alert: recipe.food_cost_high_alert,
+        recipe_type: recipe.recipe_type,
+        yield_percent: recipe.yield_percent,
         is_public: true,
       })
       .eq("id", recipe.id);
@@ -324,6 +332,79 @@ const RecipeEdit = () => {
               </div>
             </div>
           </div>
+        </motion.div>
+
+        {/* Recipe Type Selector */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="card-elevated p-5"
+        >
+          <h3 className="font-semibold mb-3">Recipe Type</h3>
+          <RecipeTypeSelector
+            value={recipe.recipe_type}
+            onChange={(type) => handleFieldUpdate("recipe_type", type)}
+            disabled={!hasEditPermission}
+            variant="compact"
+          />
+
+          {/* Type-specific fields */}
+          {(recipe.recipe_type === "batch_prep") && (
+            <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Batch Yield Qty</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={recipe.total_yield}
+                  onChange={(e) => handleFieldUpdate("total_yield", parseFloat(e.target.value) || 0)}
+                  disabled={!hasEditPermission}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Yield Unit</Label>
+                <Select
+                  value={recipe.yield_unit}
+                  onValueChange={(v) => handleFieldUpdate("yield_unit", v)}
+                  disabled={!hasEditPermission}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["kg", "L", "portions", "each", "g", "ml"].map(u => (
+                      <SelectItem key={u} value={u}>{u}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          {recipe.recipe_type === "portion_prep" && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="space-y-2 max-w-xs">
+                <Label>Yield % (after trim/waste)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={recipe.yield_percent}
+                    onChange={(e) => handleFieldUpdate("yield_percent", parseFloat(e.target.value) || 100)}
+                    disabled={!hasEditPermission}
+                    className="w-24"
+                  />
+                  <span className="text-sm text-muted-foreground">% usable after waste</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  E.g. whole fish at 55% means 45% is trim/waste
+                </p>
+              </div>
+            </div>
+          )}
         </motion.div>
 
         {/* Basic Info */}
