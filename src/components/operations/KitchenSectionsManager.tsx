@@ -13,7 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import { useSectionAssignments } from "@/hooks/useSectionAssignments";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AssignTeamDialog from "./AssignTeamDialog";
 import ActivityFeed from "@/components/activity/ActivityFeed";
 
@@ -46,6 +48,7 @@ const defaultColors = [
 
 const KitchenSectionsManager = ({ hasEditPermission }: KitchenSectionsManagerProps) => {
   const { isHeadChef } = useAuth();
+  const { currentOrg } = useOrg();
   const [sections, setSections] = useState<KitchenSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -74,17 +77,20 @@ const KitchenSectionsManager = ({ hasEditPermission }: KitchenSectionsManagerPro
     color: "#6B7280",
     is_active: true,
     monthly_budget: 0,
+    leader_user_id: "",
   });
 
   useEffect(() => {
     fetchSections();
-  }, []);
+  }, [currentOrg?.id]);
 
   const fetchSections = async () => {
+    if (!currentOrg?.id) return;
     setLoading(true);
     const { data, error } = await supabase
       .from("kitchen_sections")
       .select("*")
+      .eq("org_id", currentOrg.id)
       .order("sort_order", { ascending: true });
 
     if (error) {
@@ -121,22 +127,52 @@ const KitchenSectionsManager = ({ hasEditPermission }: KitchenSectionsManagerPro
       }
       toast.success("Section updated");
     } else {
+      if (!currentOrg?.id) {
+        toast.error("No organization selected");
+        return;
+      }
       const maxOrder = sections.reduce((max, s) => Math.max(max, s.sort_order || 0), 0);
-      const { error } = await supabase.from("kitchen_sections").insert({
+      const { data: newSection, error } = await supabase.from("kitchen_sections").insert({
         name: formData.name,
         description: formData.description || null,
         color: formData.color,
         is_active: formData.is_active,
         monthly_budget: formData.monthly_budget,
         sort_order: maxOrder + 1,
-      });
+        org_id: currentOrg.id,
+      }).select().single();
 
       if (error) {
         toast.error("Failed to create section");
         console.error(error);
         return;
       }
+
+      // Save leader assignment for new section
+      if (formData.leader_user_id && newSection) {
+        await saveAssignments(newSection.id, [
+          { user_id: formData.leader_user_id, role: "leader" as const },
+        ], currentOrg.id);
+      }
+
       toast.success("Section created");
+    }
+
+    // Save leader assignment for edited section
+    if (editingSection && currentOrg?.id) {
+      const currentLeader = getSectionLeader(editingSection.id);
+      if (formData.leader_user_id && formData.leader_user_id !== currentLeader?.user_id) {
+        const existingMembers = getSectionAssignments(editingSection.id).filter(a => a.role === "member");
+        await saveAssignments(editingSection.id, [
+          { user_id: formData.leader_user_id, role: "leader" as const },
+          ...existingMembers.map(m => ({ user_id: m.user_id, role: "member" as const })),
+        ], currentOrg.id);
+      } else if (!formData.leader_user_id && currentLeader) {
+        const existingMembers = getSectionAssignments(editingSection.id).filter(a => a.role === "member");
+        await saveAssignments(editingSection.id, [
+          ...existingMembers.map(m => ({ user_id: m.user_id, role: "member" as const })),
+        ], currentOrg.id);
+      }
     }
 
     resetForm();
@@ -165,12 +201,14 @@ const KitchenSectionsManager = ({ hasEditPermission }: KitchenSectionsManagerPro
 
   const openEditDialog = (section: KitchenSection) => {
     setEditingSection(section);
+    const leader = getSectionLeader(section.id);
     setFormData({
       name: section.name,
       description: section.description || "",
       color: section.color || "#6B7280",
       is_active: section.is_active ?? true,
       monthly_budget: section.monthly_budget || 0,
+      leader_user_id: leader?.user_id || "",
     });
     setDialogOpen(true);
   };
@@ -184,6 +222,7 @@ const KitchenSectionsManager = ({ hasEditPermission }: KitchenSectionsManagerPro
       color: "#6B7280",
       is_active: true,
       monthly_budget: 0,
+      leader_user_id: "",
     });
   };
 
@@ -480,6 +519,27 @@ const KitchenSectionsManager = ({ hasEditPermission }: KitchenSectionsManagerPro
               <p className="text-xs text-muted-foreground">Set to 0 to disable budget tracking</p>
             </div>
 
+            <div className="space-y-2">
+              <Label>Section Leader</Label>
+              <Select
+                value={formData.leader_user_id}
+                onValueChange={(value) => setFormData({ ...formData, leader_user_id: value === "none" ? "" : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a section leader..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No leader</SelectItem>
+                  {allTeamMembers.map((member) => (
+                    <SelectItem key={member.user_id} value={member.user_id}>
+                      {member.full_name} {member.position ? `(${member.position})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">The in-charge chef for this section</p>
+            </div>
+
             <div className="flex items-center justify-between">
               <div>
                 <Label htmlFor="active">Active</Label>
@@ -527,7 +587,7 @@ const KitchenSectionsManager = ({ hasEditPermission }: KitchenSectionsManagerPro
           sectionId={assigningSection.id}
           currentAssignments={getSectionAssignments(assigningSection.id)}
           allTeamMembers={allTeamMembers}
-          onSave={(assignments) => saveAssignments(assigningSection.id, assignments)}
+          onSave={(assignments) => saveAssignments(assigningSection.id, assignments, currentOrg?.id)}
         />
       )}
     </div>

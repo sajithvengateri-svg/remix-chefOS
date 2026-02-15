@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 
 export interface SectionAssignment {
   id: string;
@@ -28,14 +29,17 @@ export interface TeamMember {
 
 export const useSectionAssignments = () => {
   const { user } = useAuth();
+  const { currentOrg } = useOrg();
   const [assignments, setAssignments] = useState<Record<string, SectionAssignment[]>>({});
   const [allTeamMembers, setAllTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchAllAssignments = useCallback(async () => {
+    if (!currentOrg?.id) return;
     const { data, error } = await supabase
       .from("section_assignments")
-      .select("*");
+      .select("*")
+      .eq("org_id", currentOrg.id);
 
     if (error) {
       console.error("Error fetching assignments:", error);
@@ -73,12 +77,32 @@ export const useSectionAssignments = () => {
     });
 
     setAssignments(grouped);
-  }, []);
+  }, [currentOrg?.id]);
 
   const fetchTeamMembers = useCallback(async () => {
+    if (!currentOrg?.id) return;
+    // Get team members from org_memberships, then join profiles
+    const { data: membershipData, error: membershipError } = await supabase
+      .from("org_memberships")
+      .select("user_id")
+      .eq("org_id", currentOrg.id)
+      .eq("is_active", true);
+
+    if (membershipError) {
+      console.error("Error fetching org memberships:", membershipError);
+      return;
+    }
+
+    const userIds = membershipData?.map(m => m.user_id) || [];
+    if (userIds.length === 0) {
+      setAllTeamMembers([]);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("profiles")
       .select("user_id, full_name, email, position, avatar_url")
+      .in("user_id", userIds)
       .order("full_name");
 
     if (error) {
@@ -87,7 +111,7 @@ export const useSectionAssignments = () => {
     }
 
     setAllTeamMembers(data || []);
-  }, []);
+  }, [currentOrg?.id]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -108,10 +132,17 @@ export const useSectionAssignments = () => {
 
   const saveAssignments = async (
     sectionId: string,
-    newAssignments: { user_id: string; role: "leader" | "member" }[]
+    newAssignments: { user_id: string; role: "leader" | "member" }[],
+    orgId?: string
   ): Promise<boolean> => {
     if (!user) {
       toast.error("You must be logged in");
+      return false;
+    }
+
+    const resolvedOrgId = orgId || currentOrg?.id;
+    if (!resolvedOrgId) {
+      toast.error("No organization selected");
       return false;
     }
 
@@ -135,6 +166,7 @@ export const useSectionAssignments = () => {
               role: a.role,
               assigned_by: user.id,
               assigned_at: new Date().toISOString(),
+              org_id: resolvedOrgId,
             }))
           );
 

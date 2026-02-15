@@ -61,6 +61,7 @@ const TeamFeed = () => {
   const { currentOrg } = useOrg();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userSectionMap, setUserSectionMap] = useState<Record<string, { sectionName: string; color: string }>>({});
   const [posting, setPosting] = useState(false);
   const [newPost, setNewPost] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -117,6 +118,39 @@ const TeamFeed = () => {
     } finally {
       setLoading(false);
     }
+  }, [currentOrg?.id]);
+
+  // Fetch section assignments for badges
+  useEffect(() => {
+    if (!currentOrg?.id) return;
+    const fetchSectionBadges = async () => {
+      const [assignmentsRes, sectionsRes] = await Promise.all([
+        supabase
+          .from("section_assignments")
+          .select("user_id, section_id, role")
+          .eq("org_id", currentOrg.id)
+          .eq("role", "leader"),
+        supabase
+          .from("kitchen_sections")
+          .select("id, name, color")
+          .eq("org_id", currentOrg.id),
+      ]);
+
+      const sectionsById: Record<string, { name: string; color: string }> = {};
+      (sectionsRes.data || []).forEach(s => {
+        sectionsById[s.id] = { name: s.name, color: s.color || "#6B7280" };
+      });
+
+      const map: Record<string, { sectionName: string; color: string }> = {};
+      (assignmentsRes.data || []).forEach(a => {
+        const section = sectionsById[a.section_id];
+        if (section) {
+          map[a.user_id] = { sectionName: section.name, color: section.color };
+        }
+      });
+      setUserSectionMap(map);
+    };
+    fetchSectionBadges();
   }, [currentOrg?.id]);
 
   useEffect(() => {
@@ -506,7 +540,20 @@ const TeamFeed = () => {
                         <AvatarFallback>{getInitials(post.user_name)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium text-sm">{post.user_name || "Team Member"}</p>
+                        <p className="font-medium text-sm">
+                          {post.user_name || "Team Member"}
+                          {userSectionMap[post.user_id] && (
+                            <span
+                              className="ml-2 text-xs px-2 py-0.5 rounded-full inline-block"
+                              style={{
+                                backgroundColor: userSectionMap[post.user_id].color + "20",
+                                color: userSectionMap[post.user_id].color,
+                              }}
+                            >
+                              {userSectionMap[post.user_id].sectionName}
+                            </span>
+                          )}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                         </p>
