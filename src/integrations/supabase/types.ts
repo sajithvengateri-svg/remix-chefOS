@@ -1120,7 +1120,7 @@ export type Database = {
           is_active: boolean | null
           monthly_budget: number | null
           name: string
-          org_id: string | null
+          org_id: string
           sort_order: number | null
           updated_at: string
         }
@@ -1133,7 +1133,7 @@ export type Database = {
           is_active?: boolean | null
           monthly_budget?: number | null
           name: string
-          org_id?: string | null
+          org_id: string
           sort_order?: number | null
           updated_at?: string
         }
@@ -1146,7 +1146,7 @@ export type Database = {
           is_active?: boolean | null
           monthly_budget?: number | null
           name?: string
-          org_id?: string | null
+          org_id?: string
           sort_order?: number | null
           updated_at?: string
         }
@@ -2351,6 +2351,7 @@ export type Database = {
           assigned_by: string | null
           created_at: string
           id: string
+          org_id: string
           role: string
           section_id: string
           updated_at: string
@@ -2361,6 +2362,7 @@ export type Database = {
           assigned_by?: string | null
           created_at?: string
           id?: string
+          org_id: string
           role?: string
           section_id: string
           updated_at?: string
@@ -2371,6 +2373,7 @@ export type Database = {
           assigned_by?: string | null
           created_at?: string
           id?: string
+          org_id?: string
           role?: string
           section_id?: string
           updated_at?: string
