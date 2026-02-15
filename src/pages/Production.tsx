@@ -8,17 +8,19 @@ import {
   Calendar,
   TrendingUp,
   ArrowRight,
-  Loader2
+  Loader2,
+  Beef
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import RecipeScaler from "@/components/production/RecipeScaler";
 import BatchTracker from "@/components/production/BatchTracker";
 import OrderGenerator from "@/components/production/OrderGenerator";
+import YieldTestTracker from "@/components/production/YieldTestTracker";
 import { useProductionStore } from "@/stores/productionStore";
 import { useScalableRecipes } from "@/hooks/useScalableRecipes";
 import { cn } from "@/lib/utils";
 
-type ProductionView = 'overview' | 'scaling' | 'batches' | 'orders';
+type ProductionView = 'overview' | 'scaling' | 'batches' | 'orders' | 'yield-tests';
 
 const Production = () => {
   const [activeView, setActiveView] = useState<ProductionView>('overview');
@@ -38,6 +40,7 @@ const Production = () => {
     { id: 'scaling' as const, label: 'Recipe Scaling', icon: Scale },
     { id: 'batches' as const, label: 'Batch Tracking', icon: Package2 },
     { id: 'orders' as const, label: 'Order Generation', icon: ShoppingCart },
+    { id: 'yield-tests' as const, label: 'Yield Tests', icon: Beef },
   ];
 
   return (
@@ -271,6 +274,11 @@ const Production = () => {
         {/* Orders View */}
         {activeView === 'orders' && (
           <OrderGenerator />
+        )}
+
+        {/* Yield Tests View */}
+        {activeView === 'yield-tests' && (
+          <YieldTestTracker />
         )}
 
         {/* Recipe Scaler Modal */}

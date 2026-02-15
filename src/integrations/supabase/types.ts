@@ -2880,6 +2880,102 @@ export type Database = {
           },
         ]
       }
+      yield_tests: {
+        Row: {
+          category: string
+          cost_per_portion: number | null
+          cost_per_unit: number
+          created_at: string
+          gross_weight: number
+          gross_weight_unit: string
+          id: string
+          item_name: string
+          notes: string | null
+          org_id: string | null
+          portion_size: number | null
+          portion_unit: string | null
+          portions_count: number | null
+          prepped_by: string | null
+          prepped_by_user_id: string | null
+          recipe_id: string | null
+          target_yield_percent: number | null
+          test_date: string
+          total_cost: number | null
+          updated_at: string
+          usable_cost_per_unit: number | null
+          usable_weight: number
+          waste_weight: number
+          yield_percent: number | null
+        }
+        Insert: {
+          category?: string
+          cost_per_portion?: number | null
+          cost_per_unit?: number
+          created_at?: string
+          gross_weight?: number
+          gross_weight_unit?: string
+          id?: string
+          item_name: string
+          notes?: string | null
+          org_id?: string | null
+          portion_size?: number | null
+          portion_unit?: string | null
+          portions_count?: number | null
+          prepped_by?: string | null
+          prepped_by_user_id?: string | null
+          recipe_id?: string | null
+          target_yield_percent?: number | null
+          test_date?: string
+          total_cost?: number | null
+          updated_at?: string
+          usable_cost_per_unit?: number | null
+          usable_weight?: number
+          waste_weight?: number
+          yield_percent?: number | null
+        }
+        Update: {
+          category?: string
+          cost_per_portion?: number | null
+          cost_per_unit?: number
+          created_at?: string
+          gross_weight?: number
+          gross_weight_unit?: string
+          id?: string
+          item_name?: string
+          notes?: string | null
+          org_id?: string | null
+          portion_size?: number | null
+          portion_unit?: string | null
+          portions_count?: number | null
+          prepped_by?: string | null
+          prepped_by_user_id?: string | null
+          recipe_id?: string | null
+          target_yield_percent?: number | null
+          test_date?: string
+          total_cost?: number | null
+          updated_at?: string
+          usable_cost_per_unit?: number | null
+          usable_weight?: number
+          waste_weight?: number
+          yield_percent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "yield_tests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "yield_tests_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
