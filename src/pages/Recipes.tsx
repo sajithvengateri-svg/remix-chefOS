@@ -17,6 +17,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import FoodCostCalculator from "@/components/costing/FoodCostCalculator";
 import RecipeImportDialog from "@/components/recipes/RecipeImportDialog";
 import BulkRecipeImportDialog from "@/components/recipes/BulkRecipeImportDialog";
+import RecipeCreationLauncher from "@/components/recipes/RecipeCreationLauncher";
 import RecipeCard from "@/components/recipes/RecipeCard";
 import RecipeSectionsManager from "@/components/recipes/RecipeSectionsManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -75,6 +76,7 @@ const Recipes = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
+  const [showLauncher, setShowLauncher] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [deletingRecipe, setDeletingRecipe] = useState<Recipe | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -328,7 +330,7 @@ const Recipes = () => {
                     <Layers className="w-4 h-4" />
                   </Button>
                 </div>
-                <Button onClick={() => navigate("/recipes/new")}>
+                <Button onClick={() => setShowLauncher(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   New Recipe
                 </Button>
@@ -438,7 +440,7 @@ const Recipes = () => {
                 <ChefHat className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
                 <p className="text-muted-foreground">No recipes found</p>
                 {hasEditPermission && (
-                  <Button variant="outline" className="mt-4" onClick={() => navigate("/recipes/new")}>
+                  <Button variant="outline" className="mt-4" onClick={() => setShowLauncher(true)}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add First Recipe
                   </Button>
@@ -471,6 +473,15 @@ const Recipes = () => {
           onImportComplete={(recipeIds) => {
             fetchRecipes();
             toast.success(`${recipeIds.length} recipes imported!`);
+          }}
+        />
+
+        {/* Recipe Creation Launcher */}
+        <RecipeCreationLauncher
+          isOpen={showLauncher}
+          onClose={() => {
+            setShowLauncher(false);
+            fetchRecipes();
           }}
         />
 
