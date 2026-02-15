@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Thermometer, Plus, Trash2, CheckCircle2, AlertTriangle, Clock,
-  Settings, Archive, Camera, Loader2, Snowflake, Flame, Wind, Truck, Save, X, GripVertical
+  Settings, Archive, Camera, Loader2, Snowflake, Flame, Wind, Truck, Save, X, GripVertical, UserCheck
 } from "lucide-react";
+import { useFoodSafetyDuties } from "@/hooks/useFoodSafetyDuties";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,7 +94,7 @@ const DailyTempChecks = () => {
   const { user, canEdit } = useAuth();
   const { currentOrg } = useOrg();
   const hasEdit = canEdit("food-safety");
-
+  const { resolveDuty } = useFoodSafetyDuties();
   const [shift, setShift] = useState<"am" | "pm">(() => {
     const hour = new Date().getHours();
     return hour < 14 ? "am" : "pm";
@@ -420,6 +422,25 @@ const DailyTempChecks = () => {
           )}
         </div>
       </div>
+
+      {/* On Duty Badge */}
+      {(() => {
+        const duty = resolveDuty(shift);
+        if (!duty.user_id) return null;
+        return (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10">
+            <UserCheck className="w-4 h-4 text-primary" />
+            <span className="text-sm text-muted-foreground">On duty:</span>
+            <Avatar className="h-5 w-5">
+              <AvatarImage src={duty.avatar_url || undefined} />
+              <AvatarFallback className="text-[10px] bg-primary/10">
+                {duty.full_name?.split(" ").map(n => n[0]).join("").slice(0, 2) || "?"}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm font-medium text-foreground">{duty.full_name} ({shift.toUpperCase()})</span>
+          </div>
+        );
+      })()}
 
       {/* AM / PM Tabs */}
       <Tabs value={shift} onValueChange={(v) => setShift(v as "am" | "pm")}>

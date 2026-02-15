@@ -687,6 +687,36 @@ export type Database = {
           },
         ]
       }
+      food_safety_duties: {
+        Row: {
+          assigned_by: string | null
+          created_at: string
+          duty_date: string | null
+          id: string
+          org_id: string
+          shift: string
+          user_id: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          created_at?: string
+          duty_date?: string | null
+          id?: string
+          org_id: string
+          shift?: string
+          user_id: string
+        }
+        Update: {
+          assigned_by?: string | null
+          created_at?: string
+          duty_date?: string | null
+          id?: string
+          org_id?: string
+          shift?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       food_safety_logs: {
         Row: {
           ai_verification_notes: string | null
@@ -766,6 +796,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      food_safety_reminders: {
+        Row: {
+          created_at: string
+          dismissed_at: string | null
+          id: string
+          org_id: string
+          reminder_date: string
+          reminder_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dismissed_at?: string | null
+          id?: string
+          org_id: string
+          reminder_date?: string
+          reminder_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dismissed_at?: string | null
+          id?: string
+          org_id?: string
+          reminder_date?: string
+          reminder_type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       induction_progress: {
         Row: {

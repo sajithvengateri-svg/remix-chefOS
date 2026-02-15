@@ -58,6 +58,7 @@ import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import DailyTempChecks from "@/components/food-safety/DailyTempChecks";
+import DutyRosterTab from "@/components/food-safety/DutyRosterTab";
 
 // ---------- Types ----------
 
@@ -761,10 +762,14 @@ const FoodSafety = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="daily" className="flex items-center gap-2">
               <Clock className="w-4 h-4" />
               <span className="hidden sm:inline">Daily</span>
+            </TabsTrigger>
+            <TabsTrigger value="roster" className="flex items-center gap-2">
+              <Zap className="w-4 h-4" />
+              <span className="hidden sm:inline">Roster</span>
             </TabsTrigger>
             <TabsTrigger value="logs" className="flex items-center gap-2">
               <Thermometer className="w-4 h-4" />
@@ -787,6 +792,11 @@ const FoodSafety = () => {
           {/* ===================== DAILY CHECKS TAB ===================== */}
           <TabsContent value="daily" className="space-y-4">
             <DailyTempChecks />
+          </TabsContent>
+
+          {/* ===================== DUTY ROSTER TAB ===================== */}
+          <TabsContent value="roster" className="space-y-4">
+            <DutyRosterTab />
           </TabsContent>
 
           {/* ===================== LOGS TAB ===================== */}
