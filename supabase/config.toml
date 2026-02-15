@@ -1,1 +1,4 @@
 project_id = "wiussxofryaaxrmozysi"
+
+[functions.read-temp-display]
+verify_jwt = false
