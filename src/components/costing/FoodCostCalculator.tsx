@@ -10,12 +10,17 @@ import {
   RefreshCw,
   X,
   HelpCircle,
-  Settings2
+  Settings2,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Lightbulb,
 } from "lucide-react";
 import { calculateReverseCost, calculateSellPriceFromCost, calculateFoodCostPercent } from "@/stores/costingStore";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -27,6 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useCalcStore } from "@/stores/calcStore";
 
 interface FoodCostCalculatorProps {
   isOpen: boolean;
@@ -39,30 +45,136 @@ interface FoodCostCalculatorProps {
 
 type CalculationMode = "reverse" | "forward" | "target";
 
+const HowToUseGuide = () => {
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+
+  const sections = [
+    {
+      id: "overview",
+      icon: Calculator,
+      title: "What is this?",
+      content: "The Food Cost Calculator helps you work out pricing, margins, and ingredient budgets for your dishes. It has three modes — pick the one that matches what you're trying to figure out.",
+    },
+    {
+      id: "max-cost",
+      icon: Target,
+      emoji: "🎯",
+      title: "Max Cost Mode",
+      content: "Use when you already know your sell price and target food cost %. Enter both values and the calculator tells you the maximum you can spend on ingredients per serve. Great for recipe development — set your budget before you start costing.",
+      example: "Sell price $32, target 30% → Max ingredient cost = $9.60 per serve",
+    },
+    {
+      id: "set-price",
+      icon: DollarSign,
+      emoji: "💰",
+      title: "Set Price Mode",
+      content: "Use when you know your ingredient cost and want to find the right sell price. Enter your actual cost and target %, and the calculator recommends a sell price that hits your margin goal.",
+      example: "Ingredient cost $8.50, target 28% → Recommended sell price = $30.36",
+    },
+    {
+      id: "check-percent",
+      icon: Percent,
+      emoji: "📊",
+      title: "Check % Mode",
+      content: "Use to verify an existing dish. Enter both the ingredient cost and sell price to see your actual food cost percentage. The calculator tells you if you're on target or over budget, and by how much.",
+      example: "Cost $9.20, sell price $28 → Actual food cost = 32.9% (over a 30% target)",
+    },
+    {
+      id: "gst",
+      icon: Settings2,
+      emoji: "💡",
+      title: "GST / Tax",
+      content: "Toggle GST on to calculate margins based on ex-GST revenue — the way your accountant sees it. You can customise the GST rate (default 10%). When enabled, all calculations strip tax before computing percentages.",
+    },
+    {
+      id: "servings",
+      icon: TrendingUp,
+      emoji: "📦",
+      title: "Batch / Servings",
+      content: "In Max Cost mode, set the number of servings your recipe makes. The calculator shows both the per-serve budget and the total recipe ingredient budget — useful when scaling recipes up or down.",
+    },
+    {
+      id: "sync",
+      icon: RefreshCw,
+      emoji: "🔄",
+      title: "Synced Across Pages",
+      content: "Your calculator values are saved automatically and stay in sync wherever you open the calculator — Recipes, Menu Engineering, or the Costing page. Pick up right where you left off.",
+    },
+  ];
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 mb-3">
+        <BookOpen className="w-4 h-4 text-primary" />
+        <h4 className="font-semibold text-sm">How to Use the Food Cost Calculator</h4>
+      </div>
+      {sections.map((section) => (
+        <button
+          key={section.id}
+          onClick={() => setExpandedSection(expandedSection === section.id ? null : section.id)}
+          className="w-full text-left"
+        >
+          <div className={cn(
+            "p-3 rounded-lg transition-colors",
+            expandedSection === section.id ? "bg-primary/10" : "bg-muted/50 hover:bg-muted"
+          )}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {section.emoji && <span className="text-sm">{section.emoji}</span>}
+                <span className="text-sm font-medium text-foreground">{section.title}</span>
+              </div>
+              {expandedSection === section.id 
+                ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> 
+                : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              }
+            </div>
+            {expandedSection === section.id && (
+              <div className="mt-2 space-y-2">
+                <p className="text-xs text-muted-foreground leading-relaxed">{section.content}</p>
+                {section.example && (
+                  <div className="p-2 rounded bg-card border border-border">
+                    <p className="text-xs font-mono text-primary">{section.example}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </button>
+      ))}
+      <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 mt-3">
+        <div className="flex items-start gap-2">
+          <Lightbulb className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Pro tip:</span> Open the calculator from any recipe detail page to pre-fill values from that recipe's costing data.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const FoodCostCalculator = ({ 
   isOpen, 
   onClose,
-  initialSellPrice = 0,
-  initialTargetPercent = 30,
-  initialCost = 0,
+  initialSellPrice,
+  initialTargetPercent,
+  initialCost,
   embedded = false,
 }: FoodCostCalculatorProps) => {
-  const [mode, setMode] = useState<CalculationMode>("reverse");
-  const [sellPrice, setSellPrice] = useState(initialSellPrice);
-  const [targetPercent, setTargetPercent] = useState(initialTargetPercent);
-  const [actualCost, setActualCost] = useState(initialCost);
-  const [servings, setServings] = useState(1);
-  const [includeGST, setIncludeGST] = useState(true);
-  const [gstRate, setGstRate] = useState(10);
+  const store = useCalcStore();
   const [showHelp, setShowHelp] = useState(false);
+  const [showFullGuide, setShowFullGuide] = useState(false);
 
+  // Sync initial values from props (e.g. from RecipeDetail) into the store when opening
   useEffect(() => {
     if (isOpen) {
-      setSellPrice(initialSellPrice);
-      setTargetPercent(initialTargetPercent);
-      setActualCost(initialCost);
+      if (initialSellPrice !== undefined && initialSellPrice > 0) store.setSellPrice(initialSellPrice);
+      if (initialTargetPercent !== undefined && initialTargetPercent > 0) store.setTargetPercent(initialTargetPercent);
+      if (initialCost !== undefined && initialCost > 0) store.setActualCost(initialCost);
     }
-  }, [isOpen, initialSellPrice, initialTargetPercent, initialCost]);
+  }, [isOpen]);
+
+  const { mode, sellPrice, targetPercent, actualCost, servings, includeGST, gstRate } = store;
 
   // Calculate ex-GST sell price
   const exGSTSellPrice = includeGST && gstRate > 0 
@@ -107,11 +219,11 @@ const FoodCostCalculator = ({
               </div>
               <div>
                 <h2 className="font-display text-lg font-semibold">Food Cost Calculator</h2>
-                <p className="text-sm text-muted-foreground">Reverse engineer your pricing</p>
+                <p className="text-sm text-muted-foreground">Synced across all pages</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              {/* Help Button */}
+            <div className="flex items-center gap-1">
+              {/* Quick Help Popover */}
               <Popover open={showHelp} onOpenChange={setShowHelp}>
                 <PopoverTrigger asChild>
                   <button className="p-2 rounded-lg hover:bg-muted transition-colors">
@@ -120,36 +232,68 @@ const FoodCostCalculator = ({
                 </PopoverTrigger>
                 <PopoverContent className="w-80" align="end">
                   <div className="space-y-3">
-                    <h4 className="font-semibold text-sm">How to Use</h4>
+                    <h4 className="font-semibold text-sm">Quick Reference</h4>
                     <div className="space-y-2 text-xs text-muted-foreground">
                       <div className="p-2 rounded bg-muted/50">
-                        <p className="font-medium text-foreground mb-1">🎯 Max Cost Mode</p>
-                        <p>Enter your sell price and target food cost %. The calculator shows the maximum you can spend on ingredients.</p>
+                        <p className="font-medium text-foreground mb-1">🎯 Max Cost</p>
+                        <p>Price + target % → max ingredient spend</p>
                       </div>
                       <div className="p-2 rounded bg-muted/50">
-                        <p className="font-medium text-foreground mb-1">💰 Set Price Mode</p>
-                        <p>Enter your ingredient cost and target %. Get the recommended sell price to hit your margin goals.</p>
+                        <p className="font-medium text-foreground mb-1">💰 Set Price</p>
+                        <p>Cost + target % → recommended sell price</p>
                       </div>
                       <div className="p-2 rounded bg-muted/50">
-                        <p className="font-medium text-foreground mb-1">📊 Check % Mode</p>
-                        <p>Enter both cost and price to see your actual food cost percentage and whether you're on target.</p>
-                      </div>
-                      <div className="p-2 rounded bg-primary/10 border border-primary/20">
-                        <p className="font-medium text-primary mb-1">💡 GST Tip</p>
-                        <p>Enable GST to calculate margins based on ex-GST revenue. All calculations will factor in the tax component.</p>
+                        <p className="font-medium text-foreground mb-1">📊 Check %</p>
+                        <p>Cost + price → actual food cost %</p>
                       </div>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => { setShowHelp(false); setShowFullGuide(true); }}
+                    >
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      Full Guide
+                    </Button>
                   </div>
                 </PopoverContent>
               </Popover>
-              <button 
-                onClick={onClose}
-                className="p-2 rounded-lg hover:bg-muted transition-colors"
-              >
-                <X className="w-5 h-5 text-muted-foreground" />
-              </button>
+              {!embedded && (
+                <button 
+                  onClick={onClose}
+                  className="p-2 rounded-lg hover:bg-muted transition-colors"
+                >
+                  <X className="w-5 h-5 text-muted-foreground" />
+                </button>
+              )}
             </div>
           </div>
+
+          {/* Full Guide (expandable) */}
+          <AnimatePresence>
+            {showFullGuide && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden border-b border-border"
+              >
+                <div className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium">How to Use Guide</span>
+                    <button 
+                      onClick={() => setShowFullGuide(false)}
+                      className="p-1 rounded hover:bg-muted"
+                    >
+                      <X className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  </div>
+                  <HowToUseGuide />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* GST Settings Bar */}
           <div className="px-5 py-3 border-b border-border bg-muted/30">
@@ -157,7 +301,7 @@ const FoodCostCalculator = ({
               <div className="flex items-center gap-3">
                 <Switch
                   checked={includeGST}
-                  onCheckedChange={setIncludeGST}
+                  onCheckedChange={store.setIncludeGST}
                   id="gst-toggle"
                 />
                 <label htmlFor="gst-toggle" className="text-sm font-medium cursor-pointer">
@@ -180,7 +324,7 @@ const FoodCostCalculator = ({
                     <Input
                       type="number"
                       value={gstRate}
-                      onChange={(e) => setGstRate(parseFloat(e.target.value) || 0)}
+                      onChange={(e) => store.setGstRate(parseFloat(e.target.value) || 0)}
                       className="w-16 h-7 text-sm text-center"
                       min="0"
                       max="50"
@@ -204,7 +348,7 @@ const FoodCostCalculator = ({
               {modes.map((m) => (
                 <button
                   key={m.id}
-                  onClick={() => setMode(m.id)}
+                  onClick={() => store.setMode(m.id)}
                   className={cn(
                     "flex flex-col items-center gap-1 p-3 rounded-xl transition-all text-center",
                     mode === m.id
@@ -235,7 +379,7 @@ const FoodCostCalculator = ({
                   <input
                     type="number"
                     value={sellPrice || ""}
-                    onChange={(e) => setSellPrice(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => store.setSellPrice(parseFloat(e.target.value) || 0)}
                     placeholder="28.00"
                     className="input-field pl-10 text-lg font-semibold"
                     step="0.01"
@@ -255,7 +399,7 @@ const FoodCostCalculator = ({
                   <input
                     type="number"
                     value={targetPercent || ""}
-                    onChange={(e) => setTargetPercent(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => store.setTargetPercent(parseFloat(e.target.value) || 0)}
                     placeholder="30"
                     className="input-field pl-10 text-lg font-semibold"
                     min="1"
@@ -267,7 +411,7 @@ const FoodCostCalculator = ({
                   {[22, 25, 28, 30, 32, 35].map((pct) => (
                     <button
                       key={pct}
-                      onClick={() => setTargetPercent(pct)}
+                      onClick={() => store.setTargetPercent(pct)}
                       className={cn(
                         "px-3 py-1 rounded-full text-xs font-medium transition-all",
                         targetPercent === pct
@@ -293,7 +437,7 @@ const FoodCostCalculator = ({
                   <input
                     type="number"
                     value={actualCost || ""}
-                    onChange={(e) => setActualCost(parseFloat(e.target.value) || 0)}
+                    onChange={(e) => store.setActualCost(parseFloat(e.target.value) || 0)}
                     placeholder="8.50"
                     className="input-field pl-10 text-lg font-semibold"
                     step="0.01"
@@ -311,7 +455,7 @@ const FoodCostCalculator = ({
                 <input
                   type="number"
                   value={servings}
-                  onChange={(e) => setServings(parseInt(e.target.value) || 1)}
+                  onChange={(e) => store.setServings(parseInt(e.target.value) || 1)}
                   min="1"
                   className="input-field text-lg font-semibold"
                 />
