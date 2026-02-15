@@ -6,6 +6,7 @@ import Sidebar from "./Sidebar";
 import PullToRefresh from "./PullToRefresh";
 import { useOrg } from "@/contexts/OrgContext";
 import PageGuideCard from "@/components/onboarding/PageGuideCard";
+import FoodSafetyReminder from "@/components/food-safety/FoodSafetyReminder";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -67,6 +68,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
       {/* Contextual Page Guide */}
       <PageGuideCard />
+
+      {/* Food Safety Shift Reminders */}
+      <FoodSafetyReminder />
     </div>
   );
 };
