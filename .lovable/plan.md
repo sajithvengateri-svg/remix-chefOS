@@ -1,105 +1,94 @@
 
 
-# Recipes Section Overhaul: Photo-First New Recipe Flow
+# Recipe Type System: Dish / Component / Batch Prep / Portion Prep
 
-## Overview
-Redesign the "New Recipe" experience so chefs can start from a thought bubble -- snap a photo of a handwritten recipe, napkin sketch, or even a cookbook page -- and have the system auto-extract everything into a structured recipe, ready for fine-tuning.
+## The Problem
+Currently all recipes are treated the same -- there's just a boolean `is_batch_recipe` flag. In reality, kitchens have distinct recipe types with different costing logic:
 
-## Current State
-- Clicking "+ New Recipe" creates a blank "Untitled Recipe" record and drops the chef into a full editor with empty fields
-- The "Import Recipe" dialog (photo/file upload with AI extraction) exists but is buried behind a separate "Import" button
-- These two paths are disconnected -- chefs must choose upfront whether to start blank or import
+1. **Dish** (menu item) -- composed of 3-5 components, priced for the menu
+2. **Component** -- a sub-recipe (e.g. pesto, pickled onions) used inside dishes
+3. **Batch Prep** -- high-volume bases (stocks, sauces, mayo) that produce a yield with a **unit cost** after production, then get consumed by qty in other recipes
+4. **Portion Prep** -- proteins (beef, fish) where yield % matters (trim loss), used across multiple dishes
 
-## New Flow: Unified "New Recipe" Launcher
+## What Changes
 
-Replace the current blank-record creation with a **choice screen** that appears when clicking "+ New Recipe":
+### 1. Database: Add `recipe_type` column + allow recipes as ingredients
+- Add `recipe_type` column to `recipes` table with values: `dish`, `component`, `batch_prep`, `portion_prep` (default: `dish`)
+- Migrate existing `is_batch_recipe = true` rows to `recipe_type = 'batch_prep'`
+- Add `yield_percent` column to `recipes` for portion prep (e.g. beef fillet = 65% yield after trimming)
+- Add `parent_recipe_id` and `sub_recipe_id` columns to `recipe_ingredients` so a dish can reference another recipe as an ingredient (with qty and unit, pulling cost from the sub-recipe's computed unit cost)
 
-```text
-+-----------------------------------------------+
-|          How do you want to start?             |
-|                                                |
-|  [Camera icon]     [Pencil icon]    [File icon]|
-|  Snap a Photo      Start Blank     Import File |
-|  "Handwritten       "I'll type      "PDF, Word |
-|   notes, napkin      it in"          or image"  |
-|   sketch, book"                                 |
-|                                                |
-|  -------- or paste a URL / text --------       |
-|  [  Paste a recipe URL or raw text...    ]     |
-+-----------------------------------------------+
-```
+### 2. Recipe Cards: Visual Type Tags
+- Replace the current "Batch" badge with a color-coded type badge on each card:
+  - **Dish**: no badge (default, clean)
+  - **Component**: blue "Component" badge
+  - **Batch Prep**: purple "Batch" badge
+  - **Portion Prep**: amber "Portion" badge
+- Add a "Used in X dishes" count for components/batch/portion recipes
+- Filter bar gets new type-based filter chips alongside categories
 
-### Path 1: Snap a Photo (camera capture)
-1. Opens device camera directly (`capture="environment"`)
-2. Shows live preview of captured image
-3. "Extract Recipe" button sends to `extract-recipe` edge function
-4. AI returns structured data -> auto-populates review screen
-5. Chef reviews/tweaks -> saves -> lands in full editor with everything pre-filled
+### 3. Recipe Edit: Type-Aware UI
+- New "Recipe Type" selector at top of edit page (large, visual toggle)
+- **Dish mode**: shows "Components" section where you can link sub-recipes (components, batches, portions) alongside raw ingredients. Each sub-recipe line shows its unit cost + quantity used = line cost
+- **Component mode**: same as current but with batch yield fields prominent, and a "Used in" section showing which dishes use it
+- **Batch Prep mode**: yield fields front-and-center (makes X kg/L), auto-calculates **cost per unit** after production. This unit cost flows into any dish that uses it
+- **Portion Prep mode**: adds yield % field (e.g. whole fish = 55% yield). Calculates true cost per usable unit after waste
 
-### Path 2: Start Blank
-- Same as current behavior: creates placeholder record, opens editor with name auto-focused
+### 4. Costing Flow (the key automation)
+When a **dish** recipe includes a batch prep sub-recipe:
+- The batch recipe's total cost / total yield = cost per unit
+- The dish uses qty of that unit, so line cost = qty x batch unit cost
+- This cascades automatically -- if stock ingredient prices change, stock cost updates, which updates every dish that uses the stock
 
-### Path 3: Import File
-- Same as existing RecipeImportDialog but embedded in the launcher flow
+### 5. Creation Launcher Update
+- After choosing how to start, add a "What type of recipe?" step with 4 visual cards:
+  - Dish (plate icon) -- "A menu item with components"
+  - Component (puzzle icon) -- "A building block for dishes"
+  - Batch Prep (beaker icon) -- "Stocks, sauces, bases made in bulk"
+  - Portion Prep (scale icon) -- "Proteins and items with yield loss"
 
-### Path 4: Paste URL/Text (new)
-- Chef pastes a recipe URL or raw text
-- Edge function extracts structured recipe from text content
-- Same review -> save flow
-
-## Detailed Implementation
-
-### 1. New Component: `RecipeCreationLauncher.tsx`
-A full-screen or large dialog component that replaces the direct navigation to `/recipes/new`. It will:
-- Show the 3 creation paths as large, tappable cards (mobile-friendly)
-- Include a text input for paste-a-URL flow
-- Handle camera capture, file upload, and text extraction
-- Show a processing animation while AI extracts
-- Present a review screen with all extracted fields editable
-- On save, create the recipe record + recipe_ingredients in one go, then navigate to `/recipes/{id}/edit`
-
-### 2. Enhanced `extract-recipe` Edge Function
-Update to also accept `text` input (not just files):
-- Add support for `content-type: application/json` with `{ text: "..." }` body
-- When text is provided, skip the vision model and use text-based extraction
-- Return the same structured recipe format
-
-### 3. Review Screen Improvements
-The review screen (already exists in RecipeImportDialog) will be enhanced:
-- Confidence indicators next to each extracted field (high/medium/low)
-- Ingredient matching highlights: green = matched to database, yellow = similar match found, red = new ingredient
-- One-click "Add to ingredient database" for unmatched ingredients
-- Allergen auto-detection badges
-- Estimated cost preview before saving
-
-### 4. Route Changes
-- `/recipes/new` will render `RecipeCreationLauncher` instead of immediately creating a blank record
-- After save from any path, navigate to `/recipes/{id}/edit` for further editing
-
-### 5. Mobile UX Priorities
-- Camera button is the largest, most prominent option (chefs will use this most)
-- Single-hand-friendly layout
-- Haptic-like visual feedback on capture
-- Processing screen shows animated chef hat with progress messages
+### 6. Recipe Card Improvements
+- Show type badge with icon
+- For batch/component/portion: show "Used in X dishes" link count
+- For dishes: show component count (e.g. "4 components")
+- Better visual hierarchy with cost summary visible at a glance
 
 ## Technical Details
 
-### Files to Create
-- `src/components/recipes/RecipeCreationLauncher.tsx` -- main launcher component with all creation paths, camera capture, review screen, and save logic
+### Database Migration
+```sql
+-- Add recipe_type enum-like column
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS recipe_type text NOT NULL DEFAULT 'dish';
+-- Add yield_percent for portion prep
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS yield_percent numeric DEFAULT 100;
+
+-- Migrate existing batch recipes
+UPDATE recipes SET recipe_type = 'batch_prep' WHERE is_batch_recipe = true;
+
+-- Allow recipe_ingredients to reference sub-recipes
+ALTER TABLE recipe_ingredients ADD COLUMN IF NOT EXISTS sub_recipe_id uuid REFERENCES recipes(id) ON DELETE SET NULL;
+-- Make ingredient_id nullable (a line is either an ingredient OR a sub-recipe)
+ALTER TABLE recipe_ingredients ALTER COLUMN ingredient_id DROP NOT NULL;
+-- Add constraint: must have one of ingredient_id or sub_recipe_id
+ALTER TABLE recipe_ingredients ADD CONSTRAINT ingredient_or_sub_recipe 
+  CHECK (ingredient_id IS NOT NULL OR sub_recipe_id IS NOT NULL);
+```
 
 ### Files to Modify
-- `src/pages/Recipes.tsx` -- change "+ New Recipe" button to open the launcher dialog instead of navigating to `/recipes/new`
-- `src/pages/RecipeEdit.tsx` -- remove the `createNewRecipe` logic for `/recipes/new` route; that path now goes through the launcher
-- `src/App.tsx` -- update `/recipes/new` route to use the launcher page or keep it pointing to RecipeEdit (which will handle both new-from-launcher and edit-existing)
-- `supabase/functions/extract-recipe/index.ts` -- add JSON body support for text/URL-based extraction alongside the existing FormData/image flow
+- **`src/pages/RecipeEdit.tsx`** -- Add recipe type selector, type-aware UI sections, sub-recipe linking
+- **`src/components/recipes/RecipeBuilder.tsx`** -- Support sub-recipe lines alongside ingredients, compute sub-recipe line costs from their yield data
+- **`src/components/recipes/RecipeCard.tsx`** -- Type badges, "used in" counts, component counts
+- **`src/components/recipes/RecipeCreationLauncher.tsx`** -- Add type selection step after choosing creation method
+- **`src/pages/Recipes.tsx`** -- Add type filter chips to filter bar
 
-### Database
-No schema changes needed. The existing `recipes` and `recipe_ingredients` tables already support everything.
+### Files to Create
+- **`src/components/recipes/RecipeTypeSelector.tsx`** -- Visual type picker (4 cards with icons)
+- **`src/components/recipes/SubRecipeCombobox.tsx`** -- Searchable combobox for adding sub-recipes to a dish
 
-### Edge Function Enhancement
-The `extract-recipe` function will be updated to:
-1. Check `Content-Type` header
-2. If `application/json`: extract `{ text }` or `{ url }` from body, use text-based AI prompt
-3. If `multipart/form-data`: existing image/file flow (unchanged)
-4. Both paths return the same `ExtractedRecipe` JSON structure
+### Costing Logic Updates
+In `RecipeBuilder.tsx`, when a line has `sub_recipe_id` instead of `ingredient_id`:
+1. Fetch the sub-recipe's total food cost and yield
+2. Calculate unit cost = total cost / yield quantity
+3. Line cost = quantity used x unit cost
+4. For portion prep sub-recipes, apply yield_percent adjustment
 
