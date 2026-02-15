@@ -33,6 +33,7 @@ import OrgChartWidget from "@/components/dashboard/OrgChartWidget";
 import InductionTracker from "@/components/onboarding/InductionTracker";
 import DailyWorkflowCard from "@/components/onboarding/DailyWorkflowCard";
 import VenueSelector from "@/components/dashboard/VenueSelector";
+import CriticalFoodSafetyAlerts from "@/components/dashboard/CriticalFoodSafetyAlerts";
 import { useOrg } from "@/contexts/OrgContext";
 
 console.log("[Dashboard] Module loaded");
@@ -278,6 +279,11 @@ const Dashboard = () => {
          </motion.div>
        )}
  
+        {/* Critical Food Safety Alerts */}
+        <ErrorBoundary fallbackMessage="Could not load safety alerts">
+          <CriticalFoodSafetyAlerts />
+        </ErrorBoundary>
+
         {/* Quick Actions */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}

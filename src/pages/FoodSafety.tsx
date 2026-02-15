@@ -53,6 +53,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useOrg } from "@/contexts/OrgContext";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -171,6 +172,7 @@ const TODAY_TARGET = 8; // target temp checks per day
 
 const FoodSafety = () => {
   const { user, canEdit } = useAuth();
+  const { currentOrg } = useOrg();
   const [activeTab, setActiveTab] = useState("logs");
   const [logTypeFilter, setLogTypeFilter] = useState("all");
   const [supplierCategory, setSupplierCategory] = useState("All");
@@ -395,6 +397,7 @@ const FoodSafety = () => {
           recorded_by_name: user?.email?.split("@")[0] || "Unknown",
           date: new Date().toISOString().split("T")[0],
           time: new Date().toTimeString().split(" ")[0],
+          org_id: currentOrg?.id || null,
         } as any);
       }
 
@@ -423,6 +426,7 @@ const FoodSafety = () => {
       date: new Date().toISOString().split("T")[0],
       time: new Date().toTimeString().split(" ")[0],
       temp_image_url: tempPhotoUrl || null,
+      org_id: currentOrg?.id || null,
     };
 
     const { error } = await supabase.from("food_safety_logs").insert(payload);
@@ -544,6 +548,7 @@ const FoodSafety = () => {
         items: receivingItems.filter(i => i.name.trim()),
         ...receivingChecklist,
       },
+      org_id: currentOrg?.id || null,
     };
 
     const { error } = await supabase.from("food_safety_logs").insert(payload);
@@ -585,6 +590,7 @@ const FoodSafety = () => {
       recorded_by_name: user?.email?.split("@")[0] || "Unknown",
       date: new Date().toISOString().split("T")[0],
       time: new Date().toTimeString().split(" ")[0],
+      org_id: currentOrg?.id || null,
     };
 
     if (editingLog) {
