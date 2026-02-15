@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { 
   Plus, Calendar, CheckCircle2, Circle, Clock, User, Edit, Trash2, 
-  Loader2, Flag, MessageSquare, Share2, ClipboardList, Moon
+  Loader2, Flag, MessageSquare, Share2, ClipboardList, Moon, X
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -65,6 +65,10 @@ const PrepLists = () => {
   const [deletingList, setDeletingList] = useState<PrepList | null>(null);
   const [expandedListId, setExpandedListId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("section-prep");
+
+  const [showArchived, setShowArchived] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -277,8 +281,28 @@ const PrepLists = () => {
     setNewTask({ task: "", quantity: "", urgency: "within_48h" });
   };
 
-  const totalTasks = prepLists.reduce((acc, list) => acc + list.items.length, 0);
-  const completedTasks = prepLists.reduce((acc, list) => acc + list.items.filter(t => t.completed).length, 0);
+  const today = new Date().toISOString().split("T")[0];
+
+  // Split into active vs archived: archived = completed + date in the past
+  const activeLists = prepLists.filter(l => {
+    const isPast = l.date < today;
+    const isCompleted = l.status === "completed";
+    return !(isPast && isCompleted);
+  });
+  const archivedLists = prepLists.filter(l => {
+    const isPast = l.date < today;
+    const isCompleted = l.status === "completed";
+    return isPast && isCompleted;
+  });
+
+  const displayedLists = (showArchived ? archivedLists : activeLists).filter(l => {
+    if (dateFrom && l.date < dateFrom) return false;
+    if (dateTo && l.date > dateTo) return false;
+    return true;
+  });
+
+  const totalTasks = displayedLists.reduce((acc, list) => acc + list.items.length, 0);
+  const completedTasks = displayedLists.reduce((acc, list) => acc + list.items.filter(t => t.completed).length, 0);
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   const statusConfig = {
@@ -317,6 +341,28 @@ const PrepLists = () => {
           <TabsContent value="section-prep"><NightlyStockCount /></TabsContent>
 
           <TabsContent value="prep-tasks" className="space-y-6">
+            {/* Active / Archived Toggle + Date Filters */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex gap-2">
+                <Button variant={!showArchived ? "default" : "outline"} size="sm" onClick={() => setShowArchived(false)}>
+                  Active ({activeLists.length})
+                </Button>
+                <Button variant={showArchived ? "default" : "outline"} size="sm" onClick={() => setShowArchived(true)}>
+                  <ClipboardList className="w-4 h-4 mr-1" /> Archived ({archivedLists.length})
+                </Button>
+              </div>
+              <div className="flex items-center gap-2 ml-auto">
+                <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-auto h-8 text-xs" placeholder="From" />
+                <span className="text-xs text-muted-foreground">to</span>
+                <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-auto h-8 text-xs" placeholder="To" />
+                {(dateFrom || dateTo) && (
+                  <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => { setDateFrom(""); setDateTo(""); }}>
+                    <X className="w-3 h-3" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
             {/* Progress Overview */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
               className="card-elevated p-5">
@@ -353,7 +399,7 @@ const PrepLists = () => {
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
-                {prepLists.map((list, listIndex) => {
+                {displayedLists.map((list, listIndex) => {
                   const sc = statusConfig[list.status];
                   const StatusIcon = sc.icon;
                   const isExpanded = expandedListId === list.id;
@@ -491,7 +537,7 @@ const PrepLists = () => {
                   );
                 })}
 
-                {prepLists.length === 0 && !loading && (
+                {displayedLists.length === 0 && !loading && (
                   <div className="md:col-span-2 card-elevated p-12 text-center">
                     <Calendar className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
                     <p className="text-muted-foreground">No prep lists found</p>
