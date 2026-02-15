@@ -1144,6 +1144,76 @@ export type Database = {
         }
         Relationships: []
       }
+      nightly_stock_counts: {
+        Row: {
+          count_date: string
+          created_at: string
+          id: string
+          notes: string | null
+          org_id: string | null
+          prep_checklist: Json
+          recorded_by: string | null
+          recorded_by_name: string | null
+          section_id: string | null
+          status: string
+          stock_data: Json
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          count_date?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          org_id?: string | null
+          prep_checklist?: Json
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          section_id?: string | null
+          status?: string
+          stock_data?: Json
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          count_date?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          org_id?: string | null
+          prep_checklist?: Json
+          recorded_by?: string | null
+          recorded_by_name?: string | null
+          section_id?: string | null
+          status?: string
+          stock_data?: Json
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nightly_stock_counts_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightly_stock_counts_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_sections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nightly_stock_counts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "section_stock_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_memberships: {
         Row: {
           created_at: string
@@ -2027,6 +2097,63 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "section_assignments_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "kitchen_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      section_stock_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          items: Json
+          name: string
+          org_id: string | null
+          prep_tasks: Json
+          section_id: string | null
+          storage_locations: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          items?: Json
+          name: string
+          org_id?: string | null
+          prep_tasks?: Json
+          section_id?: string | null
+          storage_locations?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          items?: Json
+          name?: string
+          org_id?: string | null
+          prep_tasks?: Json
+          section_id?: string | null
+          storage_locations?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "section_stock_templates_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "section_stock_templates_section_id_fkey"
             columns: ["section_id"]
             isOneToOne: false
             referencedRelation: "kitchen_sections"

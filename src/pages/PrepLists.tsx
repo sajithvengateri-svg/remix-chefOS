@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { 
   Plus, Calendar, CheckCircle2, Circle, Clock, User, Edit, Trash2, 
-  Loader2, Flag, MessageSquare, Share2, FileText, CalendarDays
+  Loader2, Flag, MessageSquare, Share2, FileText, CalendarDays, Moon
 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { PrepListTemplatesManager } from "@/components/prep/PrepListTemplatesManager";
 import { WeeklyPrepView } from "@/components/prep/WeeklyPrepView";
 import { PrepListComments } from "@/components/prep/PrepListComments";
+import NightlyStockCount from "@/components/prep/NightlyStockCount";
 import { useSectionLeaderStatus } from "@/hooks/useSectionLeaderStatus";
 
 type UrgencyLevel = "priority" | "end_of_day" | "within_48h";
@@ -306,9 +307,12 @@ const PrepLists = () => {
         </motion.div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
             <TabsTrigger value="today" className="gap-2">
               <Calendar className="w-4 h-4" /><span className="hidden sm:inline">Today</span>
+            </TabsTrigger>
+            <TabsTrigger value="nightly" className="gap-2">
+              <Moon className="w-4 h-4" /><span className="hidden sm:inline">Nightly Count</span>
             </TabsTrigger>
             <TabsTrigger value="week" className="gap-2">
               <CalendarDays className="w-4 h-4" /><span className="hidden sm:inline">Week View</span>
@@ -508,6 +512,7 @@ const PrepLists = () => {
             )}
           </TabsContent>
 
+          <TabsContent value="nightly"><NightlyStockCount /></TabsContent>
           <TabsContent value="week"><WeeklyPrepView /></TabsContent>
           <TabsContent value="templates"><PrepListTemplatesManager /></TabsContent>
         </Tabs>
