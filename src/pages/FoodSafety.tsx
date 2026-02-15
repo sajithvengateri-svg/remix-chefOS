@@ -179,6 +179,10 @@ const FoodSafety = () => {
   const [logTypeFilter, setLogTypeFilter] = useState("all");
   const [supplierCategory, setSupplierCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [logsDateFrom, setLogsDateFrom] = useState("");
+  const [logsDateTo, setLogsDateTo] = useState("");
+  const [receivingDateFrom, setReceivingDateFrom] = useState("");
+  const [receivingDateTo, setReceivingDateTo] = useState("");
   
   // Data states
   const [logs, setLogs] = useState<SafetyLog[]>([]);
@@ -734,7 +738,12 @@ const FoodSafety = () => {
 
   // ---------- Computed ----------
 
-  const filteredLogs = logs.filter(log => logTypeFilter === "all" || log.log_type === logTypeFilter);
+  const filteredLogs = logs.filter(log => {
+    if (logTypeFilter !== "all" && log.log_type !== logTypeFilter) return false;
+    if (logsDateFrom && log.date < logsDateFrom) return false;
+    if (logsDateTo && log.date > logsDateTo) return false;
+    return true;
+  });
   const filteredSuppliers = suppliers.filter(s => {
     const matchesCategory = supplierCategory === "All" || s.category === supplierCategory;
     const matchesSearch = !searchQuery || s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.products?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -833,8 +842,8 @@ const FoodSafety = () => {
               </div>
             )}
 
-            {/* Filter buttons */}
-            <div className="flex items-center justify-between">
+            {/* Filter buttons + Date Range */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex gap-2 flex-wrap">
                 {["all", ...logTypes.map(t => t.value)].map(type => (
                   <button key={type} onClick={() => setLogTypeFilter(type)}
@@ -844,6 +853,16 @@ const FoodSafety = () => {
                     {type === "all" ? "All" : logTypes.find(t => t.value === type)?.label}
                   </button>
                 ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <Input type="date" value={logsDateFrom} onChange={e => setLogsDateFrom(e.target.value)} className="w-auto h-8 text-xs" />
+                <span className="text-xs text-muted-foreground">to</span>
+                <Input type="date" value={logsDateTo} onChange={e => setLogsDateTo(e.target.value)} className="w-auto h-8 text-xs" />
+                {(logsDateFrom || logsDateTo) && (
+                  <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => { setLogsDateFrom(""); setLogsDateTo(""); }}>
+                    <X className="w-3 h-3" />
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -999,9 +1018,26 @@ const FoodSafety = () => {
               )}
             </div>
 
+            {/* Date Range Filter */}
+            <div className="flex items-center gap-2">
+              <Input type="date" value={receivingDateFrom} onChange={e => setReceivingDateFrom(e.target.value)} className="w-auto h-8 text-xs" />
+              <span className="text-xs text-muted-foreground">to</span>
+              <Input type="date" value={receivingDateTo} onChange={e => setReceivingDateTo(e.target.value)} className="w-auto h-8 text-xs" />
+              {(receivingDateFrom || receivingDateTo) && (
+                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => { setReceivingDateFrom(""); setReceivingDateTo(""); }}>
+                  <X className="w-3 h-3" />
+                </Button>
+              )}
+            </div>
+
             <div className="card-elevated overflow-hidden">
               <div className="divide-y divide-border">
-                {logs.filter(l => l.log_type === "receiving").map((log) => {
+                {logs.filter(l => {
+                  if (l.log_type !== "receiving") return false;
+                  if (receivingDateFrom && l.date < receivingDateFrom) return false;
+                  if (receivingDateTo && l.date > receivingDateTo) return false;
+                  return true;
+                }).map((log) => {
                   const style = statusStyles[log.status || "pass"];
                   const StatusIcon = style.icon;
                   const rd = log.receiving_data as any;
@@ -1028,8 +1064,13 @@ const FoodSafety = () => {
                     </div>
                   );
                 })}
-                {logs.filter(l => l.log_type === "receiving").length === 0 && (
-                  <div className="p-8 text-center text-muted-foreground">No receiving logs</div>
+                {logs.filter(l => {
+                  if (l.log_type !== "receiving") return false;
+                  if (receivingDateFrom && l.date < receivingDateFrom) return false;
+                  if (receivingDateTo && l.date > receivingDateTo) return false;
+                  return true;
+                }).length === 0 && (
+                  <div className="p-8 text-center text-muted-foreground">No receiving logs{(receivingDateFrom || receivingDateTo) ? " for selected dates" : ""}</div>
                 )}
               </div>
             </div>
