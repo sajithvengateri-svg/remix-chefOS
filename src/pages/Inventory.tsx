@@ -34,6 +34,8 @@ import InventorySyncButton from "@/components/inventory/InventorySyncButton";
 import StocktakeDialog from "@/components/inventory/StocktakeDialog";
 import InvoiceScannerDialog from "@/components/inventory/InvoiceScannerDialog";
 import InventoryLocationsManager from "@/components/inventory/InventoryLocationsManager";
+import EquipmentInventoryTab from "@/components/inventory/EquipmentInventoryTab";
+import CleaningInventoryTab from "@/components/inventory/CleaningInventoryTab";
 import { useInventoryLocations } from "@/hooks/useInventoryLocations";
 
 interface InventoryItem {
@@ -263,7 +265,7 @@ const Inventory = () => {
   return (
     <AppLayout>
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
+        {/* Header & Tabs */}
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -298,6 +300,14 @@ const Inventory = () => {
           </div>
         </motion.div>
 
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="inventory">Food Inventory</TabsTrigger>
+            <TabsTrigger value="smallwares">Smallwares</TabsTrigger>
+            <TabsTrigger value="cleaning">Cleaning</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="inventory" className="space-y-6 mt-4">
         {/* Alert Cards */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -481,6 +491,17 @@ const Inventory = () => {
             </div>
           </motion.div>
         )}
+
+          </TabsContent>
+
+          <TabsContent value="smallwares" className="mt-4">
+            <EquipmentInventoryTab />
+          </TabsContent>
+
+          <TabsContent value="cleaning" className="mt-4">
+            <CleaningInventoryTab />
+          </TabsContent>
+        </Tabs>
 
         {/* Add/Edit Dialog */}
         <Dialog open={dialogOpen} onOpenChange={resetForm}>
