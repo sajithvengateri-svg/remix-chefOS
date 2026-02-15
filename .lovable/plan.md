@@ -1,160 +1,125 @@
 
 
-# Chef Induction System: 14-Day Guided Onboarding
+# AI-Powered Food Safety: Smart Temp Logs and Receiving
 
 ## Overview
 
-A structured, hand-held onboarding experience that guides new chefs (and org admins) through everything they need to get their kitchen fully operational on ChefOS. It works like a "2-week induction programme" with daily missions, contextual tooltips, and a progress tracker -- all dismissible once the chef is comfortable.
+Transform the Food Safety module into an intuitive, AI-assisted system where chefs can log temperatures and receiving checks via three methods: manual input, snap a photo of a thermometer display, or snap a photo of a delivery invoice. AI reads the values automatically and flags danger-zone issues.
 
-## How It Works
+## What Changes
 
-The system has three layers:
+### 1. Smart Temperature Logging
 
-1. **Induction Tracker** (persistent dashboard widget) -- Replaces the current simple `SetupProgressWidget` with a phased, day-by-day induction checklist organized into Week 1 and Week 2
-2. **Contextual Guide Cards** -- When a chef lands on a page for the first time (e.g. Recipes), a slide-up card explains what to do here, with a "Show me" button that highlights the key action
-3. **Daily Workflow Guide** -- A collapsible "Today's Workflow" card on the dashboard showing the recommended daily routine (morning prep check, service, nightly count) -- can be turned off in Settings
+Currently the temp log is a basic text field. The upgrade adds:
 
-## The 14-Day Induction Plan
+- **Three input modes** on the temp log dialog:
+  - **Manual**: Quick number pad-style input with unit toggle (C/F)
+  - **Snap Temp Display**: Take a photo of the thermometer/probe screen -- AI reads the value and auto-fills
+  - **Batch Entry**: Log multiple locations at once (Walk-in, Freezer, Hot Hold, etc.) in a grid
 
-### Week 1: Foundation
+- **Auto-status detection**: When a temperature is entered (manually or via AI), the system automatically sets pass/warning/fail based on food safety zones:
+  - Fridge: 0-5C = pass, 5-8C = warning, 8+ = fail
+  - Freezer: below -18C = pass, -18 to -15C = warning, above -15C = fail
+  - Hot hold: 63C+ = pass, 60-63C = warning, below 60C = fail
+  - Configurable per location
 
-| Day | Mission | Page | What They Do |
-|-----|---------|------|-------------|
-| 1 | Welcome and Setup | Dashboard | Complete profile, set up org details, add venues |
-| 2 | Your First Recipe | Recipes | Create or import 1 recipe (photo, paste, or manual) |
-| 3 | Build Your Pantry | Ingredients | Add 10+ ingredients with costs and suppliers |
-| 4 | Kitchen Sections | Kitchen Sections | Create sections (Hot, Cold, Pastry, etc.) and assign team |
-| 5 | Prep List Templates | Prep Lists | Set up section prep templates with par levels |
-| 6 | Team and Roles | Team | Invite team members, assign roles and sections |
-| 7 | Review and Catch-up | Dashboard | Complete any missed steps, explore settings |
+- **Danger zone alerts**: Visual indicator showing where the reading falls relative to safe ranges
 
-### Week 2: Advanced
+### 2. Smart Receiving Logs
 
-| Day | Mission | Page | What They Do |
-|-----|---------|------|-------------|
-| 8 | Scan Your First Invoice | Invoices | Snap a photo of a supplier invoice |
-| 9 | Yield Testing | Production | Log a yield test (butchery, fish, batch) |
-| 10 | Menu Upload | Menu Engineering | Upload or create a menu, link recipes |
-| 11 | Equipment and Smallwares | Inventory | Log plates, cutlery, equipment counts |
-| 12 | Cleaning Inventory | Inventory | Add cleaning materials and chemicals |
-| 13 | Food Safety Setup | Food Safety | Set up CCP points and temperature logs |
-| 14 | Daily Workflow | Dashboard | Run through a full day (prep, service, nightly count) |
+Currently just a basic log entry. The upgrade adds:
 
-## Database
+- **Three input modes** on the receiving dialog:
+  - **Manual**: Enter supplier, items, temps, condition
+  - **Snap Invoice/Delivery Note**: Photo of the delivery paperwork -- AI extracts supplier name, items, quantities
+  - **Snap Temp**: Photo of the probe reading on delivered goods
 
-### New table: `induction_progress`
+- **Receiving checklist** built into the form:
+  - Packaging intact?
+  - Temperature within range?
+  - Best-before dates OK?
+  - Vehicle cleanliness?
+  - Each item gets a pass/fail toggle
 
-Tracks per-user progress through the induction steps:
+- **AI extraction**: When a delivery note photo is snapped, AI reads the supplier name, item list, and populates the form. Chef just confirms temps and condition.
 
-```text
-induction_progress
-  - id (uuid, PK)
-  - user_id (uuid, references profiles)
-  - org_id (uuid)
-  - step_key (text) -- e.g. "day1_profile", "day3_pantry"
-  - completed_at (timestamptz, nullable)
-  - skipped (boolean, default false)
-  - created_at (timestamptz)
-  UNIQUE(user_id, org_id, step_key)
-```
+### 3. New Edge Function: `read-temp-display`
 
-### Add to `AppSettings` (localStorage)
+A new backend function that accepts a photo of a thermometer display and returns the temperature reading:
 
-- `inductionEnabled: boolean` (default true, user can turn off)
-- `inductionStartDate: string` (ISO date, set on first dashboard visit)
-- `showDailyWorkflow: boolean` (default true)
+- Uses Gemini Flash vision model
+- Returns: `{ temperature: number, unit: "C" | "F", confidence: number }`
+- Handles digital displays, probe screens, and dial thermometers
 
-## Components
+### 4. Improved Logs UI
 
-### 1. InductionTracker (replaces SetupProgressWidget)
+- **Today's summary** at the top of the Logs tab: how many checks done today vs target (e.g., "4 of 8 temp checks completed")
+- **Timeline view**: Logs shown in a timeline by time-of-day, grouped by type
+- **Quick-log buttons**: One-tap buttons for common checks (Walk-in, Freezer, Hot Hold) that pre-fill location
 
-A card on the dashboard right column showing:
-- Current day/phase ("Day 3 of 14 -- Build Your Pantry")
-- Overall progress bar
-- Expandable checklist grouped by Week 1 / Week 2
-- Each step links to the relevant page
-- Steps auto-complete when data exists (e.g. "Add recipes" completes when recipe count > 0)
-- "Skip" option on each step
-- "I'm done, turn off induction" button at the bottom
+## Technical Details
 
-### 2. PageGuideCard
+### New Edge Function
 
-A slide-up card shown once per page (first visit):
-- Title: "Welcome to Recipes"
-- 2-3 bullet points explaining what to do
-- "Got it" dismisses permanently
-- "Show me" highlights the primary CTA button with a pulse animation
-- Stored in localStorage: `chefos_page_guides_seen`
+**`supabase/functions/read-temp-display/index.ts`**
 
-### 3. DailyWorkflowCard
+Accepts a base64 image, uses Gemini Flash to read the temperature from the display, returns structured data. Uses tool calling to ensure clean JSON output.
 
-Dashboard widget showing the recommended daily routine:
-- **Morning**: Check prep lists, review stock counts from last night
-- **Service**: Log temperatures, handle orders
-- **Close**: Complete nightly stock count, archive prep list, review yields
-- Each item links to the relevant page
-- Collapsible, with a "Don't show again" toggle
+### Database Changes
 
-### 4. Settings Integration
-
-Add an "Induction" section to Settings > General:
-- Toggle: "Show induction guide" (on/off)
-- Toggle: "Show daily workflow reminders" (on/off)  
-- Button: "Reset induction" (start over)
-- Progress indicator: "Day 8 of 14 -- 60% complete"
-
-## Files to Create
-
-- `src/components/onboarding/InductionTracker.tsx` -- The main phased checklist widget
-- `src/components/onboarding/PageGuideCard.tsx` -- Contextual first-visit guide overlay
-- `src/components/onboarding/DailyWorkflowCard.tsx` -- Daily routine guide widget
-- `src/hooks/useInduction.ts` -- Hook managing induction state, step completion detection, day calculation
-
-## Files to Modify
-
-- `src/pages/Dashboard.tsx` -- Replace `SetupProgressWidget` with `InductionTracker`, add `DailyWorkflowCard`
-- `src/hooks/useAppSettings.ts` -- Add `inductionEnabled`, `inductionStartDate`, `showDailyWorkflow` settings
-- `src/pages/Settings.tsx` -- Add Induction section to General tab
-- `src/components/layout/AppLayout.tsx` -- Mount `PageGuideCard` system for contextual guides on each page
-
-## Auto-Completion Logic
-
-Steps complete automatically by checking real data (no manual ticking needed):
-
-- "Complete profile" -- profile has avatar_url or bio set
-- "Add recipes" -- recipe count > 0
-- "Add ingredients" -- ingredient count >= 10
-- "Set up sections" -- kitchen_sections count > 0
-- "Create prep templates" -- section_stock_templates count > 0
-- "Invite team" -- org membership count > 1
-- "Scan invoice" -- invoice_scans count > 0
-- "Log yield test" -- yield_tests count > 0
-- "Upload menu" -- menus count > 0
-- "Equipment inventory" -- equipment_inventory count > 0
-- "Cleaning inventory" -- cleaning_inventory count > 0
-- "Nightly count" -- nightly_stock_counts count > 0
-
-## Migration
-
-One table with RLS scoped to the authenticated user:
+Add columns to `food_safety_logs` for richer receiving data:
 
 ```sql
-CREATE TABLE public.induction_progress (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  org_id uuid NOT NULL,
-  step_key text NOT NULL,
-  completed_at timestamptz,
-  skipped boolean NOT NULL DEFAULT false,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE(user_id, org_id, step_key)
-);
+ALTER TABLE food_safety_logs ADD COLUMN IF NOT EXISTS 
+  receiving_data jsonb DEFAULT NULL;
+-- Structure: { supplier, items: [{name, qty, temp, condition}], vehicle_clean, packaging_ok }
 
-ALTER TABLE induction_progress ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users manage own induction"
-  ON induction_progress FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+ALTER TABLE food_safety_logs ADD COLUMN IF NOT EXISTS 
+  temp_image_url text DEFAULT NULL;
+-- Photo of thermometer display used for AI reading
 ```
+
+### Modified Files
+
+- **`src/pages/FoodSafety.tsx`** -- Major rework of the log dialog to support the three input modes (manual / snap temp / snap invoice). Add quick-log buttons, today's summary stats, auto-status detection based on temperature zones. Improve receiving tab with structured checklist. Add photo capture for temp displays with AI reading.
+
+### New Files
+
+- **`supabase/functions/read-temp-display/index.ts`** -- Edge function that reads temperature from a photo of a thermometer display using AI vision
+
+### Flow: Temperature Check
+
+1. Chef taps "Quick Check" or "New Log"
+2. Chooses location (Walk-in, Freezer, etc.) or types custom
+3. Either:
+   - Types temperature manually (number pad style)
+   - Taps camera icon, snaps photo of probe/display
+   - AI reads the temp and fills the field
+4. System auto-detects pass/warning/fail based on location type
+5. If warning or fail, prompts for corrective action
+6. Saved with timestamp, user, and optional photo evidence
+
+### Flow: Receiving Check
+
+1. Chef taps "Log Delivery" on receiving tab
+2. Either:
+   - Snaps photo of delivery note -- AI extracts supplier + items
+   - Manually enters supplier and items
+3. For each item, chef checks: temp OK, packaging OK, dates OK
+4. Snaps probe temp photo or enters manually for cold items
+5. Overall pass/fail with notes
+6. Saved as receiving log with structured `receiving_data`
+
+### Temperature Zone Config
+
+Stored in the `readings` JSONB field with the location type. Default zones:
+
+| Location Type | Pass | Warning | Fail |
+|--------------|------|---------|------|
+| Fridge | 0-5C | 5-8C | 8C+ |
+| Freezer | -18C or below | -18 to -15C | -15C+ |
+| Hot Hold | 63C+ | 60-63C | below 60C |
+| Ambient | 15-25C | 25-30C | 30C+ |
+| Delivery Cold | 0-5C | 5-8C | 8C+ |
+| Delivery Frozen | -18C or below | -15C+ | -12C+ |
 
