@@ -1,95 +1,105 @@
 
 
-# Demand Pipeline Fix + Brisbane Suburb Map
+# Recipes Section Overhaul: Photo-First New Recipe Flow
 
-## Problem Summary
-The VendorOS demand insights and Admin heatmap are showing zero data because:
-1. The `demand_insights` table is completely empty -- the database trigger only fires for recipes marked as "public", but recipes are now private by default (correct security behavior)
-2. The `useMarketplaceDemand` hook tries to query `recipe_ingredients` and `ingredients` directly, but RLS correctly blocks cross-org access for vendor users
-3. The Brisbane postcode map only has ~20 entries and needs full suburb coverage
+## Overview
+Redesign the "New Recipe" experience so chefs can start from a thought bubble -- snap a photo of a handwritten recipe, napkin sketch, or even a cookbook page -- and have the system auto-extract everything into a structured recipe, ready for fine-tuning.
 
-## Solution
+## Current State
+- Clicking "+ New Recipe" creates a blank "Untitled Recipe" record and drops the chef into a full editor with empty fields
+- The "Import Recipe" dialog (photo/file upload with AI extraction) exists but is buried behind a separate "Import" button
+- These two paths are disconnected -- chefs must choose upfront whether to start blank or import
 
-### 1. New Demand Aggregation Pipeline (Database)
-Instead of relying on the broken trigger, create a **database function** that aggregates anonymized ingredient demand into the `demand_insights` table. This function will:
-- Query `ingredients` table across ALL orgs (using `SECURITY DEFINER`)
-- Join with `org_venues` to get postcodes (hiding org identity)
-- Aggregate by category + postcode + week
-- Write results to `demand_insights`
-- Expose ZERO org/user identifiers
+## New Flow: Unified "New Recipe" Launcher
 
-A scheduled call or manual trigger from the admin panel will refresh this data.
+Replace the current blank-record creation with a **choice screen** that appears when clicking "+ New Recipe":
 
-Additionally, update the existing `aggregate_demand_insights` trigger to also fire when ingredients are inserted/updated (not just recipe_ingredients), so the pipeline stays fresh automatically.
+```text
++-----------------------------------------------+
+|          How do you want to start?             |
+|                                                |
+|  [Camera icon]     [Pencil icon]    [File icon]|
+|  Snap a Photo      Start Blank     Import File |
+|  "Handwritten       "I'll type      "PDF, Word |
+|   notes, napkin      it in"          or image"  |
+|   sketch, book"                                 |
+|                                                |
+|  -------- or paste a URL / text --------       |
+|  [  Paste a recipe URL or raw text...    ]     |
++-----------------------------------------------+
+```
 
-### 2. Update VendorOS to Read from `demand_insights` (Not Raw Tables)
-Rewrite `useMarketplaceDemand.ts` so the vendor-facing hook reads from the `demand_insights` table (which vendors already have RLS SELECT access to) instead of trying to join `recipe_ingredients` + `ingredients` (which RLS correctly blocks).
+### Path 1: Snap a Photo (camera capture)
+1. Opens device camera directly (`capture="environment"`)
+2. Shows live preview of captured image
+3. "Extract Recipe" button sends to `extract-recipe` edge function
+4. AI returns structured data -> auto-populates review screen
+5. Chef reviews/tweaks -> saves -> lands in full editor with everything pre-filled
 
-This means:
-- VendorOS sees aggregated category-level demand by postcode
-- No ingredient-level detail that could identify recipes
-- No org/user data exposed
+### Path 2: Start Blank
+- Same as current behavior: creates placeholder record, opens editor with name auto-focused
 
-### 3. Add Brisbane Suburb Postcodes to Heatmap
-Expand the `postcodeCoords` map in `AdminHeatmap.tsx` with comprehensive Brisbane/SEQ suburb postcodes (4000-4179 range) to properly render the heatmap for Queensland-based orgs like FOCC.IT (4006) and Biri (4007).
+### Path 3: Import File
+- Same as existing RecipeImportDialog but embedded in the launcher flow
 
-### 4. Seed Initial Demand Data
-Run the new aggregation function to populate `demand_insights` from the 3 existing ingredients across the 2 orgs, so vendors and admins see data immediately.
+### Path 4: Paste URL/Text (new)
+- Chef pastes a recipe URL or raw text
+- Edge function extracts structured recipe from text content
+- Same review -> save flow
 
-### 5. Admin Dashboard Sync
-The Admin heatmap already reads from `demand_insights` -- once the table is populated, it will automatically display on the admin dashboard with no code changes needed.
+## Detailed Implementation
 
----
+### 1. New Component: `RecipeCreationLauncher.tsx`
+A full-screen or large dialog component that replaces the direct navigation to `/recipes/new`. It will:
+- Show the 3 creation paths as large, tappable cards (mobile-friendly)
+- Include a text input for paste-a-URL flow
+- Handle camera capture, file upload, and text extraction
+- Show a processing animation while AI extracts
+- Present a review screen with all extracted fields editable
+- On save, create the recipe record + recipe_ingredients in one go, then navigate to `/recipes/{id}/edit`
+
+### 2. Enhanced `extract-recipe` Edge Function
+Update to also accept `text` input (not just files):
+- Add support for `content-type: application/json` with `{ text: "..." }` body
+- When text is provided, skip the vision model and use text-based extraction
+- Return the same structured recipe format
+
+### 3. Review Screen Improvements
+The review screen (already exists in RecipeImportDialog) will be enhanced:
+- Confidence indicators next to each extracted field (high/medium/low)
+- Ingredient matching highlights: green = matched to database, yellow = similar match found, red = new ingredient
+- One-click "Add to ingredient database" for unmatched ingredients
+- Allergen auto-detection badges
+- Estimated cost preview before saving
+
+### 4. Route Changes
+- `/recipes/new` will render `RecipeCreationLauncher` instead of immediately creating a blank record
+- After save from any path, navigate to `/recipes/{id}/edit` for further editing
+
+### 5. Mobile UX Priorities
+- Camera button is the largest, most prominent option (chefs will use this most)
+- Single-hand-friendly layout
+- Haptic-like visual feedback on capture
+- Processing screen shows animated chef hat with progress messages
 
 ## Technical Details
 
-### Database Migration
-```sql
--- Function to refresh demand insights from ingredients across all orgs
-CREATE OR REPLACE FUNCTION public.refresh_demand_insights()
-RETURNS integer
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  refreshed integer := 0;
-  current_week_end date;
-BEGIN
-  current_week_end := date_trunc('week', CURRENT_DATE) + interval '6 days';
-  
-  -- Clear current week data and re-aggregate
-  DELETE FROM demand_insights WHERE week_ending = current_week_end;
-  
-  INSERT INTO demand_insights (ingredient_category, postcode, week_ending, total_quantity, order_count, unit, avg_price_paid)
-  SELECT 
-    i.category,
-    COALESCE(v.postcode, '0000'),
-    current_week_end,
-    SUM(COALESCE(ri.quantity, 0)),
-    COUNT(ri.id),
-    MODE() WITHIN GROUP (ORDER BY COALESCE(ri.unit, i.unit)),
-    AVG(i.cost_per_unit)
-  FROM ingredients i
-  LEFT JOIN recipe_ingredients ri ON ri.ingredient_id = i.id
-  LEFT JOIN org_venues v ON v.org_id = i.org_id
-  WHERE i.org_id IS NOT NULL
-  GROUP BY i.category, COALESCE(v.postcode, '0000'), current_week_end;
-  
-  GET DIAGNOSTICS refreshed = ROW_COUNT;
-  RETURN refreshed;
-END;
-$$;
-```
+### Files to Create
+- `src/components/recipes/RecipeCreationLauncher.tsx` -- main launcher component with all creation paths, camera capture, review screen, and save logic
 
 ### Files to Modify
-- `supabase/migrations/` -- New migration with `refresh_demand_insights` function
-- `src/hooks/useMarketplaceDemand.ts` -- Rewrite to read from `demand_insights` table
-- `src/portals/admin/components/AdminHeatmap.tsx` -- Add Brisbane suburb postcodes
-- `src/portals/vendor/pages/VendorInsights.ts` -- Update to work with new demand data shape
+- `src/pages/Recipes.tsx` -- change "+ New Recipe" button to open the launcher dialog instead of navigating to `/recipes/new`
+- `src/pages/RecipeEdit.tsx` -- remove the `createNewRecipe` logic for `/recipes/new` route; that path now goes through the launcher
+- `src/App.tsx` -- update `/recipes/new` route to use the launcher page or keep it pointing to RecipeEdit (which will handle both new-from-launcher and edit-existing)
+- `supabase/functions/extract-recipe/index.ts` -- add JSON body support for text/URL-based extraction alongside the existing FormData/image flow
 
-### Privacy Guarantee
-- Only category, postcode, quantity, and unit flow to vendors/admin
-- No org names, user IDs, recipe names, or business details are exposed
-- Postcode maps to suburb area (not specific address)
+### Database
+No schema changes needed. The existing `recipes` and `recipe_ingredients` tables already support everything.
+
+### Edge Function Enhancement
+The `extract-recipe` function will be updated to:
+1. Check `Content-Type` header
+2. If `application/json`: extract `{ text }` or `{ url }` from body, use text-based AI prompt
+3. If `multipart/form-data`: existing image/file flow (unchanged)
+4. Both paths return the same `ExtractedRecipe` JSON structure
 
