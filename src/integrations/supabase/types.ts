@@ -259,6 +259,60 @@ export type Database = {
           },
         ]
       }
+      cleaning_inventory: {
+        Row: {
+          category: string
+          cost_per_unit: number | null
+          created_at: string
+          id: string
+          last_ordered: string | null
+          location: string | null
+          name: string
+          notes: string | null
+          org_id: string
+          par_level: number | null
+          quantity: number
+          sds_url: string | null
+          supplier: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          cost_per_unit?: number | null
+          created_at?: string
+          id?: string
+          last_ordered?: string | null
+          location?: string | null
+          name: string
+          notes?: string | null
+          org_id: string
+          par_level?: number | null
+          quantity?: number
+          sds_url?: string | null
+          supplier?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          cost_per_unit?: number | null
+          created_at?: string
+          id?: string
+          last_ordered?: string | null
+          location?: string | null
+          name?: string
+          notes?: string | null
+          org_id?: string
+          par_level?: number | null
+          quantity?: number
+          sds_url?: string | null
+          supplier?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       demand_insights: {
         Row: {
           avg_price_paid: number | null
@@ -476,6 +530,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      equipment_inventory: {
+        Row: {
+          category: string
+          condition: string | null
+          cost_per_unit: number | null
+          created_at: string
+          id: string
+          last_counted: string | null
+          location: string | null
+          name: string
+          notes: string | null
+          org_id: string
+          par_level: number | null
+          quantity: number
+          supplier: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          condition?: string | null
+          cost_per_unit?: number | null
+          created_at?: string
+          id?: string
+          last_counted?: string | null
+          location?: string | null
+          name: string
+          notes?: string | null
+          org_id: string
+          par_level?: number | null
+          quantity?: number
+          supplier?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          condition?: string | null
+          cost_per_unit?: number | null
+          created_at?: string
+          id?: string
+          last_counted?: string | null
+          location?: string | null
+          name?: string
+          notes?: string | null
+          org_id?: string
+          par_level?: number | null
+          quantity?: number
+          supplier?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       feature_releases: {
         Row: {
@@ -793,38 +901,56 @@ export type Database = {
         Row: {
           created_at: string
           file_name: string | null
+          file_url: string | null
           id: string
+          invoice_date: string | null
+          invoice_type: string
           items_extracted: number | null
           items_matched: number | null
+          notes: string | null
           org_id: string | null
           prices_updated: number | null
           scan_data: Json | null
           scanned_by: string | null
           status: string
+          supplier_name: string | null
+          total_amount: number | null
         }
         Insert: {
           created_at?: string
           file_name?: string | null
+          file_url?: string | null
           id?: string
+          invoice_date?: string | null
+          invoice_type?: string
           items_extracted?: number | null
           items_matched?: number | null
+          notes?: string | null
           org_id?: string | null
           prices_updated?: number | null
           scan_data?: Json | null
           scanned_by?: string | null
           status?: string
+          supplier_name?: string | null
+          total_amount?: number | null
         }
         Update: {
           created_at?: string
           file_name?: string | null
+          file_url?: string | null
           id?: string
+          invoice_date?: string | null
+          invoice_type?: string
           items_extracted?: number | null
           items_matched?: number | null
+          notes?: string | null
           org_id?: string | null
           prices_updated?: number | null
           scan_data?: Json | null
           scanned_by?: string | null
           status?: string
+          supplier_name?: string | null
+          total_amount?: number | null
         }
         Relationships: []
       }
