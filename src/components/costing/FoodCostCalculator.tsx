@@ -34,6 +34,7 @@ interface FoodCostCalculatorProps {
   initialSellPrice?: number;
   initialTargetPercent?: number;
   initialCost?: number;
+  embedded?: boolean;
 }
 
 type CalculationMode = "reverse" | "forward" | "target";
@@ -44,6 +45,7 @@ const FoodCostCalculator = ({
   initialSellPrice = 0,
   initialTargetPercent = 30,
   initialCost = 0,
+  embedded = false,
 }: FoodCostCalculatorProps) => {
   const [mode, setMode] = useState<CalculationMode>("reverse");
   const [sellPrice, setSellPrice] = useState(initialSellPrice);
@@ -86,20 +88,15 @@ const FoodCostCalculator = ({
 
   if (!isOpen) return null;
 
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm p-4"
-        onClick={onClose}
-      >
+  const content = (
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-card rounded-2xl shadow-lg max-w-lg w-full max-h-[90vh] overflow-y-auto"
+          className={cn(
+            "bg-card rounded-2xl shadow-lg max-w-lg w-full max-h-[90vh] overflow-y-auto",
+            embedded && "shadow-none max-h-none"
+          )}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -459,6 +456,20 @@ const FoodCostCalculator = ({
             )}
           </div>
         </motion.div>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm p-4"
+        onClick={onClose}
+      >
+        {content}
       </motion.div>
     </AnimatePresence>
   );
