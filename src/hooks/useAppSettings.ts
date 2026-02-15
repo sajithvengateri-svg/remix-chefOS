@@ -41,6 +41,11 @@ export interface AppSettings {
   aiLlmEnabled: boolean;
   aiVoiceEnabled: boolean;
   aiOcrEnabled: boolean;
+
+  // Induction
+  inductionEnabled: boolean;
+  inductionStartDate: string;
+  showDailyWorkflow: boolean;
 }
 
 const defaultSettings: AppSettings = {
@@ -82,6 +87,11 @@ const defaultSettings: AppSettings = {
   aiLlmEnabled: false,
   aiVoiceEnabled: false,
   aiOcrEnabled: false,
+
+  // Induction
+  inductionEnabled: true,
+  inductionStartDate: "",
+  showDailyWorkflow: true,
 };
 
 export const useAppSettings = () => {

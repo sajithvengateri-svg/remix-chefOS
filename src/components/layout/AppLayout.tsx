@@ -5,6 +5,7 @@ import BottomNav from "./BottomNav";
 import Sidebar from "./Sidebar";
 import PullToRefresh from "./PullToRefresh";
 import { useOrg } from "@/contexts/OrgContext";
+import PageGuideCard from "@/components/onboarding/PageGuideCard";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -63,6 +64,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
       {/* Mobile Bottom Navigation */}
       <BottomNav className="lg:hidden" />
+
+      {/* Contextual Page Guide */}
+      <PageGuideCard />
     </div>
   );
 };

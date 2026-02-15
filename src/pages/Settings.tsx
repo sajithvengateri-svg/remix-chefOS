@@ -277,6 +277,61 @@ const Settings = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Induction Settings */}
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <SettingsIcon className="w-5 h-5" />
+                    Induction Guide
+                  </CardTitle>
+                  <CardDescription>Manage the 14-day onboarding programme</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Show Induction Guide</Label>
+                      <p className="text-sm text-muted-foreground">Step-by-step setup walkthrough</p>
+                    </div>
+                    <Switch 
+                      checked={settings.inductionEnabled}
+                      onCheckedChange={(v) => handleSettingChange("inductionEnabled", v)}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Daily Workflow Reminders</Label>
+                      <p className="text-sm text-muted-foreground">Morning, service, and close routine</p>
+                    </div>
+                    <Switch 
+                      checked={settings.showDailyWorkflow}
+                      onCheckedChange={(v) => handleSettingChange("showDailyWorkflow", v)}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label>Reset Induction</Label>
+                      <p className="text-sm text-muted-foreground">Start the 14-day guide over</p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        handleSettingChange("inductionEnabled", true);
+                        handleSettingChange("inductionStartDate", new Date().toISOString().split("T")[0]);
+                        toast.success("Induction reset — Day 1 starts now");
+                      }}
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Reset
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           </TabsContent>
 
