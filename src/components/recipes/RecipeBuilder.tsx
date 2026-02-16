@@ -277,6 +277,21 @@ const RecipeBuilder = ({
     }
   };
 
+  // Update ingredient unit price and reverse-sync to ingredients table
+  const updateIngredientPrice = async (ingredientId: string, newPrice: number) => {
+    const { error } = await supabase
+      .from("ingredients")
+      .update({ cost_per_unit: newPrice })
+      .eq("id", ingredientId);
+
+    if (error) {
+      toast.error("Failed to update price");
+    } else {
+      toast.success("Unit price updated — synced to Ingredients");
+      fetchData();
+    }
+  };
+
   const removeIngredient = async (id: string) => {
     const { error } = await supabase
       .from("recipe_ingredients")
@@ -456,7 +471,30 @@ const RecipeBuilder = ({
                     </td>
                     <td className="px-4 py-3 font-mono text-sm">
                       <div className="flex flex-col">
-                        <span>${Number(ri.ingredient?.cost_per_unit || 0).toFixed(2)}/{ri.ingredient?.unit}</span>
+                        {hasEditPermission ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground">$</span>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              defaultValue={Number(ri.ingredient?.cost_per_unit || 0).toFixed(2)}
+                              onBlur={(e) => {
+                                const val = parseFloat(e.target.value);
+                                if (!isNaN(val) && ri.ingredient && val !== Number(ri.ingredient.cost_per_unit)) {
+                                  updateIngredientPrice(ri.ingredient.id, val);
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                              }}
+                              className="w-20 h-7 text-xs font-mono"
+                            />
+                            <span className="text-muted-foreground text-xs">/{ri.ingredient?.unit}</span>
+                          </div>
+                        ) : (
+                          <span>${Number(ri.ingredient?.cost_per_unit || 0).toFixed(2)}/{ri.ingredient?.unit}</span>
+                        )}
                         {ri.unit !== ri.ingredient?.unit && ri.ingredient && (
                           <span className="text-xs text-muted-foreground">
                             {getConversionExplanation(Number(ri.quantity), ri.unit, ri.ingredient.unit)}
