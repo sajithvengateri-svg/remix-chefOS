@@ -1,160 +1,22 @@
 
-
-# Kitchen Sections Upgrade: Fix, Chef Assignment, Wall Badges, and RLS
-
-## Overview
-
-This plan fixes three core problems with Kitchen Sections and adds two features:
-
-1. **Bug fix**: Sections fail to save because `org_id` is never included in INSERT/SELECT calls
-2. **Security fix**: `section_assignments` has no `org_id` column and uses `USING (true)` for SELECT -- anyone can see all assignments across all orgs
-3. **Feature**: Add "Section Leader" dropdown directly in the Add/Edit Section dialog
-4. **Feature**: Show section badge next to poster names on the Kitchen Wall (e.g., "Marco / Pastry")
-
----
-
-## Part 1: Database Migration
-
-### Add `org_id` to `section_assignments`
-
-The `section_assignments` table currently has no `org_id` column, making org-scoped RLS impossible.
-
-```text
-ALTER TABLE section_assignments ADD COLUMN org_id uuid;
-
--- Backfill from parent kitchen_sections
-UPDATE section_assignments sa
-SET org_id = ks.org_id
-FROM kitchen_sections ks
-WHERE sa.section_id = ks.id;
-
--- Make NOT NULL after backfill
-ALTER TABLE section_assignments ALTER COLUMN org_id SET NOT NULL;
-```
-
-### Replace Unsafe RLS Policies
-
-Current policies are dangerously permissive:
-- SELECT: `USING (true)` -- **anyone sees everything**
-- ALL: `is_head_chef(auth.uid())` -- **no org check, a head chef in Org A can manage Org B's assignments**
-
-Replace with:
-
-```text
--- Drop unsafe policies
-DROP POLICY "Anyone can view section assignments" ON section_assignments;
-DROP POLICY "Head chefs can manage section assignments" ON section_assignments;
-
--- Org-scoped replacements
-CREATE POLICY "Org members can view section assignments"
-  ON section_assignments FOR SELECT
-  USING (
-    org_id IN (SELECT get_user_org_ids(auth.uid()))
-    OR has_role(auth.uid(), 'admin')
-  );
-
-CREATE POLICY "Head chefs can manage section assignments"
-  ON section_assignments FOR ALL
-  USING (
-    is_head_chef(auth.uid())
-    AND org_id IN (SELECT get_user_org_ids(auth.uid()))
-  )
-  WITH CHECK (
-    is_head_chef(auth.uid())
-    AND org_id IN (SELECT get_user_org_ids(auth.uid()))
-  );
-```
-
-### Fix nullable `org_id` on related tables
-
-Make `org_id` NOT NULL on `kitchen_sections` (after defaulting any existing NULLs):
-
-```text
--- Clean up any NULL org_ids in kitchen_sections
-DELETE FROM kitchen_sections WHERE org_id IS NULL;
-ALTER TABLE kitchen_sections ALTER COLUMN org_id SET NOT NULL;
-```
-
----
-
-## Part 2: Fix KitchenSectionsManager.tsx
+## Fix: Admin Dashboard Heatmap Not Loading
 
 ### Problem
-- `fetchSections()` queries all sections globally (no org filter)
-- `handleSubmit()` insert does not include `org_id`
+The `AdminHeatmap` component on the Admin Dashboard (`/admin`) crashes with a `react-leaflet` v5 + React 18 incompatibility error ("r is not a function").
 
-### Fix
-- Import `useOrg()` and get `currentOrg`
-- Add `.eq("org_id", currentOrg.id)` to the SELECT query
-- Add `org_id: currentOrg.id` to the INSERT payload
-- Add a "Section Leader" select dropdown in the Add/Edit dialog, populated from org team members (resolved via `org_memberships` then `profiles`)
-- On save, upsert the leader in `section_assignments` with `org_id`
+### Solution
+Downgrade `react-leaflet` from v5 to v4.2.1 (the last version supporting React 18).
 
----
+### Steps
 
-## Part 3: Fix useSectionAssignments.ts
+1. **Update `package.json` dependencies**:
+   - Change `react-leaflet` from `^5.0.0` to `4.2.1`
+   - Add `@react-leaflet/core` at `2.1.0` (required peer dependency for v4)
+   - `leaflet` stays at `^1.9.4` (already compatible)
 
-### Problem
-- Fetches all assignments globally (no org filter)
-- Fetches all profiles globally for team members (no org filter)
-- Insert calls do not include `org_id`
+2. **No component code changes needed** -- the `AdminHeatmap` component uses `MapContainer`, `TileLayer`, `CircleMarker`, `Popup`, and `useMap`, all of which have the same API in v4.
 
-### Fix
-- Accept `orgId` parameter (or use `useOrg()` internally)
-- Filter `section_assignments` by org_id
-- Resolve team members from `org_memberships` (filtered by org) then join to `profiles`
-- Include `org_id` in all insert calls
-
----
-
-## Part 4: Kitchen Wall Section Badge (TeamFeed.tsx)
-
-### What Changes
-- On mount, fetch `section_assignments` (with `role = 'leader'`) and `kitchen_sections` for the current org
-- Build a lookup map: `user_id -> { sectionName, sectionColor }`
-- Next to each poster's name, render a small colored badge: "Marco / Pastry" with the section's color dot
-
-### Where in the code
-In `TeamFeed.tsx`, the post header area (around line 508-509) currently shows:
-
-```text
-<p className="font-medium text-sm">{post.user_name || "Team Member"}</p>
-```
-
-This becomes:
-
-```text
-<p className="font-medium text-sm">
-  {post.user_name || "Team Member"}
-  {userSectionMap[post.user_id] && (
-    <span className="ml-2 text-xs px-2 py-0.5 rounded-full" 
-          style={{ backgroundColor: userSectionMap[post.user_id].color + '20', color: userSectionMap[post.user_id].color }}>
-      {userSectionMap[post.user_id].sectionName}
-    </span>
-  )}
-</p>
-```
-
----
-
-## Summary of Files
-
-| File | Action | What |
-|------|--------|------|
-| Migration SQL | Create | Add `org_id` to `section_assignments`, fix RLS, make `kitchen_sections.org_id` NOT NULL |
-| `src/components/operations/KitchenSectionsManager.tsx` | Modify | Add `org_id` to queries/inserts, add Section Leader dropdown in dialog |
-| `src/hooks/useSectionAssignments.ts` | Modify | Add org scoping to all queries and inserts |
-| `src/components/feed/TeamFeed.tsx` | Modify | Fetch section assignments, show section badge next to poster names |
-| `src/integrations/supabase/types.ts` | Auto-updated | Will reflect new `org_id` column on `section_assignments` |
-
----
-
-## Security Summary
-
-| Table | Before | After |
-|-------|--------|-------|
-| `section_assignments` SELECT | `USING (true)` -- global leak | `org_id IN get_user_org_ids(auth.uid())` |
-| `section_assignments` ALL | `is_head_chef()` only -- cross-org | `is_head_chef() AND org_id IN get_user_org_ids()` |
-| `kitchen_sections.org_id` | Nullable | NOT NULL |
-| `section_assignments.org_id` | Missing | Added, NOT NULL, org-scoped |
-
+### Technical Details
+- `react-leaflet` v5 uses React 19 internals. When bundled with React 18, the shared hook dispatcher breaks, causing the minified "r is not a function" runtime error.
+- v4.2.1 is the last stable release targeting React 18.
+- The `@react-leaflet/core` package is a peer dependency that v4 requires explicitly.
